@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_DB: doctor_db
+      POSTGRES_USER: doctor_user
+      POSTGRES_PASSWORD: doctor_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    image: ghcr.io/barkovyuri/barkova_app-backend:latest
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - db
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    expose:
+      - "8000"
+
+  frontend:
+    image: ghcr.io/barkovyuri/barkova_app-frontend:latest
+    restart: always
+    env_file:
+      - .env
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx:/etc/nginx/conf.d
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
