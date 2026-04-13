@@ -5,7 +5,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_DISABLE_TURBOPACK=1
 
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 RUN npm install
 
