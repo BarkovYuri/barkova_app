@@ -6,7 +6,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_DISABLE_TURBOPACK=1
 
 COPY package.json package-lock.json ./
-RUN npm ci
+
+RUN npm install
 
 COPY . .
 
@@ -22,7 +23,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_DISABLE_TURBOPACK=1
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+
+RUN npm install --omit=dev
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
