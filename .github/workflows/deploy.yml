@@ -66,6 +66,7 @@ jobs:
           script: |
             set -e
             cd /var/www/barkova_app
+            git pull
             docker login ghcr.io -u barkovyuri -p ${{ secrets.GHCR_PAT }}
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
