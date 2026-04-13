@@ -3,16 +3,12 @@ FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_DISABLE_TURBOPACK=1
 
 COPY package.json package-lock.json ./
-
-# ВАЖНО: ставим зависимости правильно
 RUN npm ci
 
 COPY . .
-
-# ФИКС lightningcss
-ENV NEXT_DISABLE_TURBOPACK=1
 
 RUN npm run build
 
@@ -23,9 +19,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_DISABLE_TURBOPACK=1
 
 COPY package.json package-lock.json ./
-
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/.next ./.next
