@@ -1,4 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+const isServer = typeof window === "undefined";
+
+const API_URL = isServer
+  ? process.env.INTERNAL_API_URL || "http://backend:8000/api"
+  : process.env.NEXT_PUBLIC_API_URL || "/api";
 
 function normalizeEndpoint(endpoint: string) {
   if (!endpoint.startsWith("/")) {
@@ -6,7 +10,6 @@ function normalizeEndpoint(endpoint: string) {
   }
 
   const [path, query] = endpoint.split("?");
-
   const normalizedPath = path.endsWith("/") ? path : `${path}/`;
 
   return query ? `${normalizedPath}?${query}` : normalizedPath;
