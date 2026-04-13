@@ -6,9 +6,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
 
-RUN npm install
+# ВАЖНО: ставим зависимости правильно
+RUN npm ci
 
 COPY . .
+
+# ФИКС lightningcss
+ENV NEXT_DISABLE_TURBOPACK=1
 
 RUN npm run build
 
@@ -22,7 +26,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
 
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
