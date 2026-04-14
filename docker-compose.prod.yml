@@ -35,8 +35,10 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./deploy/nginx:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     depends_on:
