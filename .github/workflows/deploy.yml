@@ -63,11 +63,17 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          command_timeout: 30m
           script: |
             set -e
             cd /var/www/barkova_app
-            git pull
+
+            git fetch origin main
+            git reset --hard origin/main
+
             docker login ghcr.io -u barkovyuri -p ${{ secrets.GHCR_PAT }}
+
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
+
             docker image prune -f
