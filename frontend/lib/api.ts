@@ -15,6 +15,20 @@ function normalizeEndpoint(endpoint: string) {
   return query ? `${normalizedPath}?${query}` : normalizedPath;
 }
 
+async function parseJsonSafe(res: Response) {
+  const text = await res.text();
+
+  if (!text || !text.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("Некорректный JSON в ответе API");
+  }
+}
+
 export async function fetchAPI(endpoint: string, options?: RequestInit) {
   const normalizedEndpoint = normalizeEndpoint(endpoint);
 
@@ -27,11 +41,15 @@ export async function fetchAPI(endpoint: string, options?: RequestInit) {
     return null;
   }
 
+  const data = await parseJsonSafe(res);
+
   if (!res.ok) {
-    throw new Error(`Ошибка API: ${res.status}`);
+    throw new Error(
+      data ? JSON.stringify(data) : `Ошибка API: ${res.status}`
+    );
   }
 
-  return res.json();
+  return data;
 }
 
 export async function postFormData(endpoint: string, formData: FormData) {
@@ -42,10 +60,12 @@ export async function postFormData(endpoint: string, formData: FormData) {
     body: formData,
   });
 
-  const data = await res.json().catch(() => null);
+  const data = await parseJsonSafe(res);
 
   if (!res.ok) {
-    throw new Error(data ? JSON.stringify(data) : `Ошибка API: ${res.status}`);
+    throw new Error(
+      data ? JSON.stringify(data) : `Ошибка API: ${res.status}`
+    );
   }
 
   return data;
