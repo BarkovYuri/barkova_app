@@ -22,6 +22,16 @@ services:
     expose:
       - "8000"
 
+  telegram_bot:
+    image: ghcr.io/barkovyuri/barkova_app-backend:latest
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - backend
+    command: python telegram_bot.py
+
   frontend:
     image: ghcr.io/barkovyuri/barkova_app-frontend:latest
     restart: always
