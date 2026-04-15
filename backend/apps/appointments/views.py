@@ -26,6 +26,7 @@ from .serializers import (
 )
 
 
+@authentication_classes([])
 class AppointmentCreateView(CreateAPIView):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentCreateSerializer
@@ -39,6 +40,7 @@ class AppointmentCreateView(CreateAPIView):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
+@authentication_classes([])
 class QuickAppointmentCreateView(APIView):
     def post(self, request):
         serializer = QuickAppointmentCreateSerializer(data=request.data)
