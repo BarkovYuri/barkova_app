@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 VK_GROUP_TOKEN = os.getenv("VK_GROUP_TOKEN", "")
-BACKEND_BASE = os.getenv("BACKEND_BASE_URL", "http://127.0.0.1:8000")
+BACKEND_BASE = os.getenv("BACKEND_BASE_URL", "http://backend:8000")
 
 
 def vk_api(method: str, payload: dict):
