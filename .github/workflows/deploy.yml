@@ -72,4 +72,4 @@ jobs:
             docker login ghcr.io -u barkovyuri -p ${{ secrets.GHCR_PAT }}
             docker pull ghcr.io/barkovyuri/barkova_app-backend:latest
             docker pull ghcr.io/barkovyuri/barkova_app-frontend:latest
-            docker compose -f docker-compose.prod.yml up -d --force-recreate backend frontend nginx
+                        docker compose -f docker-compose.prod.yml up -d --force-recreate backend telegram_bot frontend nginx
