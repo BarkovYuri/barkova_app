@@ -234,17 +234,27 @@ export default function BookingForm() {
   );
 
   async function handleVkConnect() {
+    const popup = window.open("", "_blank");
+
     try {
       setLoadingVkLink(true);
       setErrorText("");
-  
+
       const data = await fetchAPI("/appointments/vk/prelink", {
         method: "POST",
       });
-  
+
       setVkPrelinkToken(data.token);
-      window.open(data.vk_url, "_blank");
+
+      if (popup) {
+        popup.location.href = data.vk_url;
+      } else {
+        window.location.href = data.vk_url;
+      }
     } catch {
+      if (popup) {
+        popup.close();
+      }
       setErrorText("Не удалось создать ссылку для подключения VK.");
     } finally {
       setLoadingVkLink(false);
@@ -276,6 +286,8 @@ export default function BookingForm() {
   }
 
   async function handleTelegramConnect() {
+    const popup = window.open("", "_blank");
+
     try {
       setLoadingTelegramLink(true);
       setErrorText("");
@@ -285,8 +297,16 @@ export default function BookingForm() {
       });
 
       setTelegramPrelinkToken(data.token);
-      window.open(data.bot_url, "_blank");
+
+      if (popup) {
+        popup.location.href = data.bot_url;
+      } else {
+        window.location.href = data.bot_url;
+      }
     } catch {
+      if (popup) {
+        popup.close();
+      }
       setErrorText("Не удалось создать ссылку для подключения Telegram.");
     } finally {
       setLoadingTelegramLink(false);
