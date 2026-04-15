@@ -16,7 +16,13 @@ ALLOWED_HOSTS = [
     "nginx",
     "doctor-barkova.ru",
     "www.doctor-barkova.ru",
+    "5.42.126.206",
     "factor-bucktooth-ogle.ngrok-free.dev",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://doctor-barkova.ru",
+    "https://www.doctor-barkova.ru",
 ]
 
 INSTALLED_APPS = [
@@ -98,6 +104,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://doctor-barkova.ru",
+    "https://www.doctor-barkova.ru",
 ]
 
 REST_FRAMEWORK = {
@@ -114,6 +122,12 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ],
 }
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
