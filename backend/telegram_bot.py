@@ -3,6 +3,17 @@ import os
 import time
 from urllib import error, parse, request
 
+import socket
+
+_original_getaddrinfo = socket.getaddrinfo
+
+def _ipv4_first_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    if host == "api.telegram.org":
+        return _original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+    return _original_getaddrinfo(host, port, family, type, proto, flags)
+
+socket.getaddrinfo = _ipv4_first_getaddrinfo
+
 from dotenv import load_dotenv
 
 load_dotenv()
