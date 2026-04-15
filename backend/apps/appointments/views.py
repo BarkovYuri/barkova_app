@@ -8,6 +8,7 @@ from rest_framework.generics import CreateAPIView, ListAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import authentication_classes
 
 from apps.core.permissions import IsAdminUser
 from apps.notifications.models import TelegramPrelink, VKPrelink
@@ -81,6 +82,7 @@ class AdminAppointmentUpdateView(UpdateAPIView):
 # Telegram prelink
 # =========================
 
+@authentication_classes([])
 class TelegramPrelinkCreateView(APIView):
     permission_classes = [AllowAny]
 
@@ -100,6 +102,7 @@ class TelegramPrelinkCreateView(APIView):
         )
 
 
+@authentication_classes([])
 class TelegramPrelinkLinkView(APIView):
     permission_classes = [AllowAny]
 
@@ -127,6 +130,7 @@ class TelegramPrelinkLinkView(APIView):
         return Response({"status": "ok"})
 
 
+@authentication_classes([])
 class TelegramPrelinkStatusView(APIView):
     permission_classes = [AllowAny]
 
@@ -154,6 +158,7 @@ class TelegramPrelinkStatusView(APIView):
         )
 
 
+@authentication_classes([])
 class TelegramAppointmentActionView(APIView):
     permission_classes = [AllowAny]
 
@@ -241,6 +246,7 @@ class TelegramAppointmentActionView(APIView):
 # VK prelink
 # =========================
 
+@authentication_classes([])
 class VKPrelinkCreateView(APIView):
     permission_classes = [AllowAny]
 
@@ -260,6 +266,7 @@ class VKPrelinkCreateView(APIView):
         )
 
 
+@authentication_classes([])
 class VKPrelinkLinkView(APIView):
     permission_classes = [AllowAny]
 
@@ -289,6 +296,7 @@ class VKPrelinkLinkView(APIView):
         return Response({"status": "ok"})
 
 
+@authentication_classes([])
 class VKPrelinkStatusView(APIView):
     permission_classes = [AllowAny]
 
@@ -317,6 +325,7 @@ class VKPrelinkStatusView(APIView):
         )
 
 
+@authentication_classes([])
 class VKAppointmentActionView(APIView):
     permission_classes = [AllowAny]
 
@@ -399,6 +408,8 @@ class VKAppointmentActionView(APIView):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+
+@authentication_classes([])
 class VKCallbackView(APIView):
     permission_classes = [AllowAny]
 
