@@ -217,8 +217,14 @@ def _vk_request(method: str, payload: dict) -> tuple[bool, dict, str]:
         return False, {}, str(exc)
 
 
-def _vk_peer_for_appointment(appointment) -> str:
-    return str(getattr(appointment, "vk_peer_id", "") or getattr(appointment, "vk_user_id", ""))
+def _vk_peer_for_appointment(appointment):
+    if getattr(appointment, "vk_peer_id", None):
+        return str(appointment.vk_peer_id)
+
+    if getattr(appointment, "vk_user_id", None):
+        return str(appointment.vk_user_id)
+
+    return ""
 
 
 def _send_vk_text_custom(text: str, peer_id: str) -> tuple[bool, str, str]:
