@@ -868,68 +868,69 @@ export default function BookingForm() {
 
             <div key={contactMethod}>
               {contactMethod === "telegram" ? (
-              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
-                <p className="text-sm leading-6 text-gray-700">
-                  Сначала подключите Telegram, чтобы получать уведомления о записи,
-                  подтверждении и отмене консультации.
-                </p>
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
+                  <p className="text-sm leading-6 text-gray-700">
+                    Сначала подключите Telegram, чтобы получать уведомления о записи,
+                    подтверждении и отмене консультации.
+                  </p>
 
-                <div className="mt-4 flex flex-col gap-3">
-                  <button
-                    type="button"
-                    onClick={handleTelegramConnect}
-                    disabled={loadingTelegramLink}
-                    className="inline-flex items-center justify-center rounded-2xl bg-blue-500 px-5 py-3.5 text-sm font-medium text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
-                  >
-                    {loadingTelegramLink ? "Создаём ссылку..." : "Подключить Telegram"}
-                  </button>
+                  <div className="mt-4 flex flex-col gap-3">
+                    <button
+                      type="button"
+                      onClick={handleTelegramConnect}
+                      disabled={loadingTelegramLink}
+                      className="inline-flex items-center justify-center rounded-2xl bg-blue-500 px-5 py-3.5 text-sm font-medium text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
+                    >
+                      {loadingTelegramLink ? "Создаём ссылку..." : "Подключить Telegram"}
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={checkTelegramConnection}
-                    disabled={!telegramPrelinkToken}
-                    className="inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-medium text-gray-700 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Проверить подключение
-                  </button>
+                    <button
+                      type="button"
+                      onClick={checkTelegramConnection}
+                      disabled={!telegramPrelinkToken}
+                      className="inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-medium text-gray-700 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Проверить подключение
+                    </button>
 
-                  <div
-                    className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium ${
-                      telegramConnected
-                        ? "bg-green-100 text-green-700"
-                        : "border border-gray-200 bg-white text-gray-500"
-                    }`}
-                  >
-                    {telegramConnected ? "Telegram подключён" : "Telegram ещё не подключён"}
+                    <div
+                      className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium ${
+                        telegramConnected
+                          ? "bg-green-100 text-green-700"
+                          : "border border-gray-200 bg-white text-gray-500"
+                      }`}
+                    >
+                      {telegramConnected ? "Telegram подключён" : "Telegram ещё не подключён"}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-5">
-                <p className="text-sm leading-6 text-gray-700">
-                  Войдите через VK ID, чтобы получать уведомления и управлять записью
-                  прямо во ВКонтакте.
-                </p>
-
-                <div className="mt-4 min-h-[50px]" ref={vkIdContainerRef} />
-
-                {!vkIdReady ? (
-                  <p className="mt-3 text-sm text-gray-500">
-                    Загружаем VK...
+              ) : (
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-5">
+                  <p className="text-sm leading-6 text-gray-700">
+                    Войдите через VK ID, чтобы получать уведомления и управлять записью
+                    прямо во ВКонтакте.
                   </p>
-                ) : null}
 
-                {vkIdAuthorized ? (
-                  <div className="mt-4 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
-                    Вы успешно вошли через VK ID
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
-                    Авторизуйтесь через VK ID, чтобы продолжить запись через ВКонтакте
-                  </div>
-                )}
-              </div>
-            )}
+                  <div className="mt-4 min-h-[50px]" ref={vkIdContainerRef} />
+
+                  {!vkIdReady ? (
+                    <p className="mt-3 text-sm text-gray-500">
+                      Загружаем VK...
+                    </p>
+                  ) : null}
+
+                  {vkIdAuthorized ? (
+                    <div className="mt-4 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
+                      Вы успешно вошли через VK ID
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+                      Авторизуйтесь через VK ID, чтобы продолжить запись через ВКонтакте
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
            <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
               Файлы (по желанию)
