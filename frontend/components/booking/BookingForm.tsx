@@ -339,6 +339,25 @@ export default function BookingForm() {
     return () => clearInterval(timer);
   }, [contactMethod]);
 
+  function switchToTelegram() {
+    setContactMethod("telegram");
+
+    if (vkIdContainerRef.current) {
+      vkIdContainerRef.current.innerHTML = "";
+    }
+
+    setVkIdReady(false);
+    setVkIdAuthorized(false);
+    setVkIdPayload(null);
+    setVkConnected(false);
+    setErrorText("");
+  }
+
+  function switchToVk() {
+    setContactMethod("vk");
+    setErrorText("");
+  }
+
   async function handleVkConnect() {
     const popup = window.open("", "_blank");
 
@@ -824,7 +843,7 @@ export default function BookingForm() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setContactMethod("telegram")}
+                onClick={switchToTelegram}
                 className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
                   contactMethod === "telegram"
                     ? "border-sky-600 bg-sky-600 text-white"
@@ -836,7 +855,7 @@ export default function BookingForm() {
 
               <button
                 type="button"
-                onClick={() => setContactMethod("vk")}
+                onClick={switchToVk}
                 className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
                   contactMethod === "vk"
                     ? "border-sky-600 bg-sky-600 text-white"
@@ -847,7 +866,8 @@ export default function BookingForm() {
               </button>
             </div>
 
-            {contactMethod === "telegram" ? (
+            <div key={contactMethod}>
+              {contactMethod === "telegram" ? (
               <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
                 <p className="text-sm leading-6 text-gray-700">
                   Сначала подключите Telegram, чтобы получать уведомления о записи,
