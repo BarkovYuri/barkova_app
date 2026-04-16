@@ -251,11 +251,6 @@ export default function BookingForm() {
       const VKID = window.VKIDSDK;
 
       if (!appId || !container || !VKID) {
-        console.log("VK ID not ready", {
-          appId,
-          hasContainer: !!container,
-          hasVKID: !!VKID,
-        });
         return;
       }
 
@@ -272,24 +267,29 @@ export default function BookingForm() {
           scope: "",
         });
 
-        const oauth = new VKID.OAuthList();
+        const oneTap = new VKID.OneTap();
 
-        oauth
+        oneTap
           .render({
             container,
-            oauthList: ["vkid"],
+            fastAuthEnabled: false,
+            showAlternativeLogin: true,
+            styles: {
+              borderRadius: 15,
+              height: 50,
+            },
           })
           .on(VKID.WidgetEvents.ERROR, (error: unknown) => {
             console.error("VK ID widget error", error);
           })
-          .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, (payload: any) => {
+          .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
             console.log("VK ID login success payload", payload);
             setVkIdAuthorized(true);
             setVkIdPayload(payload);
             setVkConnected(true);
             setErrorText("");
           });
-
+        
         setVkIdReady(true);
       } catch (error) {
         console.error("VK ID init error", error);
