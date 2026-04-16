@@ -144,7 +144,7 @@ def handle_connect(user_id: int, peer_id: int, token: str):
             "✅ VK подключён. Теперь сюда будут приходить уведомления о записи.",
         )
     except Exception as exc:
-        send_message(peer_id, f"Не удалось подключить VK: {exc}")
+        print("VK connect error:", exc)
 
 
 def handle_action(user_id: int, peer_id: int, payload: dict):
@@ -175,7 +175,7 @@ def handle_action(user_id: int, peer_id: int, payload: dict):
         else:
             send_message(peer_id, "❌ Запись отменена.")
     except Exception as exc:
-        send_message(peer_id, f"Ошибка: {exc}")
+        print("VK action error:", exc)
 
 
 def handle_regular_user_message(user_id: int, peer_id: int, text: str):

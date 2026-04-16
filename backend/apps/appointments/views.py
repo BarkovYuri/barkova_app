@@ -370,16 +370,17 @@ class VKAppointmentActionView(APIView):
                 appointment.save(update_fields=["status"])
                 send_appointment_status_notification(appointment)
 
-            send_to_patient_vk(
-                appointment,
-                (
-                    "✅ Запись подтверждена\n"
-                    f"Дата: {appointment.slot.date}\n"
-                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                    f"{appointment.slot.end_time.strftime('%H:%M')}"
-                ),
-            )
-            return Response({"status": "confirmed"})
+                send_to_patient_vk(
+                    appointment,
+                    (
+                        "✅ Запись подтверждена\n"
+                        f"Дата: {appointment.slot.date}\n"
+                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                        f"{appointment.slot.end_time.strftime('%H:%M')}"
+                    ),
+                )
+
+            return Response({"status": "confirmed", "changed": changed})
 
         if action == "cancel":
             changed = appointment.status != "cancelled"
@@ -394,16 +395,17 @@ class VKAppointmentActionView(APIView):
 
                 send_appointment_status_notification(appointment)
 
-            send_to_patient_vk(
-                appointment,
-                (
-                    "❌ Запись отменена\n"
-                    f"Дата: {appointment.slot.date}\n"
-                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                    f"{appointment.slot.end_time.strftime('%H:%M')}"
-                ),
-            )
-            return Response({"status": "cancelled"})
+                send_to_patient_vk(
+                    appointment,
+                    (
+                        "❌ Запись отменена\n"
+                        f"Дата: {appointment.slot.date}\n"
+                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                        f"{appointment.slot.end_time.strftime('%H:%M')}"
+                    ),
+                )
+
+            return Response({"status": "cancelled", "changed": changed})
 
         return Response(
             {"detail": "Неизвестное действие."},
