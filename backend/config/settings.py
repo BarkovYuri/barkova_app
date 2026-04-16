@@ -137,3 +137,9 @@ VK_GROUP_TOKEN = os.getenv("VK_GROUP_TOKEN", "")
 VK_GROUP_ID = os.getenv("VK_GROUP_ID", "")
 VK_GROUP_DOMAIN = os.getenv("VK_GROUP_DOMAIN", "")
 VK_CALLBACK_CONFIRMATION_CODE = os.getenv("VK_CALLBACK_CONFIRMATION_CODE", "")
+VK_APP_ID = os.getenv("VK_APP_ID", "")
+VK_APP_SECRET = os.getenv("VK_APP_SECRET", "")
+VK_ID_REDIRECT_URL = os.getenv(
+    "VK_ID_REDIRECT_URL",
+    "https://doctor-barkova.ru/auth/vk/callback",
+)

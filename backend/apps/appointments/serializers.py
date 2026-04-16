@@ -9,6 +9,7 @@ from apps.notifications.services import (
     send_created_message_to_patient_with_actions,
     send_created_message_to_patient_with_actions_vk,
 )
+from apps.notifications.services_vk_id import exchange_vk_id_code
 from apps.scheduling.models import TimeSlot
 from .models import Appointment, AppointmentAttachment
 
@@ -275,7 +276,28 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
 
         if preferred_contact_method == "vk":
             if vk_id_code and vk_id_device_id:
+                vk_result = exchange_vk_id_code(vk_id_code, vk_id_device_id)
+
+                if vk_result.get("error"):
+                    raise serializers.ValidationError(
+                        {"vk_id_code": "Не удалось подтвердить вход через VK ID."}
+                    )
+
+                user = vk_result.get("user") or {}
+                user_id = (
+                    user.get("user_id")
+                    or user.get("id")
+                    or vk_result.get("user_id")
+                )
+
+                if not user_id:
+                    raise serializers.ValidationError(
+                        {"vk_id_code": "VK ID не вернул идентификатор пользователя."}
+                    )
+
                 attrs["vk_id_authorized"] = True
+                attrs["vk_id_user_id"] = str(user_id)
+
             elif vk_prelink_token:
                 prelink = VKPrelink.objects.filter(
                     token=vk_prelink_token,
@@ -305,6 +327,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         telegram_prelink = validated_data.pop("telegram_prelink", None)
         vk_prelink = validated_data.pop("vk_prelink", None)
         vk_id_authorized = validated_data.pop("vk_id_authorized", False)
+        vk_id_user_id = validated_data.pop("vk_id_user_id", "")
 
         validated_data.pop("telegram_prelink_token", None)
         validated_data.pop("vk_prelink_token", None)
@@ -318,7 +341,9 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "preferred_contact_method": validated_data.get("preferred_contact_method", ""),
             "telegram_chat_id": telegram_prelink.chat_id if telegram_prelink else "",
             "telegram_linked_at": telegram_prelink.linked_at if telegram_prelink else None,
-            "vk_user_id": vk_prelink.user_id if vk_prelink else "",
+            "vk_user_id": (
+                vk_prelink.user_id if vk_prelink else (vk_id_user_id if vk_id_authorized else "")
+            ),
             "vk_peer_id": vk_prelink.peer_id if vk_prelink else "",
             "vk_linked_at": vk_prelink.linked_at if vk_prelink else None,
             "reason": validated_data.get("reason", ""),
@@ -326,14 +351,6 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "privacy_accepted": validated_data["privacy_accepted"],
             "offer_accepted": validated_data["offer_accepted"],
         }
-
-        if (
-            validated_data.get("preferred_contact_method", "") == "vk"
-            and vk_id_authorized
-        ):
-            appointment_data["notes"] = (
-                f"VK ID authorized. code={vk_id_code}; device_id={vk_id_device_id}"
-            )
 
         appointment = _create_appointment_with_slot_lock(
             slot=slot,
