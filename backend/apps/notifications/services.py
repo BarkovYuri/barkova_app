@@ -216,6 +216,14 @@ def _vk_request(method: str, payload: dict) -> tuple[bool, dict, str]:
     except Exception as exc:
         return False, {}, str(exc)
 
+def _vk_peer_for_appointment(appointment):
+    if getattr(appointment, "vk_peer_id", None):
+        return str(appointment.vk_peer_id)
+
+    if getattr(appointment, "vk_user_id", None):
+        return str(appointment.vk_user_id)
+
+    return ""
 
 def _vk_user_for_appointment(appointment):
     if getattr(appointment, "vk_user_id", None):
