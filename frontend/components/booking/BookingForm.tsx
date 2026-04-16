@@ -391,6 +391,25 @@ export default function BookingForm() {
     }
   }
 
+  function switchToTelegram() {
+    setContactMethod("telegram");
+
+    if (vkIdContainerRef.current) {
+      vkIdContainerRef.current.innerHTML = "";
+    }
+
+    setVkIdReady(false);
+    setVkIdAuthorized(false);
+    setVkIdPayload(null);
+    setVkConnected(false);
+    setErrorText("");
+  }
+
+  function switchToVk() {
+    setContactMethod("vk");
+    setErrorText("");
+  }
+
   async function handleTelegramConnect() {
     const popup = window.open("", "_blank");
 
