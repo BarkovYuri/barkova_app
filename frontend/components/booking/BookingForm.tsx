@@ -438,9 +438,8 @@ export default function BookingForm() {
       return;
     }
 
-    if (contactMethod === "telegram" && !telegramConnected) {
-      setErrorText("Нажмите Start в Telegram и затем «Проверить подключение».");
-      return;
+    if (contactMethod === "vk" && vkIdPayload?.user_id) {
+      formData.append("vk_user_id", String(vkIdPayload.user_id));
     }
 
     if (!selectedSlotId) {
