@@ -14,6 +14,9 @@ from .views import (
     VKPrelinkLinkView,
     VKPrelinkStatusView,
     VKCallbackView,
+    VKMessagingStatusView,
+    VKAutoLinkView,
+    VKPendingLinkCreateView,
 )
 
 urlpatterns = [
@@ -30,6 +33,9 @@ urlpatterns = [
     path("vk/prelink/", VKPrelinkCreateView.as_view(), name="vk-prelink-create"),
     path("vk/prelink/link/", VKPrelinkLinkView.as_view(), name="vk-prelink-link"),
     path("vk/prelink/status/", VKPrelinkStatusView.as_view(), name="vk-prelink-status"),
+    path("vk/messaging-status/", VKMessagingStatusView.as_view(), name="vk-messaging-status"),
     path("vk/action/", VKAppointmentActionView.as_view(), name="vk-appointment-action"),
     path("vk/callback/", VKCallbackView.as_view(), name="vk-callback"),
+    path("vk/auto-link/", VKAutoLinkView.as_view(), name="vk-auto-link"),
+    path("vk/pending-link/", VKPendingLinkCreateView.as_view(), name="vk-pending-link"),
 ]

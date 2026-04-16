@@ -1,5 +1,6 @@
 import secrets
 
+from django.core.cache import cache
 from django.conf import settings
 from django.utils import timezone
 from django.http import HttpResponse
@@ -355,6 +356,101 @@ class VKMessagingStatusView(APIView):
                 "dialog_url": dialog_url,
             }
         )
+    
+@authentication_classes([])
+class VKPendingLinkCreateView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        vk_user_id = str(request.data.get("vk_user_id", "")).strip()
+
+        if not vk_user_id:
+            return Response(
+                {"detail": "vk_user_id обязателен."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cache_key = f"vk_pending_link:{vk_user_id}"
+        cache.set(cache_key, {"vk_user_id": vk_user_id}, timeout=15 * 60)
+
+        group_id = settings.VK_GROUP_ID
+        dialog_url = f"https://vk.com/im?sel=-{group_id}"
+
+        return Response(
+            {
+                "status": "pending",
+                "vk_user_id": vk_user_id,
+                "dialog_url": dialog_url,
+            }
+        )
+
+@authentication_classes([])
+class VKAutoLinkView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user_id = str(request.data.get("user_id", "")).strip()
+        peer_id = str(request.data.get("peer_id", "")).strip()
+
+        if not user_id or not peer_id:
+            return Response(
+                {"detail": "user_id и peer_id обязательны."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cache_key = f"vk_pending_link:{user_id}"
+        pending = cache.get(cache_key)
+
+        if not pending:
+            return Response({"status": "not_pending"})
+
+        appointment = (
+            Appointment.objects.filter(vk_user_id=user_id)
+            .order_by("-created_at")
+            .first()
+        )
+
+        if not appointment:
+            return Response({"status": "no_appointment"})
+
+        if appointment.vk_peer_id != peer_id:
+            appointment.vk_peer_id = peer_id
+            appointment.vk_linked_at = timezone.now()
+            appointment.save(update_fields=["vk_peer_id", "vk_linked_at"])
+
+        cache.delete(cache_key)
+
+        return Response({"status": "linked"})
+
+@authentication_classes([])
+class VKAutoLinkView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user_id = request.data.get("user_id")
+        peer_id = request.data.get("peer_id")
+
+        if not user_id or not peer_id:
+            return Response({"detail": "user_id и peer_id обязательны"}, status=400)
+
+        from apps.appointments.models import Appointment
+
+        # Находим последнюю запись с этим vk_user_id
+        appointment = (
+            Appointment.objects.filter(vk_user_id=str(user_id))
+            .order_by("-created_at")
+            .first()
+        )
+
+        if not appointment:
+            return Response({"status": "no_appointment"})
+
+        # Привязываем peer_id
+        if not appointment.vk_peer_id:
+            appointment.vk_peer_id = str(peer_id)
+            appointment.save(update_fields=["vk_peer_id"])
+
+        return Response({"status": "linked"})
 
 @authentication_classes([])
 class VKAppointmentActionView(APIView):

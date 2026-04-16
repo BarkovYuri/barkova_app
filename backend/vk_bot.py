@@ -180,10 +180,35 @@ def handle_action(user_id: int, peer_id: int, payload: dict):
 
 def handle_regular_user_message(user_id: int, peer_id: int, text: str):
     """
-    Логика для обычных сообщений:
-    - если активной записи нет -> нейтральный автоответ
-    - если активная запись есть -> предлагаем отмену, а не отвечаем 'нет записи'
+    Логика:
+    1. Если пользователь ожидается системой после VK ID -> делаем auto-link
+    2. Если есть активная запись -> показываем кнопки действий
+    3. Иначе обычный нейтральный автоответ
     """
+
+    auto_linked = False
+
+    try:
+        result = backend_post(
+            "/api/appointments/vk/auto-link/",
+            {
+                "user_id": str(user_id),
+                "peer_id": str(peer_id),
+            },
+        )
+        auto_linked = result.get("status") == "linked"
+    except Exception as exc:
+        print("VK auto-link error:", exc)
+
+    if auto_linked:
+        send_message(
+            peer_id,
+            "✅ Диалог с сообществом подключён.\n"
+            "Теперь вы будете получать уведомления здесь.\n\n"
+            "Вернитесь на сайт и завершите запись.",
+        )
+        return
+
     appointment = get_active_appointment_for_vk_user(user_id)
 
     if not appointment:
@@ -196,7 +221,7 @@ def handle_regular_user_message(user_id: int, peer_id: int, text: str):
     send_message(
         peer_id,
         (
-            "Если вам нужно отменить запись, нажмите кнопку ниже.\n"
+            "Если вам нужно изменить запись, используйте кнопки ниже.\n"
             f"Дата: {appointment.slot.date}\n"
             f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
             f"{appointment.slot.end_time.strftime('%H:%M')}"
