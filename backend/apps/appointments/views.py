@@ -326,6 +326,35 @@ class VKPrelinkStatusView(APIView):
             }
         )
 
+@authentication_classes([])
+class VKMessagingStatusView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        vk_user_id = request.query_params.get("vk_user_id", "").strip()
+
+        if not vk_user_id:
+            return Response(
+                {"detail": "vk_user_id обязателен."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Проверяем, можно ли писать пользователю
+        from apps.notifications.services import _vk_is_messages_allowed
+
+        allowed, error = _vk_is_messages_allowed(vk_user_id)
+
+        group_id = settings.VK_GROUP_ID
+        dialog_url = f"https://vk.com/im?sel=-{group_id}"
+
+        return Response(
+            {
+                "vk_user_id": vk_user_id,
+                "can_message_user": allowed,
+                "error": error,
+                "dialog_url": dialog_url,
+            }
+        )
 
 @authentication_classes([])
 class VKAppointmentActionView(APIView):
