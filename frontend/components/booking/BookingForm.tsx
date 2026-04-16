@@ -283,11 +283,29 @@ export default function BookingForm() {
             console.error("VK ID widget error", error);
           })
           .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
-            console.log("VK ID login success payload", payload);
-            setVkIdAuthorized(true);
-            setVkIdPayload(payload);
-            setVkConnected(true);
-            setErrorText("");
+            const code = payload?.code;
+            const deviceId = payload?.device_id;
+          
+            if (!code || !deviceId) {
+              setErrorText("VK ID не вернул code или device_id.");
+              return;
+            }
+          
+            VKID.Auth.exchangeCode(code, deviceId)
+              .then((data: any) => {
+                console.log("VK ID exchange success", data);
+                setVkIdAuthorized(true);
+                setVkIdPayload(data);
+                setVkConnected(true);
+                setErrorText("");
+              })
+              .catch((error: unknown) => {
+                console.error("VK ID exchange error", error);
+                setVkIdAuthorized(false);
+                setVkIdPayload(null);
+                setVkConnected(false);
+                setErrorText("Не удалось завершить вход через VK ID.");
+              });
           });
         
         setVkIdReady(true);
