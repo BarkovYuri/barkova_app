@@ -430,13 +430,8 @@ export default function BookingForm() {
       return;
     }
 
-    if (contactMethod === "vk" && !vkPrelinkToken) {
-      setErrorText("Сначала подключите VK.");
-      return;
-    }
-    
-    if (contactMethod === "vk" && !vkConnected) {
-      setErrorText("Напишите в чат сообщества VK и затем нажмите «Проверить подключение».");
+    if (contactMethod === "vk" && !vkIdAuthorized) {
+      setErrorText("Сначала войдите через VK ID.");
       return;
     }
 
@@ -448,12 +443,19 @@ export default function BookingForm() {
       formData.append("name", name);
       formData.append("phone", phone);
       formData.append("reason", reason);
-      formData.append("vk_prelink_token", vkPrelinkToken);
       formData.append("preferred_contact_method", contactMethod);
       formData.append("telegram_prelink_token", telegramPrelinkToken);
       formData.append("consent_given", String(consentGiven));
       formData.append("privacy_accepted", String(privacyAccepted));
       formData.append("offer_accepted", String(offerAccepted));
+
+      if (contactMethod === "vk" && vkIdPayload?.code) {
+        formData.append("vk_id_code", String(vkIdPayload.code));
+      }
+
+      if (contactMethod === "vk" && vkIdPayload?.device_id) {
+        formData.append("vk_id_device_id", String(vkIdPayload.device_id));
+      }
 
       if (files) {
         Array.from(files).forEach((file) => {
@@ -834,63 +836,30 @@ export default function BookingForm() {
                 </div>
               </div>
             ) : (
-              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
+              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-5">
                 <p className="text-sm leading-6 text-gray-700">
-                Сначала подключите VK, чтобы получать уведомления о записи,
-                подтверждении и отмене консультации.
+                  Войдите через VK ID, чтобы получать уведомления и управлять записью
+                  прямо во ВКонтакте.
                 </p>
 
-                <div className="mt-4 flex flex-col gap-3">
-                  <button
-                    type="button"
-                    onClick={handleVkConnect}
-                    disabled={loadingVkLink}
-                    className="inline-flex items-center justify-center rounded-2xl bg-blue-500 px-5 py-3.5 text-sm font-medium text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
-                  >
-                    {loadingVkLink ? "Создаём ссылку..." : "Подключить VK"}
-                  </button>
+                <div className="mt-4 min-h-[50px]" ref={vkIdContainerRef} />
 
-                  <button
-                    type="button"
-                    onClick={checkVkConnection}
-                    disabled={!vkPrelinkToken}
-                    className="inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-medium text-gray-700 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Проверить подключение
-                  </button>
-                  <div
-                    className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium ${
-                      vkConnected
-                        ? "bg-green-100 text-green-700"
-                        : "border border-gray-200 bg-white text-gray-500"
-                    }`}
-                  >
-                    {vkConnected ? "VK подключён" : "VK ещё не подключён"}
+                {!vkIdReady ? (
+                  <p className="mt-3 text-sm text-gray-500">
+                    Загружаем VK...
+                  </p>
+                ) : null}
+
+                {vkIdAuthorized ? (
+                  <div className="mt-4 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
+                    Вы успешно вошли через VK ID
                   </div>
-
-                  {contactMethod === "vk" ? (
-                    <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
-                      <p className="text-sm leading-6 text-gray-700">
-                        Основной способ подключения VK скоро будет через VK ID. Ниже уже
-                        подключаем официальный вход VK ID.
-                      </p>
-
-                      <div className="mt-4 min-h-[48px]" ref={vkIdContainerRef} />
-                      {vkIdAuthorized ? (
-                        <div className="mt-3 rounded-2xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
-                          VK ID авторизация получена
-                        </div>
-                      ) : null}
-
-                      {!vkIdReady ? (
-                        <p className="mt-3 text-sm text-gray-500">
-                          Загружаем VK ID...
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
+                ) : (
+                  <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+                    Авторизуйтесь через VK ID, чтобы продолжить запись через ВКонтакте
                   </div>
-                </div>
+                )}
+              </div>
             )}
            <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
