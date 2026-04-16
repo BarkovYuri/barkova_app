@@ -184,6 +184,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     )
     telegram_prelink_token = serializers.CharField(required=False, allow_blank=True)
     vk_prelink_token = serializers.CharField(required=False, allow_blank=True)
+    vk_id_code = serializers.CharField(required=False, allow_blank=True)
+    vk_id_device_id = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Appointment
@@ -196,6 +198,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "preferred_contact_method",
             "telegram_prelink_token",
             "vk_prelink_token",
+            "vk_id_code",
+            "vk_id_device_id",
             "reason",
             "consent_given",
             "privacy_accepted",
@@ -248,6 +252,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         preferred_contact_method = attrs.get("preferred_contact_method", "").strip()
         telegram_prelink_token = attrs.get("telegram_prelink_token", "").strip()
         vk_prelink_token = attrs.get("vk_prelink_token", "").strip()
+        vk_id_code = attrs.get("vk_id_code", "").strip()
+        vk_id_device_id = attrs.get("vk_id_device_id", "").strip()
 
         if preferred_contact_method == "telegram":
             if not telegram_prelink_token:
@@ -268,22 +274,24 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             attrs["telegram_prelink"] = prelink
 
         if preferred_contact_method == "vk":
-            if not vk_prelink_token:
+            if vk_id_code and vk_id_device_id:
+                attrs["vk_id_authorized"] = True
+            elif vk_prelink_token:
+                prelink = VKPrelink.objects.filter(
+                    token=vk_prelink_token,
+                    is_used=False,
+                ).first()
+
+                if not prelink or not prelink.user_id or not prelink.peer_id:
+                    raise serializers.ValidationError(
+                        {"vk_prelink_token": "VK ещё не подключён."}
+                    )
+
+                attrs["vk_prelink"] = prelink
+            else:
                 raise serializers.ValidationError(
-                    {"vk_prelink_token": "Сначала подключите VK."}
+                    {"vk_id_code": "Сначала войдите через VK ID."}
                 )
-
-            prelink = VKPrelink.objects.filter(
-                token=vk_prelink_token,
-                is_used=False,
-            ).first()
-
-            if not prelink or not prelink.user_id or not prelink.peer_id:
-                raise serializers.ValidationError(
-                    {"vk_prelink_token": "VK ещё не подключён."}
-                )
-
-            attrs["vk_prelink"] = prelink
 
         attrs["slot"] = _get_available_slot_or_error(attrs["slot_id"])
         return attrs
@@ -296,9 +304,12 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
 
         telegram_prelink = validated_data.pop("telegram_prelink", None)
         vk_prelink = validated_data.pop("vk_prelink", None)
+        vk_id_authorized = validated_data.pop("vk_id_authorized", False)
 
         validated_data.pop("telegram_prelink_token", None)
         validated_data.pop("vk_prelink_token", None)
+        vk_id_code = validated_data.pop("vk_id_code", "")
+        vk_id_device_id = validated_data.pop("vk_id_device_id", "")
 
         appointment_data = {
             "name": validated_data["name"],
@@ -315,6 +326,14 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "privacy_accepted": validated_data["privacy_accepted"],
             "offer_accepted": validated_data["offer_accepted"],
         }
+
+        if (
+            validated_data.get("preferred_contact_method", "") == "vk"
+            and vk_id_authorized
+        ):
+            appointment_data["notes"] = (
+                f"VK ID authorized. code={vk_id_code}; device_id={vk_id_device_id}"
+            )
 
         appointment = _create_appointment_with_slot_lock(
             slot=slot,
