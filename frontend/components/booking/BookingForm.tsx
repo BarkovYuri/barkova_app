@@ -249,15 +249,19 @@ export default function BookingForm() {
       const appId = process.env.NEXT_PUBLIC_VK_APP_ID;
       const container = vkIdContainerRef.current;
       const VKID = window.VKIDSDK;
-
+  
+      if (contactMethod !== "vk") {
+        return;
+      }
+  
       if (!appId || !container || !VKID) {
         return;
       }
-
+  
       if (container.childNodes.length > 0) {
         return;
       }
-
+  
       try {
         VKID.Config.init({
           app: Number(appId),
@@ -266,9 +270,9 @@ export default function BookingForm() {
           source: VKID.ConfigSource.LOWCODE,
           scope: "",
         });
-
+  
         const oneTap = new VKID.OneTap();
-
+  
         oneTap
           .render({
             container,
@@ -285,12 +289,12 @@ export default function BookingForm() {
           .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, (payload: any) => {
             const code = payload?.code;
             const deviceId = payload?.device_id;
-          
+  
             if (!code || !deviceId) {
               setErrorText("VK ID не вернул code или device_id.");
               return;
             }
-          
+  
             VKID.Auth.exchangeCode(code, deviceId)
               .then((data: any) => {
                 console.log("VK ID exchange success", data);
@@ -307,23 +311,33 @@ export default function BookingForm() {
                 setErrorText("Не удалось завершить вход через VK ID.");
               });
           });
-        
+  
         setVkIdReady(true);
       } catch (error) {
         console.error("VK ID init error", error);
       }
     }
-
+  
+    if (contactMethod !== "vk") {
+      if (vkIdContainerRef.current) {
+        vkIdContainerRef.current.innerHTML = "";
+      }
+      setVkIdReady(false);
+      setVkIdAuthorized(false);
+      setVkIdPayload(null);
+      return;
+    }
+  
     initVkIdWidget();
-
+  
     const timer = setInterval(() => {
       if (window.VKIDSDK) {
         initVkIdWidget();
       }
     }, 500);
-
+  
     return () => clearInterval(timer);
-  }, []);
+  }, [contactMethod]);
 
   async function handleVkConnect() {
     const popup = window.open("", "_blank");

@@ -217,14 +217,30 @@ def _vk_request(method: str, payload: dict) -> tuple[bool, dict, str]:
         return False, {}, str(exc)
 
 
-def _vk_peer_for_appointment(appointment):
-    if getattr(appointment, "vk_peer_id", None):
-        return str(appointment.vk_peer_id)
-
+def _vk_user_for_appointment(appointment):
     if getattr(appointment, "vk_user_id", None):
         return str(appointment.vk_user_id)
-
     return ""
+
+
+def _vk_is_messages_allowed(user_id: str) -> tuple[bool, str]:
+    if not _vk_is_configured() or not user_id:
+        return False, "VK user id is missing"
+
+    success, result, error_text = _vk_request(
+        "messages.isMessagesFromGroupAllowed",
+        {
+            "group_id": settings.VK_GROUP_ID,
+            "user_id": str(user_id),
+        },
+    )
+
+    if not success:
+        return False, error_text
+
+    response = result.get("response", {})
+    is_allowed = bool(response.get("is_allowed"))
+    return is_allowed, ""
 
 
 def _send_vk_text_custom(text: str, peer_id: str) -> tuple[bool, str, str]:
@@ -357,19 +373,32 @@ def send_created_message_to_patient_with_actions(appointment):
 
 def send_to_patient_vk(appointment, text):
     peer_id = _vk_peer_for_appointment(appointment)
-    if not peer_id:
-        return
+    user_id = _vk_user_for_appointment(appointment)
 
-    _send_vk_text_custom(
+    if not peer_id or not user_id:
+        return False, "VK peer_id или user_id отсутствует"
+
+    allowed, allowed_error = _vk_is_messages_allowed(user_id)
+    if not allowed:
+        return False, allowed_error or "Пользователь не разрешил сообщения от сообщества"
+
+    success, _, error_text = _send_vk_text_custom(
         text=text,
         peer_id=peer_id,
     )
+    return success, error_text
 
 
 def send_created_message_to_patient_with_actions_vk(appointment):
     peer_id = _vk_peer_for_appointment(appointment)
-    if not peer_id:
-        return
+    user_id = _vk_user_for_appointment(appointment)
+
+    if not peer_id or not user_id:
+        return False, "VK peer_id или user_id отсутствует"
+
+    allowed, allowed_error = _vk_is_messages_allowed(user_id)
+    if not allowed:
+        return False, allowed_error or "Пользователь не разрешил сообщения от сообщества"
 
     text = (
         "✅ Вы записаны на онлайн-консультацию\n"
@@ -417,6 +446,13 @@ def send_created_message_to_patient_with_actions_vk(appointment):
             ]
         ],
     }
+
+    success, _, error_text = _send_vk_text_with_keyboard_custom(
+        text=text,
+        peer_id=peer_id,
+        keyboard=keyboard,
+    )
+    return success, error_text
 
     _send_vk_text_with_keyboard_custom(
         text=text,
