@@ -438,10 +438,6 @@ export default function BookingForm() {
       return;
     }
 
-    if (contactMethod === "vk" && vkIdPayload?.user_id) {
-      formData.append("vk_user_id", String(vkIdPayload.user_id));
-    }
-
     if (!selectedSlotId) {
       setErrorText("Выберите время консультации.");
       return;
@@ -456,6 +452,9 @@ export default function BookingForm() {
       setSubmitting(true);
 
       const formData = new FormData();
+      if (contactMethod === "vk" && vkIdPayload?.user_id) {
+        formData.append("vk_user_id", String(vkIdPayload.user_id));
+      }
       formData.append("slot_id", String(selectedSlotId));
       formData.append("name", name);
       formData.append("phone", phone);
