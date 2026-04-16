@@ -1,5 +1,6 @@
 "use client";
 
+import Script from "next/script";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchAPI, postFormData } from "../../lib/api";
 
@@ -27,6 +28,12 @@ type CalendarDay = {
   isAvailable: boolean;
   freeSlots?: number;
 };
+
+declare global {
+  interface Window {
+    VKIDSDK?: any;
+  }
+}
 
 const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
@@ -133,6 +140,10 @@ export default function BookingForm() {
   const [vkConnected, setVkConnected] = useState(false);
   const [vkPrelinkToken, setVkPrelinkToken] = useState("");
   const [loadingVkLink, setLoadingVkLink] = useState(false);
+  const [vkIdReady, setVkIdReady] = useState(false);
+  const vkIdContainerRef = useRef<HTMLDivElement | null>(null);
+  const [vkIdAuthorized, setVkIdAuthorized] = useState(false);
+  const [vkIdPayload, setVkIdPayload] = useState<any>(null);
   const [files, setFiles] = useState<FileList | null>(null);
 
   const [consentGiven, setConsentGiven] = useState(false);
@@ -232,6 +243,69 @@ export default function BookingForm() {
     () => getCalendarDays(currentMonth, availableDatesMap),
     [currentMonth, availableDatesMap]
   );
+
+  useEffect(() => {
+    function initVkIdWidget() {
+      const appId = process.env.NEXT_PUBLIC_VK_APP_ID;
+      const container = vkIdContainerRef.current;
+      const VKID = window.VKIDSDK;
+
+      if (!appId || !container || !VKID) {
+        console.log("VK ID not ready", {
+          appId,
+          hasContainer: !!container,
+          hasVKID: !!VKID,
+        });
+        return;
+      }
+
+      if (container.childNodes.length > 0) {
+        return;
+      }
+
+      try {
+        VKID.Config.init({
+          app: Number(appId),
+          redirectUrl: "https://doctor-barkova.ru/auth/vk/callback",
+          responseMode: VKID.ConfigResponseMode.Callback,
+          source: VKID.ConfigSource.LOWCODE,
+          scope: "",
+        });
+
+        const oauth = new VKID.OAuthList();
+
+        oauth
+          .render({
+            container,
+            oauthList: ["vkid"],
+          })
+          .on(VKID.WidgetEvents.ERROR, (error: unknown) => {
+            console.error("VK ID widget error", error);
+          })
+          .on(VKID.OAuthListInternalEvents.LOGIN_SUCCESS, (payload: any) => {
+            console.log("VK ID login success payload", payload);
+            setVkIdAuthorized(true);
+            setVkIdPayload(payload);
+            setVkConnected(true);
+            setErrorText("");
+          });
+
+        setVkIdReady(true);
+      } catch (error) {
+        console.error("VK ID init error", error);
+      }
+    }
+
+    initVkIdWidget();
+
+    const timer = setInterval(() => {
+      if (window.VKIDSDK) {
+        initVkIdWidget();
+      }
+    }, 500);
+
+    return () => clearInterval(timer);
+  }, []);
 
   async function handleVkConnect() {
     const popup = window.open("", "_blank");
@@ -454,7 +528,12 @@ export default function BookingForm() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.02fr_0.98fr] lg:gap-8">
+    <>
+      <Script
+        src="https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js"
+        strategy="afterInteractive"
+      />
+      <div className="grid gap-4 lg:grid-cols-[1.02fr_0.98fr] lg:gap-8">
       <section className="rounded-[1.75rem] border border-white/70 bg-white p-4 shadow-xl shadow-sky-100/40 sm:p-6">
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">
@@ -779,7 +858,6 @@ export default function BookingForm() {
                   >
                     Проверить подключение
                   </button>
-
                   <div
                     className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium ${
                       vkConnected
@@ -789,8 +867,30 @@ export default function BookingForm() {
                   >
                     {vkConnected ? "VK подключён" : "VK ещё не подключён"}
                   </div>
+
+                  {contactMethod === "vk" ? (
+                    <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
+                      <p className="text-sm leading-6 text-gray-700">
+                        Основной способ подключения VK скоро будет через VK ID. Ниже уже
+                        подключаем официальный вход VK ID.
+                      </p>
+
+                      <div className="mt-4 min-h-[48px]" ref={vkIdContainerRef} />
+                      {vkIdAuthorized ? (
+                        <div className="mt-3 rounded-2xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
+                          VK ID авторизация получена
+                        </div>
+                      ) : null}
+
+                      {!vkIdReady ? (
+                        <p className="mt-3 text-sm text-gray-500">
+                          Загружаем VK ID...
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  </div>
                 </div>
-              </div>
             )}
            <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -852,6 +952,7 @@ export default function BookingForm() {
           </button>
         </form>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
