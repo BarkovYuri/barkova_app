@@ -34,6 +34,9 @@ def _validate_legal_flags(attrs):
 
 
 def _get_available_slot_or_error(slot_id):
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+
     try:
         slot = TimeSlot.objects.get(id=slot_id, is_active=True)
     except TimeSlot.DoesNotExist:
@@ -41,6 +44,18 @@ def _get_available_slot_or_error(slot_id):
 
     if slot.is_booked:
         raise serializers.ValidationError({"slot_id": "Этот слот уже занят."})
+
+    current_tz = timezone.get_current_timezone()
+    slot_dt = timezone.make_aware(
+        datetime.combine(slot.date, slot.start_time),
+        current_tz,
+    )
+    threshold = timezone.now() + timedelta(hours=1)
+
+    if slot_dt <= threshold:
+        raise serializers.ValidationError(
+            {"slot_id": "Запись на это время уже закрыта. Выберите слот позже чем через 1 час."}
+        )
 
     return slot
 

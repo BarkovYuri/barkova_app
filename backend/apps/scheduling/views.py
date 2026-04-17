@@ -2,6 +2,8 @@ from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 from apps.core.permissions import IsAdminUser
 
@@ -37,11 +39,23 @@ class AvailableSlotsView(APIView):
         if not date:
             raise serializers.ValidationError({"date": "Параметр date обязателен."})
 
-        slots = TimeSlot.objects.filter(
+        raw_slots = TimeSlot.objects.filter(
             date=date,
             is_booked=False,
             is_active=True,
         ).order_by("start_time")
+
+        threshold = timezone.now() + timedelta(hours=1)
+        current_tz = timezone.get_current_timezone()
+
+        slots = []
+        for slot in raw_slots:
+            slot_dt = timezone.make_aware(
+                datetime.combine(slot.date, slot.start_time),
+                current_tz,
+            )
+            if slot_dt > threshold:
+                slots.append(slot)
 
         serializer = TimeSlotSerializer(slots, many=True)
         return Response(serializer.data)
