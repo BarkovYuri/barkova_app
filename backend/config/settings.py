@@ -161,4 +161,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.scheduling.tasks.deactivate_near_slots",
         "schedule": 300.0,
     },
+    "send-appointment-reminders-every-minute": {
+        "task": "apps.appointments.tasks.send_appointment_reminders",
+        "schedule": 60.0,
+    },
 }

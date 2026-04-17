@@ -332,9 +332,9 @@ def _format_appointment_status_text(appointment) -> str:
 
 def send_to_patient(appointment, text):
     if not appointment.telegram_chat_id:
-        return
+        return False, "", "Telegram chat_id отсутствует"
 
-    _send_telegram_text_custom(
+    return _send_telegram_text_custom(
         text=text,
         chat_id=appointment.telegram_chat_id,
     )
