@@ -9,6 +9,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
   backend:
     image: ghcr.io/barkovyuri/barkova_app-backend:latest
     restart: always
@@ -16,11 +23,34 @@ services:
       - .env
     depends_on:
       - db
+      - redis
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     expose:
       - "8000"
+
+  celery_worker:
+    image: ghcr.io/barkovyuri/barkova_app-backend:latest
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - backend
+    command: celery -A config worker -l info
+
+  celery_beat:
+    image: ghcr.io/barkovyuri/barkova_app-backend:latest
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - backend
+    command: celery -A config beat -l info
 
   telegram_bot:
     image: ghcr.io/barkovyuri/barkova_app-backend:latest
@@ -30,6 +60,7 @@ services:
     depends_on:
       - db
       - backend
+      - redis
     command: python telegram_bot.py
 
   frontend:
@@ -57,5 +88,6 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   static_volume:
   media_volume:

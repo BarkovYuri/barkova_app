@@ -133,6 +133,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME")
 
+
 VK_GROUP_TOKEN = os.getenv("VK_GROUP_TOKEN", "")
 VK_GROUP_ID = os.getenv("VK_GROUP_ID", "")
 VK_GROUP_DOMAIN = os.getenv("VK_GROUP_DOMAIN", "")
@@ -143,3 +144,21 @@ VK_ID_REDIRECT_URL = os.getenv(
     "VK_ID_REDIRECT_URL",
     "https://doctor-barkova.ru/auth/vk/callback",
 )
+
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 60 * 10
+CELERY_TASK_SOFT_TIME_LIMIT = 60 * 8
+
+CELERY_BEAT_SCHEDULE = {
+    "deactivate-near-slots-every-5-minutes": {
+        "task": "apps.scheduling.tasks.deactivate_near_slots",
+        "schedule": 300.0,
+    },
+}
