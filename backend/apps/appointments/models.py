@@ -40,6 +40,23 @@ class Appointment(models.Model):
     vk_link_token = models.CharField("VK link token", max_length=64, blank=True)
     vk_linked_at = models.DateTimeField("VK привязан", null=True, blank=True)
 
+    reminder_sent_at = models.DateTimeField("Напоминание отправлено", null=True, blank=True)
+
+    reminder_response = models.CharField(
+        "Ответ на напоминание",
+        max_length=30,
+        choices=[
+            ("", "Нет ответа"),
+            ("yes", "Смогу"),
+            ("no", "Не смогу"),
+            ("doctor_contact", "Связь с врачом"),
+        ],
+        blank=True,
+        default="",
+    )
+    reminder_response_at = models.DateTimeField("Ответ на напоминание получен", null=True, blank=True)
+    doctor_contact_requested_at = models.DateTimeField("Запрос связи с врачом", null=True, blank=True)
+
     reason = models.TextField("Причина обращения", blank=True)
 
     consent_given = models.BooleanField("Согласие на обработку данных")
