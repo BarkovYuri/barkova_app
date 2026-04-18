@@ -258,16 +258,13 @@ def handle_message_event(event: dict):
     if not peer_id or not from_id:
         return
 
-    # 1. Сначала пытаемся обработать привязку с сайта
     token = parse_connect_token(text, payload)
     if token:
         handle_connect(from_id, peer_id, token)
         return
 
-    # 2. Затем кнопки подтверждения/отмены
-    if payload and payload.get("cmd") in {"confirm", "cancel", "keep"}:
+    if payload and payload.get("cmd") in {"confirm", "cancel", "keep", "yes", "no", "doctor"}:
         handle_action(from_id, peer_id, payload)
         return
 
-    # 3. Любое обычное сообщение
     handle_regular_user_message(from_id, peer_id, text)

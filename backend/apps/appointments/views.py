@@ -493,35 +493,6 @@ class VKAutoLinkView(APIView):
 
         return Response({"status": "linked"})
 
-@authentication_classes([])
-class VKAutoLinkView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        user_id = request.data.get("user_id")
-        peer_id = request.data.get("peer_id")
-
-        if not user_id or not peer_id:
-            return Response({"detail": "user_id и peer_id обязательны"}, status=400)
-
-        from apps.appointments.models import Appointment
-
-        # Находим последнюю запись с этим vk_user_id
-        appointment = (
-            Appointment.objects.filter(vk_user_id=str(user_id))
-            .order_by("-created_at")
-            .first()
-        )
-
-        if not appointment:
-            return Response({"status": "no_appointment"})
-
-        # Привязываем peer_id
-        if not appointment.vk_peer_id:
-            appointment.vk_peer_id = str(peer_id)
-            appointment.save(update_fields=["vk_peer_id"])
-
-        return Response({"status": "linked"})
 
 @authentication_classes([])
 class VKAppointmentActionView(APIView):

@@ -131,17 +131,18 @@ def handle_callback(callback_query: dict):
         answer_callback_query(callback_query_id, "Некорректная команда.")
         return
 
-    if action not in {"confirm", "cancel", "keep"}:
+    allowed_actions = {"confirm", "cancel", "keep", "yes", "no", "doctor"}
+    if action not in allowed_actions:
         answer_callback_query(callback_query_id, "Неизвестное действие.")
         return
-    
+
     if action == "keep":
         answer_callback_query(callback_query_id, "Запись оставлена без изменений.")
         edit_message_text(chat_id, message_id, "✅ Запись оставлена без изменений")
         return
 
     try:
-        result = backend_post(
+        backend_post(
             "/api/appointments/telegram/action/",
             {
                 "appointment_id": appointment_id,
@@ -154,9 +155,18 @@ def handle_callback(callback_query: dict):
         if action == "confirm":
             answer_callback_query(callback_query_id, "Запись подтверждена.")
             edit_message_text(chat_id, message_id, "✅ Запись подтверждена")
-        else:
+        elif action == "cancel":
             answer_callback_query(callback_query_id, "Запись отменена.")
             edit_message_text(chat_id, message_id, "❌ Запись отменена")
+        elif action == "yes":
+            answer_callback_query(callback_query_id, "Отлично, ждём вас.")
+            edit_message_text(chat_id, message_id, "✅ Вы подтвердили, что сможете прийти")
+        elif action == "no":
+            answer_callback_query(callback_query_id, "Запись отменена.")
+            edit_message_text(chat_id, message_id, "❌ Вы сообщили, что не сможете прийти")
+        elif action == "doctor":
+            answer_callback_query(callback_query_id, "Передали врачу.")
+            edit_message_text(chat_id, message_id, "💬 Запрос на связь с врачом передан")
 
     except Exception as exc:
         answer_callback_query(callback_query_id, f"Ошибка: {exc}")
