@@ -141,6 +141,7 @@ export default function BookingForm() {
   const [vkPrelinkToken, setVkPrelinkToken] = useState("");
   const [loadingVkLink, setLoadingVkLink] = useState(false);
   const [vkIdReady, setVkIdReady] = useState(false);
+  const [vkIdLoadError, setVkIdLoadError] = useState("");
   const vkIdContainerRef = useRef<HTMLDivElement | null>(null);
   const [vkIdAuthorized, setVkIdAuthorized] = useState(false);
   const [vkIdPayload, setVkIdPayload] = useState<any>(null);
@@ -254,7 +255,16 @@ export default function BookingForm() {
         return;
       }
   
-      if (!appId || !container || !VKID) {
+      if (!container) {
+        return;
+      }
+
+      if (!appId) {
+        setVkIdLoadError("VK ID не настроен на фронтенде.");
+        return;
+      }
+
+      if (!VKID) {
         return;
       }
   
@@ -315,6 +325,7 @@ export default function BookingForm() {
         setVkIdReady(true);
       } catch (error) {
         console.error("VK ID init error", error);
+        setVkIdLoadError("Не удалось инициализировать VK ID.");
       }
     }
   
@@ -351,11 +362,13 @@ export default function BookingForm() {
     setVkIdPayload(null);
     setVkConnected(false);
     setErrorText("");
+    setVkIdLoadError("");
   }
 
   function switchToVk() {
     setContactMethod("vk");
     setErrorText("");
+    setVkIdLoadError("");
   }
 
   async function handleVkConnect() {
@@ -894,7 +907,11 @@ export default function BookingForm() {
 
                   <div className="mt-4 min-h-[50px]" ref={vkIdContainerRef} />
 
-                  {!vkIdReady ? (
+                  {vkIdLoadError ? (
+                    <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {vkIdLoadError}
+                    </div>
+                  ) : !vkIdReady ? (
                     <p className="mt-3 text-sm text-gray-500">
                       Загружаем VK...
                     </p>
