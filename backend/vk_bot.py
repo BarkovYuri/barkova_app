@@ -80,7 +80,7 @@ def should_send_vk_greeting(user_id: int | str) -> bool:
     if cache.get(cache_key):
         return False
 
-    cache.set(cache_key, "1", timeout=24 * 60 * 60)
+    cache.set(cache_key, "1", timeout=365 * 24 * 60 * 60)
     return True
 
 

@@ -5,20 +5,9 @@ from django.utils import timezone
 
 from apps.appointments.models import Appointment
 from apps.notifications.services import (
-    send_to_patient,
-    send_to_patient_vk,
+    send_reminder_with_actions_telegram,
+    send_reminder_with_actions_vk,
 )
-
-
-def _build_reminder_text(appointment) -> str:
-    return (
-        "⏰ Напоминание о консультации\n"
-        f"Сегодня консультация через 2 часа.\n"
-        f"Дата: {appointment.slot.date}\n"
-        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-        f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
-        "Сможете присутствовать?"
-    )
 
 
 @shared_task
@@ -48,31 +37,29 @@ def send_appointment_reminders():
         if not (window_start <= slot_dt <= window_end):
             continue
 
-        text = _build_reminder_text(appointment)
-
         sent = False
 
         if (
             appointment.preferred_contact_method == "telegram"
             and appointment.telegram_chat_id
         ):
-            ok, _, _ = send_to_patient(
-                appointment,
-                text,
-            ) or (False, "", "")
+            ok, _, error_text = send_reminder_with_actions_telegram(appointment)
             sent = bool(ok)
+            if not ok:
+                print(
+                    f"Telegram reminder error for appointment {appointment.id}: {error_text}"
+                )
 
         elif (
             appointment.preferred_contact_method == "vk"
             and appointment.vk_user_id
         ):
-            ok, error_text = send_to_patient_vk(
-                appointment,
-                text,
-            )
+            ok, error_text = send_reminder_with_actions_vk(appointment)
             sent = bool(ok)
             if not ok:
-                print(f"VK reminder error for appointment {appointment.id}: {error_text}")
+                print(
+                    f"VK reminder error for appointment {appointment.id}: {error_text}"
+                )
 
         if sent:
             appointment.reminder_sent_at = now
