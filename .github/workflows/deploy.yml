@@ -48,8 +48,6 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          build-args: |
-            NEXT_PUBLIC_VK_APP_ID=54546774
           tags: |
             ${{ env.IMAGE_FRONTEND }}:latest
             ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
@@ -65,13 +63,26 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          command_timeout: 45m
+          command_timeout: 60m
           script: |
             set -e
             cd /var/www/barkova_app
+
             git fetch origin main
             git reset --hard origin/main
-            docker login ghcr.io -u barkovyuri -p ${{ secrets.GHCR_PAT }}
+
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u barkovyuri --password-stdin
+
             docker pull ghcr.io/barkovyuri/barkova_app-backend:latest
             docker pull ghcr.io/barkovyuri/barkova_app-frontend:latest
-            docker compose -f docker-compose.prod.yml up -d --force-recreate backend telegram_bot frontend nginx
+
+            docker compose -f docker-compose.prod.yml up -d --force-recreate \
+              backend \
+              celery_worker \
+              celery_beat \
+              telegram_bot \
+              frontend \
+              nginx
+
+            docker image prune -a -f || true
+            docker builder prune -a -f || true

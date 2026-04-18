@@ -12,7 +12,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly no
     volumes:
       - redis_data:/data
 
@@ -59,8 +59,8 @@ services:
       - .env
     depends_on:
       - db
-      - backend
       - redis
+      - backend
     command: python telegram_bot.py
 
   frontend:
