@@ -3,6 +3,8 @@ import os
 import time
 from urllib import parse, request
 
+from django.core.cache import cache
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -71,6 +73,15 @@ def parse_connect_token(text: str, payload: dict | None):
         return text.replace("connect_", "", 1).strip()
 
     return None
+
+def should_send_vk_greeting(user_id: int | str) -> bool:
+    cache_key = f"vk_greeting_sent:{user_id}"
+
+    if cache.get(cache_key):
+        return False
+
+    cache.set(cache_key, "1", timeout=24 * 60 * 60)
+    return True
 
 
 def get_active_appointment_for_vk_user(user_id: int | str):
@@ -189,7 +200,7 @@ def handle_regular_user_message(user_id: int, peer_id: int, text: str):
     Логика:
     1. Если пользователь ожидается системой после VK ID -> делаем auto-link
     2. Если есть активная запись -> показываем кнопки действий
-    3. Иначе обычный нейтральный автоответ
+    3. Если активной записи нет -> приветственное сообщение только один раз
     """
 
     auto_linked = False
@@ -217,23 +228,24 @@ def handle_regular_user_message(user_id: int, peer_id: int, text: str):
 
     appointment = get_active_appointment_for_vk_user(user_id)
 
-    if not appointment:
+    if appointment:
+        send_message(
+            peer_id,
+            (
+                "Если вам нужно изменить запись, используйте кнопки ниже.\n"
+                f"Дата: {appointment.slot.date}\n"
+                f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                f"{appointment.slot.end_time.strftime('%H:%M')}"
+            ),
+            keyboard=build_cancel_keyboard(appointment),
+        )
+        return
+
+    if should_send_vk_greeting(user_id):
         send_message(
             peer_id,
             "Здравствуйте. Как только доктор освободится, вам обязательно ответят.",
         )
-        return
-
-    send_message(
-        peer_id,
-        (
-            "Если вам нужно изменить запись, используйте кнопки ниже.\n"
-            f"Дата: {appointment.slot.date}\n"
-            f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-            f"{appointment.slot.end_time.strftime('%H:%M')}"
-        ),
-        keyboard=build_cancel_keyboard(appointment),
-    )
 
 
 def handle_message_event(event: dict):
