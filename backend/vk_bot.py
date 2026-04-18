@@ -156,7 +156,7 @@ def handle_action(user_id: int, peer_id: int, payload: dict):
         send_message(peer_id, "✅ Запись оставлена без изменений.")
         return
 
-    if cmd not in {"confirm", "cancel"}:
+    if cmd not in {"confirm", "cancel", "yes", "no", "doctor"}:
         return
 
     try:
@@ -172,8 +172,14 @@ def handle_action(user_id: int, peer_id: int, payload: dict):
 
         if cmd == "confirm":
             send_message(peer_id, "✅ Запись подтверждена.")
-        else:
+        elif cmd == "cancel":
             send_message(peer_id, "❌ Запись отменена.")
+        elif cmd == "yes":
+            send_message(peer_id, "✅ Отлично, ждём вас на консультации.")
+        elif cmd == "no":
+            send_message(peer_id, "❌ Запись отменена по вашему ответу на напоминание.")
+        elif cmd == "doctor":
+            send_message(peer_id, "💬 Передали врачу, что вам нужна связь.")
     except Exception as exc:
         print("VK action error:", exc)
 

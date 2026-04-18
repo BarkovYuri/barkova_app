@@ -374,6 +374,45 @@ def send_created_message_to_patient_with_actions(appointment):
         reply_markup=reply_markup,
     )
 
+def send_reminder_with_actions_telegram(appointment):
+    if not appointment.telegram_chat_id:
+        return False, "", "Нет chat_id"
+
+    text = (
+        "⏰ Напоминание о консультации\n"
+        f"Сегодня консультация через 2 часа\n\n"
+        f"Дата: {appointment.slot.date}\n"
+        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+        f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
+        "Сможете присутствовать?"
+    )
+
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "✅ Смогу",
+                    "callback_data": f"yes:{appointment.id}:{appointment.telegram_link_token}",
+                },
+                {
+                    "text": "❌ Не смогу",
+                    "callback_data": f"no:{appointment.id}:{appointment.telegram_link_token}",
+                },
+            ],
+            [
+                {
+                    "text": "💬 Связь с врачом",
+                    "callback_data": f"doctor:{appointment.id}:{appointment.telegram_link_token}",
+                }
+            ],
+        ]
+    }
+
+    return _send_telegram_text_with_keyboard_custom(
+        text=text,
+        chat_id=appointment.telegram_chat_id,
+        reply_markup=keyboard,
+    )
 
 # =========================
 # VK public helpers
@@ -462,12 +501,89 @@ def send_created_message_to_patient_with_actions_vk(appointment):
     )
     return success, error_text
 
-    _send_vk_text_with_keyboard_custom(
+
+def send_reminder_with_actions_vk(appointment):
+    peer_id = _vk_peer_for_appointment(appointment)
+    user_id = _vk_user_for_appointment(appointment)
+
+    if not peer_id or not user_id:
+        return False, "VK peer_id или user_id отсутствует"
+
+    allowed, allowed_error = _vk_is_messages_allowed(user_id)
+    if not allowed:
+        return False, allowed_error or "Пользователь не разрешил сообщения от сообщества"
+
+    text = (
+        "⏰ Напоминание о консультации\n"
+        f"Сегодня консультация через 2 часа\n\n"
+        f"Дата: {appointment.slot.date}\n"
+        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+        f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
+        "Сможете присутствовать?"
+    )
+
+    keyboard = {
+        "one_time": False,
+        "inline": False,
+        "buttons": [
+            [
+                {
+                    "action": {
+                        "type": "text",
+                        "label": "Смогу",
+                        "payload": json.dumps(
+                            {
+                                "cmd": "yes",
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "positive",
+                },
+                {
+                    "action": {
+                        "type": "text",
+                        "label": "Не смогу",
+                        "payload": json.dumps(
+                            {
+                                "cmd": "no",
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "negative",
+                },
+            ],
+            [
+                {
+                    "action": {
+                        "type": "text",
+                        "label": "Связь с врачом",
+                        "payload": json.dumps(
+                            {
+                                "cmd": "doctor",
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "primary",
+                }
+            ],
+        ],
+    }
+
+    success, _, error_text = _send_vk_text_with_keyboard_custom(
         text=text,
         peer_id=peer_id,
         keyboard=keyboard,
     )
-
+    return success, error_text
 
 # =========================
 # Doctor notifications
@@ -531,6 +647,37 @@ def send_appointment_status_notification(appointment) -> None:
         appointment=appointment,
         channel="telegram",
         notification_type=notification_type,
+        status="pending",
+        payload={"text": text},
+    )
+
+    success, external_message_id, error_text = _send_telegram_text(text)
+
+    if success:
+        log.status = "sent"
+        log.external_message_id = external_message_id
+        log.sent_at = timezone.now()
+        log.error_text = ""
+    else:
+        log.status = "failed"
+        log.error_text = error_text
+
+    log.save(update_fields=["status", "external_message_id", "sent_at", "error_text"])
+
+def send_doctor_contact_request_notification(appointment) -> None:
+    text = (
+        "<b>Пациент просит связаться</b>\n"
+        f"Пациент: {appointment.name}\n"
+        f"Телефон: {appointment.phone}\n"
+        f"Дата: {appointment.slot.date}\n"
+        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–{appointment.slot.end_time.strftime('%H:%M')}\n"
+        f"Способ связи: {appointment.preferred_contact_method or 'не указан'}"
+    )
+
+    log = NotificationLog.objects.create(
+        appointment=appointment,
+        channel="telegram",
+        notification_type="doctor_contact",
         status="pending",
         payload={"text": text},
     )

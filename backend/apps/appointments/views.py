@@ -15,6 +15,7 @@ from apps.core.permissions import IsAdminUser
 from apps.notifications.models import TelegramPrelink, VKPrelink
 from apps.notifications.services import (
     send_appointment_status_notification,
+    send_doctor_contact_request_notification,
     send_to_patient,
     send_to_patient_vk,
 )
@@ -204,16 +205,17 @@ class TelegramAppointmentActionView(APIView):
                 appointment.save(update_fields=["status"])
                 send_appointment_status_notification(appointment)
 
-            send_to_patient(
-                appointment,
-                (
-                    "✅ Запись подтверждена\n"
-                    f"Дата: {appointment.slot.date}\n"
-                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                    f"{appointment.slot.end_time.strftime('%H:%M')}"
-                ),
-            )
-            return Response({"status": "confirmed"})
+                send_to_patient(
+                    appointment,
+                    (
+                        "✅ Запись подтверждена\n"
+                        f"Дата: {appointment.slot.date}\n"
+                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                        f"{appointment.slot.end_time.strftime('%H:%M')}"
+                    ),
+                )
+
+            return Response({"status": "confirmed", "changed": changed})
 
         if action == "cancel":
             changed = appointment.status != "cancelled"
@@ -228,16 +230,85 @@ class TelegramAppointmentActionView(APIView):
 
                 send_appointment_status_notification(appointment)
 
+                send_to_patient(
+                    appointment,
+                    (
+                        "❌ Запись отменена\n"
+                        f"Дата: {appointment.slot.date}\n"
+                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                        f"{appointment.slot.end_time.strftime('%H:%M')}"
+                    ),
+                )
+
+            return Response({"status": "cancelled", "changed": changed})
+
+        if action == "yes":
+            appointment.reminder_response = "yes"
+            appointment.reminder_response_at = timezone.now()
+            appointment.save(update_fields=["reminder_response", "reminder_response_at"])
+
             send_to_patient(
                 appointment,
                 (
-                    "❌ Запись отменена\n"
+                    "✅ Отлично, ждём вас на консультации.\n"
                     f"Дата: {appointment.slot.date}\n"
                     f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                     f"{appointment.slot.end_time.strftime('%H:%M')}"
                 ),
             )
-            return Response({"status": "cancelled"})
+
+            return Response({"status": "reminder_yes"})
+
+        if action == "no":
+            appointment.reminder_response = "no"
+            appointment.reminder_response_at = timezone.now()
+
+            changed = appointment.status != "cancelled"
+            if changed:
+                appointment.status = "cancelled"
+
+            appointment.save(
+                update_fields=["reminder_response", "reminder_response_at", "status"]
+            )
+
+            if changed:
+                slot = appointment.slot
+                slot.is_booked = False
+                slot.save(update_fields=["is_booked"])
+                send_appointment_status_notification(appointment)
+
+            send_to_patient(
+                appointment,
+                (
+                    "❌ Запись отменена по вашему ответу на напоминание.\n"
+                    f"Дата: {appointment.slot.date}\n"
+                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                    f"{appointment.slot.end_time.strftime('%H:%M')}"
+                ),
+            )
+
+            return Response({"status": "reminder_no", "changed": changed})
+
+        if action == "doctor":
+            appointment.reminder_response = "doctor_contact"
+            appointment.reminder_response_at = timezone.now()
+            appointment.doctor_contact_requested_at = timezone.now()
+            appointment.save(
+                update_fields=[
+                    "reminder_response",
+                    "reminder_response_at",
+                    "doctor_contact_requested_at",
+                ]
+            )
+
+            send_doctor_contact_request_notification(appointment)
+
+            send_to_patient(
+                appointment,
+                "💬 Передали врачу, что вам нужна связь. С вами свяжутся.",
+            )
+
+            return Response({"status": "doctor_contact_requested"})
 
         return Response(
             {"detail": "Неизвестное действие."},
@@ -531,6 +602,74 @@ class VKAppointmentActionView(APIView):
                 )
 
             return Response({"status": "cancelled", "changed": changed})
+
+        if action == "yes":
+            appointment.reminder_response = "yes"
+            appointment.reminder_response_at = timezone.now()
+            appointment.save(update_fields=["reminder_response", "reminder_response_at"])
+
+            send_to_patient_vk(
+                appointment,
+                (
+                    "✅ Отлично, ждём вас на консультации.\n"
+                    f"Дата: {appointment.slot.date}\n"
+                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                    f"{appointment.slot.end_time.strftime('%H:%M')}"
+                ),
+            )
+
+            return Response({"status": "reminder_yes"})
+
+        if action == "no":
+            appointment.reminder_response = "no"
+            appointment.reminder_response_at = timezone.now()
+
+            changed = appointment.status != "cancelled"
+            if changed:
+                appointment.status = "cancelled"
+
+            appointment.save(
+                update_fields=["reminder_response", "reminder_response_at", "status"]
+            )
+
+            if changed:
+                slot = appointment.slot
+                slot.is_booked = False
+                slot.save(update_fields=["is_booked"])
+                send_appointment_status_notification(appointment)
+
+            send_to_patient_vk(
+                appointment,
+                (
+                    "❌ Запись отменена по вашему ответу на напоминание.\n"
+                    f"Дата: {appointment.slot.date}\n"
+                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                    f"{appointment.slot.end_time.strftime('%H:%M')}"
+                ),
+            )
+
+            return Response({"status": "reminder_no", "changed": changed})
+
+        if action == "doctor":
+            appointment.reminder_response = "doctor_contact"
+            appointment.reminder_response_at = timezone.now()
+            appointment.doctor_contact_requested_at = timezone.now()
+            appointment.save(
+                update_fields=[
+                    "reminder_response",
+                    "reminder_response_at",
+                    "doctor_contact_requested_at",
+                ]
+            )
+
+            send_doctor_contact_request_notification(appointment)
+
+            send_to_patient_vk(
+                appointment,
+                "💬 Передали врачу, что вам нужна связь. С вами свяжутся.",
+            )
+
+            return Response({"status": "doctor_contact_requested"})
 
         return Response(
             {"detail": "Неизвестное действие."},
