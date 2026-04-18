@@ -477,7 +477,7 @@ def send_created_message_to_patient_with_actions_vk(appointment):
             [
                 {
                     "action": {
-                        "type": "text",
+                        "type": "callback",
                         "label": "Подтвердить",
                         "payload": json.dumps(
                             {
@@ -492,11 +492,11 @@ def send_created_message_to_patient_with_actions_vk(appointment):
                 },
                 {
                     "action": {
-                        "type": "text",
+                        "type": "callback",
                         "label": "Отменить",
                         "payload": json.dumps(
                             {
-                                "cmd": "cancel",
+                                "cmd": "cancel_request",
                                 "appointment_id": appointment.id,
                                 "token": appointment.vk_link_token,
                             },
@@ -530,7 +530,7 @@ def send_reminder_with_actions_vk(appointment):
 
     text = (
         "⏰ Напоминание о консультации\n"
-        f"Сегодня консультация через 2 часа\n\n"
+        "Сегодня консультация через 2 часа\n\n"
         f"Дата: {appointment.slot.date}\n"
         f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
         f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
@@ -544,7 +544,7 @@ def send_reminder_with_actions_vk(appointment):
             [
                 {
                     "action": {
-                        "type": "text",
+                        "type": "callback",
                         "label": "Смогу",
                         "payload": json.dumps(
                             {
@@ -559,11 +559,11 @@ def send_reminder_with_actions_vk(appointment):
                 },
                 {
                     "action": {
-                        "type": "text",
+                        "type": "callback",
                         "label": "Не смогу",
                         "payload": json.dumps(
                             {
-                                "cmd": "no",
+                                "cmd": "cancel_request",
                                 "appointment_id": appointment.id,
                                 "token": appointment.vk_link_token,
                             },
@@ -576,7 +576,7 @@ def send_reminder_with_actions_vk(appointment):
             [
                 {
                     "action": {
-                        "type": "text",
+                        "type": "callback",
                         "label": "Связь с врачом",
                         "payload": json.dumps(
                             {
