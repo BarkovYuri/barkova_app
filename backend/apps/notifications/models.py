@@ -89,3 +89,30 @@ class VKPrelink(models.Model):
 
     def __str__(self):
         return self.token
+    
+class VKDialogState(models.Model):
+    STATE_CHOICES = [
+        ("idle", "Ожидание"),
+        ("has_active_appointment", "Есть активная запись"),
+        ("confirm_cancel", "Подтверждение отмены"),
+    ]
+
+    user_id = models.CharField("VK user id", max_length=50, unique=True)
+    peer_id = models.CharField("VK peer id", max_length=50, blank=True)
+    appointment = models.ForeignKey(
+        Appointment,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="vk_dialog_states",
+    )
+    state = models.CharField("Состояние", max_length=50, choices=STATE_CHOICES, default="idle")
+    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+
+    class Meta:
+        verbose_name = "Состояние VK-диалога"
+        verbose_name_plural = "Состояния VK-диалогов"
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.user_id} / {self.state}"

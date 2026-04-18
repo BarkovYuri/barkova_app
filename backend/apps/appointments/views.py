@@ -660,13 +660,37 @@ class VKCallbackView(APIView):
 
     def post(self, request):
         data = request.data
+        event_type = data.get("type")
 
-        if data.get("type") == "confirmation":
+        if event_type == "confirmation":
             return HttpResponse(settings.VK_CALLBACK_CONFIRMATION_CODE)
 
-        if data.get("type") == "message_new":
+        if event_type == "message_new":
             from vk_bot import handle_message_event
             handle_message_event(data)
+            return HttpResponse("ok")
+
+        if event_type == "message_event":
+            from vk_bot import handle_message_event
+            handle_message_event(data)
+
+            event_object = data.get("object", {})
+            event_id = event_object.get("event_id")
+            user_id = event_object.get("user_id")
+            peer_id = event_object.get("peer_id")
+
+            if event_id and user_id and peer_id:
+                from apps.notifications.services import _vk_request
+
+                _vk_request(
+                    "messages.sendMessageEventAnswer",
+                    {
+                        "event_id": event_id,
+                        "user_id": user_id,
+                        "peer_id": peer_id,
+                    },
+                )
+
             return HttpResponse("ok")
 
         return HttpResponse("ok")
