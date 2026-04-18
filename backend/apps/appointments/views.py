@@ -18,6 +18,7 @@ from apps.notifications.services import (
     send_doctor_contact_request_notification,
     send_to_patient,
     send_to_patient_vk,
+    get_vk_remove_keyboard,
 )
 from .models import Appointment
 from .serializers import (
@@ -537,15 +538,16 @@ class VKAppointmentActionView(APIView):
                 appointment.save(update_fields=["status"])
                 send_appointment_status_notification(appointment)
 
-                send_to_patient_vk(
-                    appointment,
-                    (
-                        "✅ Запись подтверждена\n"
-                        f"Дата: {appointment.slot.date}\n"
-                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                        f"{appointment.slot.end_time.strftime('%H:%M')}"
-                    ),
-                )
+            send_to_patient_vk(
+                appointment,
+                (
+                    "✅ Запись подтверждена\n"
+                    f"Дата: {appointment.slot.date}\n"
+                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                    f"{appointment.slot.end_time.strftime('%H:%M')}"
+                ),
+                keyboard=get_vk_remove_keyboard(),
+            )
 
             return Response({"status": "confirmed", "changed": changed})
 
@@ -562,15 +564,16 @@ class VKAppointmentActionView(APIView):
 
                 send_appointment_status_notification(appointment)
 
-                send_to_patient_vk(
-                    appointment,
-                    (
-                        "❌ Запись отменена\n"
-                        f"Дата: {appointment.slot.date}\n"
-                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                        f"{appointment.slot.end_time.strftime('%H:%M')}"
-                    ),
-                )
+            send_to_patient_vk(
+                appointment,
+                (
+                    "❌ Запись отменена\n"
+                    f"Дата: {appointment.slot.date}\n"
+                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                    f"{appointment.slot.end_time.strftime('%H:%M')}"
+                ),
+                keyboard=get_vk_remove_keyboard(),
+            )
 
             return Response({"status": "cancelled", "changed": changed})
 
@@ -587,6 +590,7 @@ class VKAppointmentActionView(APIView):
                     f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                     f"{appointment.slot.end_time.strftime('%H:%M')}"
                 ),
+                keyboard=get_vk_remove_keyboard(),
             )
 
             return Response({"status": "reminder_yes"})
@@ -617,6 +621,7 @@ class VKAppointmentActionView(APIView):
                     f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                     f"{appointment.slot.end_time.strftime('%H:%M')}"
                 ),
+                keyboard=get_vk_remove_keyboard(),
             )
 
             return Response({"status": "reminder_no", "changed": changed})
@@ -638,6 +643,7 @@ class VKAppointmentActionView(APIView):
             send_to_patient_vk(
                 appointment,
                 "💬 Передали врачу, что вам нужна связь. С вами свяжутся.",
+                keyboard=get_vk_remove_keyboard(),
             )
 
             return Response({"status": "doctor_contact_requested"})

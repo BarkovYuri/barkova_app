@@ -418,7 +418,7 @@ def send_reminder_with_actions_telegram(appointment):
 # VK public helpers
 # =========================
 
-def send_to_patient_vk(appointment, text):
+def send_to_patient_vk(appointment, text, keyboard: dict | None = None):
     peer_id = _vk_peer_for_appointment(appointment)
     user_id = _vk_user_for_appointment(appointment)
 
@@ -429,11 +429,26 @@ def send_to_patient_vk(appointment, text):
     if not allowed:
         return False, allowed_error or "Пользователь не разрешил сообщения от сообщества"
 
-    success, _, error_text = _send_vk_text_custom(
-        text=text,
-        peer_id=peer_id,
-    )
+    if keyboard is not None:
+        success, _, error_text = _send_vk_text_with_keyboard_custom(
+            text=text,
+            peer_id=peer_id,
+            keyboard=keyboard,
+        )
+    else:
+        success, _, error_text = _send_vk_text_custom(
+            text=text,
+            peer_id=peer_id,
+        )
+
     return success, error_text
+
+def get_vk_remove_keyboard():
+    return {
+        "one_time": False,
+        "inline": False,
+        "buttons": [],
+    }
 
 
 def send_created_message_to_patient_with_actions_vk(appointment):

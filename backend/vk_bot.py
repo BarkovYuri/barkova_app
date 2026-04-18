@@ -180,17 +180,6 @@ def handle_action(user_id: int, peer_id: int, payload: dict):
                 "user_id": str(user_id),
             },
         )
-
-        if cmd == "confirm":
-            send_message(peer_id, "✅ Запись подтверждена.")
-        elif cmd == "cancel":
-            send_message(peer_id, "❌ Запись отменена.")
-        elif cmd == "yes":
-            send_message(peer_id, "✅ Отлично, ждём вас на консультации.")
-        elif cmd == "no":
-            send_message(peer_id, "❌ Запись отменена по вашему ответу на напоминание.")
-        elif cmd == "doctor":
-            send_message(peer_id, "💬 Передали врачу, что вам нужна связь.")
     except Exception as exc:
         print("VK action error:", exc)
 
