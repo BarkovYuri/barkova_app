@@ -50,10 +50,24 @@ def send_message(peer_id: int | str, text: str, keyboard: dict | None = None):
     return vk_api("messages.send", payload)
 
 
+def answer_message_event(event_id: str, user_id: int | str, peer_id: int | str):
+    return vk_api(
+        "messages.sendMessageEventAnswer",
+        {
+            "event_id": event_id,
+            "user_id": str(user_id),
+            "peer_id": str(peer_id),
+            "event_data": json.dumps({"type": "show_snackbar", "text": "Обрабатываю..."}, ensure_ascii=False),
+        },
+    )
+
+
 def parse_payload(raw_payload):
     if not raw_payload:
         return None
     try:
+        if isinstance(raw_payload, dict):
+            return raw_payload
         return json.loads(raw_payload)
     except Exception:
         return None
@@ -72,7 +86,6 @@ def parse_connect_token(text: str, payload: dict | None):
 
 
 def should_send_vk_greeting(user_id: int | str) -> bool:
-    import os
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
     import django
     django.setup()
@@ -227,7 +240,7 @@ def handle_connect(user_id: int, peer_id: int, token: str):
         print("VK connect error:", exc)
 
 
-def handle_action(user_id: int, peer_id: int, payload: dict):
+def handle_callback_action(user_id: int, peer_id: int, payload: dict):
     cmd = payload.get("cmd")
     appointment_id = payload.get("appointment_id")
     token = payload.get("token")
@@ -283,14 +296,28 @@ def handle_action(user_id: int, peer_id: int, payload: dict):
         print("VK action error:", exc)
 
 
-def handle_regular_user_message(user_id: int, peer_id: int, text: str):
+def handle_new_message_event(event: dict):
+    message = event.get("object", {}).get("message", {})
+    text = (message.get("text") or "").strip()
+    peer_id = message.get("peer_id")
+    from_id = message.get("from_id")
+    payload = parse_payload(message.get("payload"))
+
+    if not peer_id or not from_id:
+        return
+
+    token = parse_connect_token(text, payload)
+    if token:
+        handle_connect(from_id, peer_id, token)
+        return
+
     auto_linked = False
 
     try:
         result = backend_post(
             "/api/appointments/vk/auto-link/",
             {
-                "user_id": str(user_id),
+                "user_id": str(from_id),
                 "peer_id": str(peer_id),
             },
         )
@@ -305,8 +332,8 @@ def handle_regular_user_message(user_id: int, peer_id: int, text: str):
         )
         return
 
-    appointment = get_active_appointment_for_vk_user(user_id)
-    dialog_state = get_dialog_state(user_id)
+    appointment = get_active_appointment_for_vk_user(from_id)
+    dialog_state = get_dialog_state(from_id)
 
     if appointment:
         same_appointment = (
@@ -326,44 +353,35 @@ def handle_regular_user_message(user_id: int, peer_id: int, text: str):
                 ),
                 keyboard=build_manage_keyboard(appointment),
             )
-            set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
+            set_dialog_state(from_id, peer_id, "has_active_appointment", appointment)
 
         return
 
-    reset_dialog_state(user_id, peer_id)
+    reset_dialog_state(from_id, peer_id)
 
-    if should_send_vk_greeting(user_id):
+    if should_send_vk_greeting(from_id):
         send_message(
             peer_id,
             "Здравствуйте. Как только доктор освободится, вам обязательно ответят.",
         )
 
 
-def handle_message_event(event: dict):
-    message = event.get("object", {}).get("message", {})
-    text = (message.get("text") or "").strip()
-    peer_id = message.get("peer_id")
-    from_id = message.get("from_id")
-    payload = parse_payload(message.get("payload"))
+def handle_callback_event(event: dict):
+    event_object = event.get("object", {})
+    event_id = event_object.get("event_id")
+    user_id = event_object.get("user_id")
+    peer_id = event_object.get("peer_id")
+    payload = parse_payload(event_object.get("payload"))
 
-    if not peer_id or not from_id:
+    if not event_id or not user_id or not peer_id:
         return
 
-    token = parse_connect_token(text, payload)
-    if token:
-        handle_connect(from_id, peer_id, token)
+    try:
+        answer_message_event(event_id, user_id, peer_id)
+    except Exception as exc:
+        print("VK message_event answer error:", exc)
+
+    if not payload:
         return
 
-    if payload and payload.get("cmd") in {
-        "confirm",
-        "cancel_request",
-        "cancel_confirm",
-        "cancel_keep",
-        "yes",
-        "no",
-        "doctor",
-    }:
-        handle_action(from_id, peer_id, payload)
-        return
-
-    handle_regular_user_message(from_id, peer_id, text)
+    handle_callback_action(user_id, peer_id, payload)

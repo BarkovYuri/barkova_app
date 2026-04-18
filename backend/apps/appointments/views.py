@@ -666,31 +666,13 @@ class VKCallbackView(APIView):
             return HttpResponse(settings.VK_CALLBACK_CONFIRMATION_CODE)
 
         if event_type == "message_new":
-            from vk_bot import handle_message_event
-            handle_message_event(data)
+            from vk_bot import handle_new_message_event
+            handle_new_message_event(data)
             return HttpResponse("ok")
 
         if event_type == "message_event":
-            from vk_bot import handle_message_event
-            handle_message_event(data)
-
-            event_object = data.get("object", {})
-            event_id = event_object.get("event_id")
-            user_id = event_object.get("user_id")
-            peer_id = event_object.get("peer_id")
-
-            if event_id and user_id and peer_id:
-                from apps.notifications.services import _vk_request
-
-                _vk_request(
-                    "messages.sendMessageEventAnswer",
-                    {
-                        "event_id": event_id,
-                        "user_id": user_id,
-                        "peer_id": peer_id,
-                    },
-                )
-
+            from vk_bot import handle_callback_event
+            handle_callback_event(data)
             return HttpResponse("ok")
 
         return HttpResponse("ok")
