@@ -21,6 +21,15 @@ class NotificationLogAdmin(admin.ModelAdmin):
 
 @admin.register(VKDialogState)
 class VKDialogStateAdmin(admin.ModelAdmin):
-    list_display = ("user_id", "peer_id", "state", "appointment", "updated_at")
-    list_filter = ("state", "updated_at")
+    list_display = (
+        "user_id",
+        "peer_id",
+        "state",
+        "last_menu_kind",
+        "appointment",
+        "last_menu_sent_at",
+        "last_action_at",
+        "updated_at",
+    )
+    list_filter = ("state", "last_menu_kind", "updated_at")
     search_fields = ("user_id", "peer_id", "appointment__name", "appointment__phone")

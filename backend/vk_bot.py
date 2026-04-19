@@ -131,17 +131,65 @@ def get_dialog_state(user_id: int | str):
     return state
 
 
-def set_dialog_state(user_id: int | str, peer_id: int | str, state_name: str, appointment=None):
+def set_dialog_state(
+    user_id: int | str,
+    peer_id: int | str,
+    state_name: str,
+    appointment=None,
+    last_menu_kind: str | None = None,
+    touch_action: bool = False,
+):
+    from django.utils import timezone
+
     state = get_dialog_state(user_id)
     state.peer_id = str(peer_id)
     state.state = state_name
     state.appointment = appointment
-    state.save(update_fields=["peer_id", "state", "appointment", "updated_at"])
+
+    update_fields = ["peer_id", "state", "appointment", "updated_at"]
+
+    if last_menu_kind is not None:
+        state.last_menu_kind = last_menu_kind
+        update_fields.append("last_menu_kind")
+
+    if touch_action:
+        state.last_action_at = timezone.now()
+        update_fields.append("last_action_at")
+
+    state.save(update_fields=update_fields)
     return state
 
 
 def reset_dialog_state(user_id: int | str, peer_id: int | str):
-    return set_dialog_state(user_id, peer_id, "idle", appointment=None)
+    return set_dialog_state(
+        user_id,
+        peer_id,
+        "idle",
+        appointment=None,
+        last_menu_kind="none",
+    )
+
+def can_send_menu(dialog_state, menu_kind: str, cooldown_seconds: int = 600) -> bool:
+    from django.utils import timezone
+
+    if dialog_state.last_menu_kind != menu_kind:
+        return True
+
+    if not dialog_state.last_menu_sent_at:
+        return True
+
+    delta = timezone.now() - dialog_state.last_menu_sent_at
+    return delta.total_seconds() >= cooldown_seconds
+
+
+def mark_menu_sent(user_id: int | str, menu_kind: str):
+    from django.utils import timezone
+
+    state = get_dialog_state(user_id)
+    state.last_menu_kind = menu_kind
+    state.last_menu_sent_at = timezone.now()
+    state.save(update_fields=["last_menu_kind", "last_menu_sent_at", "updated_at"])
+    return state
 
 
 def get_dialog_appointment(user_id: int | str):
@@ -158,6 +206,25 @@ def get_effective_appointment(user_id: int | str):
     return get_active_appointment_for_vk_user(user_id)
 
 
+def build_booking_keyboard():
+    return {
+        "one_time": False,
+        "inline": False,
+        "buttons": [
+            [
+                {
+                    "action": {
+                        "type": "open_link",
+                        "label": "Записаться на консультацию",
+                        "link": "https://doctor-barkova.ru/booking",
+                        "payload": json.dumps({"cmd": "open_booking"}, ensure_ascii=False),
+                    }
+                }
+            ]
+        ],
+    }
+
+
 def build_manage_keyboard(appointment):
     return {
         "one_time": False,
@@ -167,22 +234,7 @@ def build_manage_keyboard(appointment):
                 {
                     "action": {
                         "type": "callback",
-                        "label": "Подтвердить",
-                        "payload": json.dumps(
-                            {
-                                "cmd": "confirm",
-                                "appointment_id": appointment.id,
-                                "token": appointment.vk_link_token,
-                            },
-                            ensure_ascii=False,
-                        ),
-                    },
-                    "color": "positive",
-                },
-                {
-                    "action": {
-                        "type": "callback",
-                        "label": "Отменить",
+                        "label": "Отменить запись",
                         "payload": json.dumps(
                             {
                                 "cmd": "cancel_request",
@@ -193,6 +245,21 @@ def build_manage_keyboard(appointment):
                         ),
                     },
                     "color": "negative",
+                },
+                {
+                    "action": {
+                        "type": "callback",
+                        "label": "Связь с врачом",
+                        "payload": json.dumps(
+                            {
+                                "cmd": "doctor",
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "primary",
                 },
             ]
         ],
@@ -265,7 +332,6 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
 
     appointment = get_effective_appointment(user_id)
 
-    # Если callback пришел по конкретной записи — предпочитаем ее
     if appointment and appointment_id and str(appointment.id) != str(appointment_id):
         if appointment.status not in {"new", "confirmed"}:
             appointment = None
@@ -282,13 +348,28 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
                 ),
                 keyboard=build_cancel_confirm_keyboard(appointment),
             )
-            set_dialog_state(user_id, peer_id, "confirm_cancel", appointment)
+            set_dialog_state(
+                user_id,
+                peer_id,
+                "confirm_cancel",
+                appointment,
+                last_menu_kind="cancel_confirm",
+                touch_action=True,
+            )
+            mark_menu_sent(user_id, "cancel_confirm")
         return
 
     if cmd == "cancel_keep":
         if appointment:
             send_message(peer_id, "✅ Запись оставлена без изменений.")
-            set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
+            set_dialog_state(
+                user_id,
+                peer_id,
+                "has_active_appointment",
+                appointment,
+                last_menu_kind="active_appointment",
+                touch_action=True,
+            )
         else:
             reset_dialog_state(user_id, peer_id)
         return
@@ -310,23 +391,39 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
             },
         )
 
-        # Если действие не изменило состояние, не переключаемся хаотично
         changed = bool(result.get("changed", True))
 
         if cmd == "confirm":
-            if appointment and changed:
-                set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
-            elif appointment:
-                set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
+            if appointment:
+                set_dialog_state(
+                    user_id,
+                    peer_id,
+                    "has_active_appointment",
+                    appointment,
+                    last_menu_kind="active_appointment",
+                    touch_action=True,
+                )
             else:
                 reset_dialog_state(user_id, peer_id)
+
         elif cmd in {"cancel", "no"}:
             reset_dialog_state(user_id, peer_id)
+
         elif cmd == "doctor":
-            if appointment:
-                set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
+            if changed:
+                reset_dialog_state(user_id, peer_id)
+            elif appointment:
+                set_dialog_state(
+                    user_id,
+                    peer_id,
+                    "has_active_appointment",
+                    appointment,
+                    last_menu_kind="active_appointment",
+                    touch_action=True,
+                )
             else:
                 reset_dialog_state(user_id, peer_id)
+
         else:
             reset_dialog_state(user_id, peer_id)
 
@@ -372,14 +469,16 @@ def handle_new_message_event(event: dict):
     dialog_state = get_dialog_state(from_id)
     appointment = get_effective_appointment(from_id)
 
-    # Если активной записи нет — чистим state и максимум один раз шлем приветствие
     if not appointment:
         reset_dialog_state(from_id, peer_id)
-        if should_send_vk_greeting(from_id):
+
+        if can_send_menu(dialog_state, "booking", cooldown_seconds=600):
             send_message(
                 peer_id,
-                "Здравствуйте. Как только доктор освободится, вам обязательно ответят.",
+                "Здравствуйте. Вы можете записаться на консультацию по кнопке ниже.",
+                keyboard=build_booking_keyboard(),
             )
+            mark_menu_sent(from_id, "booking")
         return
 
     same_appointment = (
@@ -387,22 +486,29 @@ def handle_new_message_event(event: dict):
         and dialog_state.appointment.id == appointment.id
     )
 
-    # Если уже в сценарии этой же записи, не спамим повторными меню на обычный текст
     if dialog_state.state in {"has_active_appointment", "confirm_cancel"} and same_appointment:
         return
 
-    send_message(
-        peer_id,
-        (
-            "У вас есть активная запись.\n"
-            f"Дата: {appointment.slot.date}\n"
-            f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-            f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
-            "Используйте кнопки ниже, если хотите изменить запись."
-        ),
-        keyboard=build_manage_keyboard(appointment),
-    )
-    set_dialog_state(from_id, peer_id, "has_active_appointment", appointment)
+    if can_send_menu(dialog_state, "active_appointment", cooldown_seconds=600):
+        send_message(
+            peer_id,
+            (
+                "У вас есть активная запись.\n"
+                f"Дата: {appointment.slot.date}\n"
+                f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
+                "Вы можете отменить запись или запросить связь с врачом."
+            ),
+            keyboard=build_manage_keyboard(appointment),
+        )
+        set_dialog_state(
+            from_id,
+            peer_id,
+            "has_active_appointment",
+            appointment,
+            last_menu_kind="active_appointment",
+        )
+        mark_menu_sent(from_id, "active_appointment")
 
 
 def handle_callback_event(event: dict):

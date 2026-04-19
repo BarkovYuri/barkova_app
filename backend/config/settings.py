@@ -144,6 +144,7 @@ VK_ID_REDIRECT_URL = os.getenv(
     "VK_ID_REDIRECT_URL",
     "https://doctor-barkova.ru/auth/vk/callback",
 )
+VK_CALLBACK_SECRET = os.getenv("VK_CALLBACK_SECRET", "")
 
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")

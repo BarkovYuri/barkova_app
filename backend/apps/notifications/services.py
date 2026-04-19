@@ -9,6 +9,13 @@ from django.utils import timezone
 
 from .models import NotificationLog
 
+from .vk_constants import (
+    VK_CMD_CONFIRM,
+    VK_CMD_CANCEL_REQUEST,
+    VK_CMD_YES,
+    VK_CMD_DOCTOR,
+)
+
 
 # =========================
 # Telegram
@@ -451,26 +458,14 @@ def get_vk_remove_keyboard():
     }
 
 
-def send_created_message_to_patient_with_actions_vk(appointment):
-    peer_id = _vk_peer_for_appointment(appointment)
-    user_id = _vk_user_for_appointment(appointment)
+def get_vk_remove_keyboard():
+    return {
+        "buttons": []
+    }
 
-    if not peer_id or not user_id:
-        return False, "VK peer_id или user_id отсутствует"
 
-    allowed, allowed_error = _vk_is_messages_allowed(user_id)
-    if not allowed:
-        return False, allowed_error or "Пользователь не разрешил сообщения от сообщества"
-
-    text = (
-        "✅ Вы записаны на онлайн-консультацию\n"
-        f"Дата: {appointment.slot.date}\n"
-        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–{appointment.slot.end_time.strftime('%H:%M')}\n\n"
-        "Пожалуйста, подтвердите запись кнопкой ниже.\n"
-        "Если планы изменятся, вы сможете отменить запись."
-    )
-
-    keyboard = {
+def build_vk_new_appointment_keyboard(appointment):
+    return {
         "one_time": False,
         "inline": False,
         "buttons": [
@@ -481,7 +476,7 @@ def send_created_message_to_patient_with_actions_vk(appointment):
                         "label": "Подтвердить",
                         "payload": json.dumps(
                             {
-                                "cmd": "confirm",
+                                "cmd": VK_CMD_CONFIRM,
                                 "appointment_id": appointment.id,
                                 "token": appointment.vk_link_token,
                             },
@@ -496,7 +491,7 @@ def send_created_message_to_patient_with_actions_vk(appointment):
                         "label": "Отменить",
                         "payload": json.dumps(
                             {
-                                "cmd": "cancel_request",
+                                "cmd": VK_CMD_CANCEL_REQUEST,
                                 "appointment_id": appointment.id,
                                 "token": appointment.vk_link_token,
                             },
@@ -509,35 +504,50 @@ def send_created_message_to_patient_with_actions_vk(appointment):
         ],
     }
 
-    success, _, error_text = _send_vk_text_with_keyboard_custom(
-        text=text,
-        peer_id=peer_id,
-        keyboard=keyboard,
-    )
-    return success, error_text
+
+def build_vk_active_appointment_keyboard(appointment):
+    return {
+        "one_time": False,
+        "inline": False,
+        "buttons": [
+            [
+                {
+                    "action": {
+                        "type": "callback",
+                        "label": "Отменить запись",
+                        "payload": json.dumps(
+                            {
+                                "cmd": VK_CMD_CANCEL_REQUEST,
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "negative",
+                },
+                {
+                    "action": {
+                        "type": "callback",
+                        "label": "Связь с врачом",
+                        "payload": json.dumps(
+                            {
+                                "cmd": VK_CMD_DOCTOR,
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "primary",
+                },
+            ]
+        ],
+    }
 
 
-def send_reminder_with_actions_vk(appointment):
-    peer_id = _vk_peer_for_appointment(appointment)
-    user_id = _vk_user_for_appointment(appointment)
-
-    if not peer_id or not user_id:
-        return False, "VK peer_id или user_id отсутствует"
-
-    allowed, allowed_error = _vk_is_messages_allowed(user_id)
-    if not allowed:
-        return False, allowed_error or "Пользователь не разрешил сообщения от сообщества"
-
-    text = (
-        "⏰ Напоминание о консультации\n"
-        "Сегодня консультация через 2 часа\n\n"
-        f"Дата: {appointment.slot.date}\n"
-        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-        f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
-        "Сможете присутствовать?"
-    )
-
-    keyboard = {
+def build_vk_reminder_keyboard(appointment):
+    return {
         "one_time": False,
         "inline": False,
         "buttons": [
@@ -548,7 +558,7 @@ def send_reminder_with_actions_vk(appointment):
                         "label": "Смогу",
                         "payload": json.dumps(
                             {
-                                "cmd": "yes",
+                                "cmd": VK_CMD_YES,
                                 "appointment_id": appointment.id,
                                 "token": appointment.vk_link_token,
                             },
@@ -563,7 +573,7 @@ def send_reminder_with_actions_vk(appointment):
                         "label": "Не смогу",
                         "payload": json.dumps(
                             {
-                                "cmd": "cancel_request",
+                                "cmd": VK_CMD_CANCEL_REQUEST,
                                 "appointment_id": appointment.id,
                                 "token": appointment.vk_link_token,
                             },
@@ -580,7 +590,7 @@ def send_reminder_with_actions_vk(appointment):
                         "label": "Связь с врачом",
                         "payload": json.dumps(
                             {
-                                "cmd": "doctor",
+                                "cmd": VK_CMD_DOCTOR,
                                 "appointment_id": appointment.id,
                                 "token": appointment.vk_link_token,
                             },
@@ -593,12 +603,38 @@ def send_reminder_with_actions_vk(appointment):
         ],
     }
 
-    success, _, error_text = _send_vk_text_with_keyboard_custom(
-        text=text,
-        peer_id=peer_id,
-        keyboard=keyboard,
+
+def send_created_message_to_patient_with_actions_vk(appointment):
+    text = (
+        "✅ Вы записаны на онлайн-консультацию\n"
+        f"Дата: {appointment.slot.date}\n"
+        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+        f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
+        "Пожалуйста, подтвердите запись кнопкой ниже."
     )
-    return success, error_text
+
+    return send_to_patient_vk(
+        appointment,
+        text,
+        keyboard=build_vk_new_appointment_keyboard(appointment),
+    )
+
+
+def send_reminder_with_actions_vk(appointment):
+    text = (
+        "⏰ Напоминание о консультации\n"
+        "Сегодня консультация через 2 часа.\n\n"
+        f"Дата: {appointment.slot.date}\n"
+        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+        f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
+        "Сможете присутствовать?"
+    )
+
+    return send_to_patient_vk(
+        appointment,
+        text,
+        keyboard=build_vk_reminder_keyboard(appointment),
+    )
 
 # =========================
 # Doctor notifications

@@ -28,6 +28,14 @@ from .serializers import (
     QuickAppointmentCreateSerializer,
 )
 
+from apps.notifications.tasks import process_vk_callback_event
+from apps.notifications.vk_serializers import VKCallbackEnvelopeSerializer
+from apps.notifications.vk_constants import (
+    VK_EVENT_CONFIRMATION,
+    VK_EVENT_MESSAGE_NEW,
+    VK_EVENT_MESSAGE_EVENT,
+)
+
 
 @authentication_classes([])
 class AppointmentCreateView(CreateAPIView):
@@ -559,8 +567,9 @@ class VKAppointmentActionView(APIView):
                 appointment.save(update_fields=["status"])
 
                 slot = appointment.slot
-                slot.is_booked = False
-                slot.save(update_fields=["is_booked"])
+                if slot.is_booked:
+                    slot.is_booked = False
+                    slot.save(update_fields=["is_booked"])
 
                 send_appointment_status_notification(appointment)
 
@@ -668,20 +677,27 @@ class VKCallbackView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        data = request.data
-        event_type = data.get("type")
+        serializer = VKCallbackEnvelopeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        if event_type == "confirmation":
+        event_type = data["type"]
+
+        if event_type == VK_EVENT_CONFIRMATION:
             return HttpResponse(settings.VK_CALLBACK_CONFIRMATION_CODE)
 
-        if event_type == "message_new":
-            from vk_bot import handle_new_message_event
-            handle_new_message_event(data)
-            return HttpResponse("ok")
+        callback_secret = getattr(settings, "VK_CALLBACK_SECRET", "")
+        incoming_secret = data.get("secret", "")
+        if callback_secret and incoming_secret != callback_secret:
+            return HttpResponse("forbidden", status=403)
 
-        if event_type == "message_event":
-            from vk_bot import handle_callback_event
-            handle_callback_event(data)
-            return HttpResponse("ok")
+        event_id = data.get("event_id")
+        if event_id:
+            cache_key = f"vk_callback_event:{event_id}"
+            if cache.get(cache_key):
+                return HttpResponse("ok")
+            cache.set(cache_key, "1", timeout=60 * 10)
+
+        process_vk_callback_event.delay(data)
 
         return HttpResponse("ok")

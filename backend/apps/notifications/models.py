@@ -89,7 +89,7 @@ class VKPrelink(models.Model):
 
     def __str__(self):
         return self.token
-    
+
 class VKDialogState(models.Model):
     STATE_CHOICES = [
         ("idle", "Ожидание"),
@@ -97,16 +97,46 @@ class VKDialogState(models.Model):
         ("confirm_cancel", "Подтверждение отмены"),
     ]
 
+    MENU_KIND_CHOICES = [
+        ("none", "Нет меню"),
+        ("booking", "Меню записи"),
+        ("active_appointment", "Меню активной записи"),
+        ("cancel_confirm", "Меню подтверждения отмены"),
+    ]
+
     user_id = models.CharField("VK user id", max_length=50, unique=True)
     peer_id = models.CharField("VK peer id", max_length=50, blank=True)
+
     appointment = models.ForeignKey(
-        Appointment,
+        "appointments.Appointment",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="vk_dialog_states",
     )
-    state = models.CharField("Состояние", max_length=50, choices=STATE_CHOICES, default="idle")
+
+    state = models.CharField(
+        "Состояние",
+        max_length=50,
+        choices=STATE_CHOICES,
+        default="idle",
+    )
+
+    last_menu_kind = models.CharField(
+        "Последнее меню",
+        max_length=50,
+        choices=MENU_KIND_CHOICES,
+        default="none",
+    )
+    last_menu_sent_at = models.DateTimeField("Последнее меню отправлено", null=True, blank=True)
+    last_action_at = models.DateTimeField("Последнее действие", null=True, blank=True)
+    last_processed_event_id = models.CharField(
+        "Последний обработанный event_id",
+        max_length=120,
+        blank=True,
+        default="",
+    )
+
     updated_at = models.DateTimeField("Обновлено", auto_now=True)
 
     class Meta:

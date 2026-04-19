@@ -137,9 +137,6 @@ export default function BookingForm() {
   const [phone, setPhone] = useState("");
   const [reason, setReason] = useState("");
   const [contactMethod, setContactMethod] = useState<"telegram" | "vk">("telegram");
-  const [vkConnected, setVkConnected] = useState(false);
-  const [vkPrelinkToken, setVkPrelinkToken] = useState("");
-  const [loadingVkLink, setLoadingVkLink] = useState(false);
   const [vkIdReady, setVkIdReady] = useState(false);
   const [vkIdLoadError, setVkIdLoadError] = useState("");
   const vkIdContainerRef = useRef<HTMLDivElement | null>(null);
@@ -310,14 +307,12 @@ export default function BookingForm() {
                 console.log("VK ID exchange success", data);
                 setVkIdAuthorized(true);
                 setVkIdPayload(data);
-                setVkConnected(true);
                 setErrorText("");
               })
               .catch((error: unknown) => {
                 console.error("VK ID exchange error", error);
                 setVkIdAuthorized(false);
                 setVkIdPayload(null);
-                setVkConnected(false);
                 setErrorText("Не удалось завершить вход через VK ID.");
               });
           });
@@ -360,7 +355,6 @@ export default function BookingForm() {
     setVkIdReady(false);
     setVkIdAuthorized(false);
     setVkIdPayload(null);
-    setVkConnected(false);
     setErrorText("");
     setVkIdLoadError("");
   }
@@ -371,57 +365,6 @@ export default function BookingForm() {
     setVkIdLoadError("");
   }
 
-  async function handleVkConnect() {
-    const popup = window.open("", "_blank");
-
-    try {
-      setLoadingVkLink(true);
-      setErrorText("");
-
-      const data = await fetchAPI("/appointments/vk/prelink", {
-        method: "POST",
-      });
-
-      setVkPrelinkToken(data.token);
-
-      if (popup) {
-        popup.location.href = data.vk_url;
-      } else {
-        window.location.href = data.vk_url;
-      }
-    } catch {
-      if (popup) {
-        popup.close();
-      }
-      setErrorText("Не удалось создать ссылку для подключения VK.");
-    } finally {
-      setLoadingVkLink(false);
-    }
-  }
-  
-  async function checkVkConnection() {
-    if (!vkPrelinkToken) {
-      setErrorText("Сначала нажмите «Подключить VK».");
-      return;
-    }
-  
-    try {
-      setErrorText("");
-  
-      const data = await fetchAPI(
-        `/appointments/vk/prelink/status?token=${vkPrelinkToken}`
-      );
-  
-      if (data?.linked) {
-        setVkConnected(true);
-      } else {
-        setVkConnected(false);
-        setErrorText("VK ещё не подтверждён. Напишите боту сообщества, затем проверьте снова.");
-      }
-    } catch {
-      setErrorText("Не удалось проверить подключение VK.");
-    }
-  }
 
   async function handleTelegramConnect() {
     const popup = window.open("", "_blank");
@@ -501,6 +444,12 @@ export default function BookingForm() {
       if (contactMethod === "vk" && vkIdPayload?.user_id) {
         formData.append("vk_user_id", String(vkIdPayload.user_id));
       }
+      if (contactMethod === "vk" && vkIdPayload?.code) {
+        formData.append("vk_id_code", String(vkIdPayload.code));
+      }
+      if (contactMethod === "vk" && vkIdPayload?.device_id) {
+        formData.append("vk_id_device_id", String(vkIdPayload.device_id));
+      }
       formData.append("slot_id", String(selectedSlotId));
       formData.append("name", name);
       formData.append("phone", phone);
@@ -510,14 +459,6 @@ export default function BookingForm() {
       formData.append("consent_given", String(consentGiven));
       formData.append("privacy_accepted", String(privacyAccepted));
       formData.append("offer_accepted", String(offerAccepted));
-
-      if (contactMethod === "vk" && vkIdPayload?.code) {
-        formData.append("vk_id_code", String(vkIdPayload.code));
-      }
-
-      if (contactMethod === "vk" && vkIdPayload?.device_id) {
-        formData.append("vk_id_device_id", String(vkIdPayload.device_id));
-      }
 
       if (files) {
         Array.from(files).forEach((file) => {
@@ -901,8 +842,7 @@ export default function BookingForm() {
               ) : (
                 <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-5">
                   <p className="text-sm leading-6 text-gray-700">
-                    Войдите через VK ID, чтобы получать уведомления и управлять записью
-                    прямо во ВКонтакте.
+                    Войдите через VK ID, чтобы получать уведомления и управлять записью во ВКонтакте.
                   </p>
 
                   <div className="mt-4 min-h-[50px]" ref={vkIdContainerRef} />
@@ -912,23 +852,22 @@ export default function BookingForm() {
                       {vkIdLoadError}
                     </div>
                   ) : !vkIdReady ? (
-                    <p className="mt-3 text-sm text-gray-500">
-                      Загружаем VK...
-                    </p>
+                    <p className="mt-3 text-sm text-gray-500">Загружаем VK...</p>
                   ) : null}
 
-                  {vkIdAuthorized ? (
-                    <div className="mt-4 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
-                      Вы успешно вошли через VK ID
+                  <div
+                    className={`mt-4 inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium ${
+                      vkIdAuthorized
+                        ? "bg-green-100 text-green-700"
+                        : "border border-gray-200 bg-white text-gray-500"
+                    }`}
+                    >
+                      {vkIdAuthorized ? "VK подключён" : "Войдите через VK ID"}
                     </div>
-                  ) : (
-                    <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
-                      Авторизуйтесь через VK ID, чтобы продолжить запись через ВКонтакте
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+           </div>
+           
            <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
               Файлы (по желанию)
