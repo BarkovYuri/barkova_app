@@ -100,7 +100,8 @@ class VKDialogState(models.Model):
     MENU_KIND_CHOICES = [
         ("none", "Нет меню"),
         ("booking", "Меню записи"),
-        ("active_appointment", "Меню активной записи"),
+        ("active_root", "Корневое меню активной записи"),
+        ("manage", "Меню управления записью"),
         ("cancel_confirm", "Меню подтверждения отмены"),
     ]
 

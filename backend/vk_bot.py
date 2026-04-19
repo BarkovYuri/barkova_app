@@ -420,7 +420,7 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
                 peer_id,
                 "has_active_appointment",
                 appointment,
-                last_menu_kind="active_appointment",
+                last_menu_kind="active_root",
                 touch_action=True,
             )
         else:
@@ -453,7 +453,7 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
                     peer_id,
                     "has_active_appointment",
                     appointment,
-                    last_menu_kind="active_appointment",
+                    last_menu_kind="active_root",
                     touch_action=True,
                 )
             else:
@@ -463,9 +463,7 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
             reset_dialog_state(user_id, peer_id)
 
         elif cmd == "doctor":
-            if changed:
-                reset_dialog_state(user_id, peer_id)
-            elif appointment:
+            if appointment:
                 set_dialog_state(
                     user_id,
                     peer_id,
@@ -543,7 +541,7 @@ def handle_new_message_event(event: dict):
     if dialog_state.state in {"has_active_appointment", "confirm_cancel"} and same_appointment:
         return
 
-    if can_send_menu(dialog_state, "active_appointment", cooldown_seconds=600):
+    if can_send_menu(dialog_state, "active_root", cooldown_seconds=600):
         send_message(
             peer_id,
             (
@@ -562,7 +560,7 @@ def handle_new_message_event(event: dict):
             appointment,
             last_menu_kind="active_root",
         )
-        mark_menu_sent(from_id, "active_appointment")
+        mark_menu_sent(from_id, "active_root")
 
 
 def handle_callback_event(event: dict):

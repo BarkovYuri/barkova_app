@@ -560,7 +560,7 @@ class VKAppointmentActionView(APIView):
                         f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                         f"{appointment.slot.end_time.strftime('%H:%M')}"
                     ),
-                    keyboard=build_vk_active_appointment_keyboard(appointment),
+                    keyboard=build_vk_active_root_keyboard(appointment),
                 )
 
             return Response({"status": "confirmed", "changed": changed})
@@ -587,7 +587,7 @@ class VKAppointmentActionView(APIView):
                         f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                         f"{appointment.slot.end_time.strftime('%H:%M')}"
                     ),
-                    keyboard=get_vk_remove_keyboard(),
+                    keyboard=build_vk_booking_keyboard(),
                 )
 
             return Response({"status": "cancelled", "changed": changed})
@@ -608,7 +608,7 @@ class VKAppointmentActionView(APIView):
                         f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                         f"{appointment.slot.end_time.strftime('%H:%M')}"
                     ),
-                    keyboard=get_vk_remove_keyboard(),
+                    keyboard=build_vk_active_root_keyboard(appointment),
                 )
 
             return Response({"status": "reminder_yes", "changed": changed})
@@ -642,7 +642,7 @@ class VKAppointmentActionView(APIView):
                         f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                         f"{appointment.slot.end_time.strftime('%H:%M')}"
                     ),
-                    keyboard=get_vk_remove_keyboard(),
+                    keyboard=build_vk_booking_keyboard(),
                 )
 
             return Response({"status": "reminder_no", "changed": changed})
@@ -667,7 +667,7 @@ class VKAppointmentActionView(APIView):
                 send_to_patient_vk(
                     appointment,
                     "💬 Передали врачу, что вам нужна связь. С вами свяжутся.",
-                    keyboard=get_vk_remove_keyboard(),
+                    keyboard=build_vk_active_root_keyboard(appointment),
                 )
 
             return Response({"status": "doctor_contact_requested", "changed": changed})
