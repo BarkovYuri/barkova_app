@@ -15,10 +15,9 @@ from .vk_constants import (
     VK_CMD_DOCTOR,
 )
 
+
 class VKCallbackEnvelopeSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(
-        choices=[VK_EVENT_CONFIRMATION, VK_EVENT_MESSAGE_NEW, VK_EVENT_MESSAGE_EVENT]
-    )
+    type = serializers.CharField()
     object = serializers.JSONField(required=False)
     group_id = serializers.IntegerField(required=False)
     event_id = serializers.CharField(required=False, allow_blank=True)

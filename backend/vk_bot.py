@@ -471,6 +471,7 @@ def handle_new_message_event(event: dict):
 
     if not appointment:
         reset_dialog_state(from_id, peer_id)
+        dialog_state = get_dialog_state(from_id)
 
         if can_send_menu(dialog_state, "booking", cooldown_seconds=600):
             send_message(

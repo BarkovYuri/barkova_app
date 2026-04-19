@@ -19,6 +19,7 @@ from apps.notifications.services import (
     send_to_patient,
     send_to_patient_vk,
     get_vk_remove_keyboard,
+    build_vk_active_appointment_keyboard,
 )
 from .models import Appointment
 from .serializers import (
@@ -554,7 +555,7 @@ class VKAppointmentActionView(APIView):
                         f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                         f"{appointment.slot.end_time.strftime('%H:%M')}"
                     ),
-                    keyboard=get_vk_remove_keyboard(),
+                    keyboard=build_vk_active_appointment_keyboard(appointment),
                 )
 
             return Response({"status": "confirmed", "changed": changed})
@@ -690,6 +691,9 @@ class VKCallbackView(APIView):
         incoming_secret = data.get("secret", "")
         if callback_secret and incoming_secret != callback_secret:
             return HttpResponse("forbidden", status=403)
+
+        if event_type not in {VK_EVENT_MESSAGE_NEW, VK_EVENT_MESSAGE_EVENT}:
+            return HttpResponse("ok")
 
         event_id = data.get("event_id")
         if event_id:
