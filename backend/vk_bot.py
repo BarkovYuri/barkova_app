@@ -54,10 +54,13 @@ def answer_message_event(event_id: str, user_id: int | str, peer_id: int | str):
     return vk_api(
         "messages.sendMessageEventAnswer",
         {
-            "event_id": event_id,
+            "event_id": str(event_id),
             "user_id": str(user_id),
             "peer_id": str(peer_id),
-            "event_data": json.dumps({"type": "show_snackbar", "text": "Обрабатываю..."}, ensure_ascii=False),
+            "event_data": json.dumps(
+                {"type": "show_snackbar", "text": "Обрабатываю..."},
+                ensure_ascii=False,
+            ),
         },
     )
 
@@ -93,7 +96,6 @@ def should_send_vk_greeting(user_id: int | str) -> bool:
     from django.core.cache import cache
 
     cache_key = f"vk_greeting_sent:{user_id}"
-
     if cache.get(cache_key):
         return False
 
@@ -123,7 +125,9 @@ def get_dialog_state(user_id: int | str):
 
     from apps.notifications.models import VKDialogState
 
-    state, _ = VKDialogState.objects.get_or_create(user_id=str(user_id))
+    state, _ = VKDialogState.objects.select_related("appointment", "appointment__slot").get_or_create(
+        user_id=str(user_id)
+    )
     return state
 
 
@@ -138,6 +142,20 @@ def set_dialog_state(user_id: int | str, peer_id: int | str, state_name: str, ap
 
 def reset_dialog_state(user_id: int | str, peer_id: int | str):
     return set_dialog_state(user_id, peer_id, "idle", appointment=None)
+
+
+def get_dialog_appointment(user_id: int | str):
+    state = get_dialog_state(user_id)
+    if state.appointment_id:
+        return state.appointment
+    return None
+
+
+def get_effective_appointment(user_id: int | str):
+    dialog_appointment = get_dialog_appointment(user_id)
+    if dialog_appointment and dialog_appointment.status in {"new", "confirmed"}:
+        return dialog_appointment
+    return get_active_appointment_for_vk_user(user_id)
 
 
 def build_manage_keyboard(appointment):
@@ -245,7 +263,12 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
     appointment_id = payload.get("appointment_id")
     token = payload.get("token")
 
-    appointment = get_active_appointment_for_vk_user(user_id)
+    appointment = get_effective_appointment(user_id)
+
+    # Если callback пришел по конкретной записи — предпочитаем ее
+    if appointment and appointment_id and str(appointment.id) != str(appointment_id):
+        if appointment.status not in {"new", "confirmed"}:
+            appointment = None
 
     if cmd == "cancel_request":
         if appointment:
@@ -277,7 +300,7 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
         return
 
     try:
-        backend_post(
+        result = backend_post(
             "/api/appointments/vk/action/",
             {
                 "appointment_id": appointment_id,
@@ -287,8 +310,23 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
             },
         )
 
-        if cmd == "confirm" and appointment:
-            set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
+        # Если действие не изменило состояние, не переключаемся хаотично
+        changed = bool(result.get("changed", True))
+
+        if cmd == "confirm":
+            if appointment and changed:
+                set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
+            elif appointment:
+                set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
+            else:
+                reset_dialog_state(user_id, peer_id)
+        elif cmd in {"cancel", "no"}:
+            reset_dialog_state(user_id, peer_id)
+        elif cmd == "doctor":
+            if appointment:
+                set_dialog_state(user_id, peer_id, "has_active_appointment", appointment)
+            else:
+                reset_dialog_state(user_id, peer_id)
         else:
             reset_dialog_state(user_id, peer_id)
 
@@ -312,7 +350,6 @@ def handle_new_message_event(event: dict):
         return
 
     auto_linked = False
-
     try:
         result = backend_post(
             "/api/appointments/vk/auto-link/",
@@ -332,38 +369,40 @@ def handle_new_message_event(event: dict):
         )
         return
 
-    appointment = get_active_appointment_for_vk_user(from_id)
     dialog_state = get_dialog_state(from_id)
+    appointment = get_effective_appointment(from_id)
 
-    if appointment:
-        same_appointment = (
-            dialog_state.appointment is not None
-            and dialog_state.appointment.id == appointment.id
-        )
-
-        if dialog_state.state != "has_active_appointment" or not same_appointment:
+    # Если активной записи нет — чистим state и максимум один раз шлем приветствие
+    if not appointment:
+        reset_dialog_state(from_id, peer_id)
+        if should_send_vk_greeting(from_id):
             send_message(
                 peer_id,
-                (
-                    "У вас есть активная запись.\n"
-                    f"Дата: {appointment.slot.date}\n"
-                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                    f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
-                    "Используйте кнопки ниже, если хотите изменить запись."
-                ),
-                keyboard=build_manage_keyboard(appointment),
+                "Здравствуйте. Как только доктор освободится, вам обязательно ответят.",
             )
-            set_dialog_state(from_id, peer_id, "has_active_appointment", appointment)
-
         return
 
-    reset_dialog_state(from_id, peer_id)
+    same_appointment = (
+        dialog_state.appointment is not None
+        and dialog_state.appointment.id == appointment.id
+    )
 
-    if should_send_vk_greeting(from_id):
-        send_message(
-            peer_id,
-            "Здравствуйте. Как только доктор освободится, вам обязательно ответят.",
-        )
+    # Если уже в сценарии этой же записи, не спамим повторными меню на обычный текст
+    if dialog_state.state in {"has_active_appointment", "confirm_cancel"} and same_appointment:
+        return
+
+    send_message(
+        peer_id,
+        (
+            "У вас есть активная запись.\n"
+            f"Дата: {appointment.slot.date}\n"
+            f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+            f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
+            "Используйте кнопки ниже, если хотите изменить запись."
+        ),
+        keyboard=build_manage_keyboard(appointment),
+    )
+    set_dialog_state(from_id, peer_id, "has_active_appointment", appointment)
 
 
 def handle_callback_event(event: dict):
