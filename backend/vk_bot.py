@@ -307,6 +307,32 @@ def build_cancel_confirm_keyboard(appointment):
     }
 
 
+def build_active_root_keyboard(appointment):
+    return {
+        "one_time": False,
+        "inline": False,
+        "buttons": [
+            [
+                {
+                    "action": {
+                        "type": "callback",
+                        "label": "Управление записью",
+                        "payload": json.dumps(
+                            {
+                                "cmd": "manage",
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "primary",
+                }
+            ]
+        ],
+    }
+
+
 def handle_connect(user_id: int, peer_id: int, token: str):
     try:
         backend_post(
@@ -336,6 +362,29 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
         if appointment.status not in {"new", "confirmed"}:
             appointment = None
 
+    if cmd == "manage":
+        if appointment:
+            send_message(
+                peer_id,
+                (
+                    "Что вы хотите сделать с записью?\n"
+                    f"Дата: {appointment.slot.date}\n"
+                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                    f"{appointment.slot.end_time.strftime('%H:%M')}"
+                ),
+                keyboard=build_manage_keyboard(appointment),
+            )
+            set_dialog_state(
+                user_id,
+                peer_id,
+                "has_active_appointment",
+                appointment,
+                last_menu_kind="manage",
+                touch_action=True,
+            )
+            mark_menu_sent(user_id, "manage")
+        return
+
     if cmd == "cancel_request":
         if appointment:
             send_message(
@@ -361,7 +410,11 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
 
     if cmd == "cancel_keep":
         if appointment:
-            send_message(peer_id, "✅ Запись оставлена без изменений.")
+            send_message(
+                peer_id,
+                "✅ Запись оставлена без изменений.",
+                keyboard=build_active_root_keyboard(appointment),
+            )
             set_dialog_state(
                 user_id,
                 peer_id,
@@ -418,7 +471,7 @@ def handle_callback_action(user_id: int, peer_id: int, payload: dict):
                     peer_id,
                     "has_active_appointment",
                     appointment,
-                    last_menu_kind="active_appointment",
+                    last_menu_kind="active_root",
                     touch_action=True,
                 )
             else:
@@ -476,7 +529,7 @@ def handle_new_message_event(event: dict):
         if can_send_menu(dialog_state, "booking", cooldown_seconds=600):
             send_message(
                 peer_id,
-                "Здравствуйте. Вы можете записаться на консультацию по кнопке ниже.",
+                "Здравствуйте. Чтобы записаться на консультацию, нажмите кнопку ниже.",
                 keyboard=build_booking_keyboard(),
             )
             mark_menu_sent(from_id, "booking")
@@ -498,16 +551,16 @@ def handle_new_message_event(event: dict):
                 f"Дата: {appointment.slot.date}\n"
                 f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                 f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
-                "Вы можете отменить запись или запросить связь с врачом."
+                "Нажмите «Управление записью», чтобы открыть доступные действия."
             ),
-            keyboard=build_manage_keyboard(appointment),
+            keyboard=build_active_root_keyboard(appointment),
         )
         set_dialog_state(
             from_id,
             peer_id,
             "has_active_appointment",
             appointment,
-            last_menu_kind="active_appointment",
+            last_menu_kind="active_root",
         )
         mark_menu_sent(from_id, "active_appointment")
 

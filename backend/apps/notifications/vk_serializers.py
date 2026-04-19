@@ -13,6 +13,7 @@ from .vk_constants import (
     VK_CMD_YES,
     VK_CMD_NO,
     VK_CMD_DOCTOR,
+    VK_CMD_MANAGE,
 )
 
 
@@ -33,6 +34,7 @@ class VKMessageEventPayloadSerializer(serializers.Serializer):
     cmd = serializers.ChoiceField(
         choices=[
             VK_CMD_CONNECT,
+            VK_CMD_MANAGE,
             VK_CMD_CONFIRM,
             VK_CMD_CANCEL_REQUEST,
             VK_CMD_CANCEL_CONFIRM,

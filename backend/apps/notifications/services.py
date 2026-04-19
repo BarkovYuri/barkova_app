@@ -10,6 +10,7 @@ from django.utils import timezone
 from .models import NotificationLog
 
 from .vk_constants import (
+    VK_CMD_MANAGE,
     VK_CMD_CONFIRM,
     VK_CMD_CANCEL_REQUEST,
     VK_CMD_YES,
@@ -430,37 +431,32 @@ def send_to_patient_vk(appointment, text, keyboard: dict | None = None):
     user_id = _vk_user_for_appointment(appointment)
 
     if not peer_id or not user_id:
-        return False, "VK peer_id или user_id отсутствует"
+        return False, "", "VK peer_id или user_id отсутствует"
 
     allowed, allowed_error = _vk_is_messages_allowed(user_id)
     if not allowed:
-        return False, allowed_error or "Пользователь не разрешил сообщения от сообщества"
+        return False, "", allowed_error or "Пользователь не разрешил сообщения от сообщества"
 
     if keyboard is not None:
-        success, _, error_text = _send_vk_text_with_keyboard_custom(
+        success, message_id, error_text = _send_vk_text_with_keyboard_custom(
             text=text,
             peer_id=peer_id,
             keyboard=keyboard,
         )
     else:
-        success, _, error_text = _send_vk_text_custom(
+        success, message_id, error_text = _send_vk_text_custom(
             text=text,
             peer_id=peer_id,
         )
 
-    return success, error_text
+    return success, message_id, error_text
+
 
 def get_vk_remove_keyboard():
     return {
         "one_time": False,
         "inline": False,
         "buttons": [],
-    }
-
-
-def get_vk_remove_keyboard():
-    return {
-        "buttons": []
     }
 
 
@@ -499,47 +495,6 @@ def build_vk_new_appointment_keyboard(appointment):
                         ),
                     },
                     "color": "negative",
-                },
-            ]
-        ],
-    }
-
-
-def build_vk_active_appointment_keyboard(appointment):
-    return {
-        "one_time": False,
-        "inline": False,
-        "buttons": [
-            [
-                {
-                    "action": {
-                        "type": "callback",
-                        "label": "Отменить запись",
-                        "payload": json.dumps(
-                            {
-                                "cmd": VK_CMD_CANCEL_REQUEST,
-                                "appointment_id": appointment.id,
-                                "token": appointment.vk_link_token,
-                            },
-                            ensure_ascii=False,
-                        ),
-                    },
-                    "color": "negative",
-                },
-                {
-                    "action": {
-                        "type": "callback",
-                        "label": "Связь с врачом",
-                        "payload": json.dumps(
-                            {
-                                "cmd": VK_CMD_DOCTOR,
-                                "appointment_id": appointment.id,
-                                "token": appointment.vk_link_token,
-                            },
-                            ensure_ascii=False,
-                        ),
-                    },
-                    "color": "primary",
                 },
             ]
         ],
@@ -600,6 +555,91 @@ def build_vk_reminder_keyboard(appointment):
                     "color": "primary",
                 }
             ],
+        ],
+    }
+
+
+def build_vk_booking_keyboard():
+    return {
+        "one_time": False,
+        "inline": False,
+        "buttons": [
+            [
+                {
+                    "action": {
+                        "type": "open_link",
+                        "label": "Записаться онлайн",
+                        "link": "https://doctor-barkova.ru/booking",
+                    }
+                }
+            ]
+        ],
+    }
+
+
+def build_vk_active_root_keyboard(appointment):
+    return {
+        "one_time": False,
+        "inline": False,
+        "buttons": [
+            [
+                {
+                    "action": {
+                        "type": "callback",
+                        "label": "Управление записью",
+                        "payload": json.dumps(
+                            {
+                                "cmd": VK_CMD_MANAGE,
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "primary",
+                }
+            ]
+        ],
+    }
+
+
+def build_vk_manage_keyboard(appointment):
+    return {
+        "one_time": False,
+        "inline": False,
+        "buttons": [
+            [
+                {
+                    "action": {
+                        "type": "callback",
+                        "label": "Отменить запись",
+                        "payload": json.dumps(
+                            {
+                                "cmd": VK_CMD_CANCEL_REQUEST,
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "negative",
+                },
+                {
+                    "action": {
+                        "type": "callback",
+                        "label": "Связь с врачом",
+                        "payload": json.dumps(
+                            {
+                                "cmd": VK_CMD_DOCTOR,
+                                "appointment_id": appointment.id,
+                                "token": appointment.vk_link_token,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                    "color": "primary",
+                },
+            ]
         ],
     }
 

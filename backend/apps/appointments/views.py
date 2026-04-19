@@ -19,7 +19,8 @@ from apps.notifications.services import (
     send_to_patient,
     send_to_patient_vk,
     get_vk_remove_keyboard,
-    build_vk_active_appointment_keyboard,
+    build_vk_booking_keyboard,
+    build_vk_active_root_keyboard,
 )
 from .models import Appointment
 from .serializers import (
@@ -223,6 +224,7 @@ class TelegramAppointmentActionView(APIView):
                         f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                         f"{appointment.slot.end_time.strftime('%H:%M')}"
                     ),
+                    keyboard=build_vk_active_root_keyboard(appointment),
                 )
 
             return Response({"status": "confirmed", "changed": changed})
@@ -248,6 +250,7 @@ class TelegramAppointmentActionView(APIView):
                         f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                         f"{appointment.slot.end_time.strftime('%H:%M')}"
                     ),
+                    keyboard=build_vk_booking_keyboard(),
                 )
 
             return Response({"status": "cancelled", "changed": changed})
@@ -295,6 +298,7 @@ class TelegramAppointmentActionView(APIView):
                     f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
                     f"{appointment.slot.end_time.strftime('%H:%M')}"
                 ),
+                keyboard=build_vk_booking_keyboard(),
             )
 
             return Response({"status": "reminder_no", "changed": changed})
@@ -316,6 +320,7 @@ class TelegramAppointmentActionView(APIView):
             send_to_patient(
                 appointment,
                 "💬 Передали врачу, что вам нужна связь. С вами свяжутся.",
+                keyboard=build_vk_active_root_keyboard(appointment),
             )
 
             return Response({"status": "doctor_contact_requested"})

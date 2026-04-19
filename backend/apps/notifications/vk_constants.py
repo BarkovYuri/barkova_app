@@ -1,10 +1,9 @@
-# backend/apps/notifications/vk_constants.py
-
 VK_EVENT_CONFIRMATION = "confirmation"
 VK_EVENT_MESSAGE_NEW = "message_new"
 VK_EVENT_MESSAGE_EVENT = "message_event"
 
 VK_CMD_CONNECT = "connect"
+VK_CMD_MANAGE = "manage"
 VK_CMD_CONFIRM = "confirm"
 VK_CMD_CANCEL_REQUEST = "cancel_request"
 VK_CMD_CANCEL_CONFIRM = "cancel_confirm"
@@ -20,5 +19,6 @@ VK_STATE_CONFIRM_CANCEL = "confirm_cancel"
 
 VK_MENU_KIND_NONE = "none"
 VK_MENU_KIND_BOOKING = "booking"
-VK_MENU_KIND_ACTIVE_APPOINTMENT = "active_appointment"
+VK_MENU_KIND_ACTIVE_ROOT = "active_root"
+VK_MENU_KIND_MANAGE = "manage"
 VK_MENU_KIND_CANCEL_CONFIRM = "cancel_confirm"
