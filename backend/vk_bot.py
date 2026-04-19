@@ -538,29 +538,29 @@ def handle_new_message_event(event: dict):
         and dialog_state.appointment.id == appointment.id
     )
 
-    if dialog_state.state in {"has_active_appointment", "confirm_cancel"} and same_appointment:
+    if same_appointment:
+        if can_send_menu(dialog_state, "active_root", cooldown_seconds=600):
+            send_message(
+                peer_id,
+                (
+                    "У вас есть активная запись.\n"
+                    f"Дата: {appointment.slot.date}\n"
+                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
+                    f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
+                    "Нажмите «Управление записью», чтобы открыть доступные действия."
+                ),
+                keyboard=build_active_root_keyboard(appointment),
+            )
+            set_dialog_state(
+                from_id,
+                peer_id,
+                "has_active_appointment",
+                appointment,
+                last_menu_kind="active_root",
+            )
+            mark_menu_sent(from_id, "active_root")
         return
 
-    if can_send_menu(dialog_state, "active_root", cooldown_seconds=600):
-        send_message(
-            peer_id,
-            (
-                "У вас есть активная запись.\n"
-                f"Дата: {appointment.slot.date}\n"
-                f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                f"{appointment.slot.end_time.strftime('%H:%M')}\n\n"
-                "Нажмите «Управление записью», чтобы открыть доступные действия."
-            ),
-            keyboard=build_active_root_keyboard(appointment),
-        )
-        set_dialog_state(
-            from_id,
-            peer_id,
-            "has_active_appointment",
-            appointment,
-            last_menu_kind="active_root",
-        )
-        mark_menu_sent(from_id, "active_root")
 
 
 def handle_callback_event(event: dict):
