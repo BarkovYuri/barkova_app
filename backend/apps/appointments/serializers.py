@@ -1,17 +1,13 @@
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from rest_framework import serializers
 
-from apps.content.models import LegalDocument
 from apps.notifications.models import TelegramPrelink, VKPrelink
-from apps.notifications.services import (
-    send_appointment_created_notification,
-    send_appointment_status_notification,
-    send_created_message_to_patient_with_actions,
-    send_created_message_to_patient_with_actions_vk,
+from apps.notifications.services import send_appointment_status_notification
+from apps.appointments.services.booking import (
+    get_available_slot_or_error as _get_available_slot_or_error,
+    create_appointment_with_slot_lock as _create_appointment_with_slot_lock,
 )
-from apps.scheduling.models import TimeSlot
 from .models import Appointment, AppointmentAttachment
-
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx", ".heic"}
 
@@ -21,67 +17,14 @@ def _validate_legal_flags(attrs):
         raise serializers.ValidationError(
             {"consent_given": "Необходимо согласие на обработку персональных данных."}
         )
-
     if not attrs.get("privacy_accepted"):
         raise serializers.ValidationError(
             {"privacy_accepted": "Необходимо принять политику конфиденциальности."}
         )
-
     if not attrs.get("offer_accepted"):
         raise serializers.ValidationError(
             {"offer_accepted": "Необходимо принять оферту."}
         )
-
-
-def _get_available_slot_or_error(slot_id):
-    from datetime import datetime, timedelta
-    from django.utils import timezone
-
-    try:
-        slot = TimeSlot.objects.get(id=slot_id, is_active=True)
-    except TimeSlot.DoesNotExist:
-        raise serializers.ValidationError({"slot_id": "Слот не найден или недоступен."})
-
-    if slot.is_booked:
-        raise serializers.ValidationError({"slot_id": "Этот слот уже занят."})
-
-    current_tz = timezone.get_current_timezone()
-    slot_dt = timezone.make_aware(
-        datetime.combine(slot.date, slot.start_time),
-        current_tz,
-    )
-    threshold = timezone.now() + timedelta(hours=1)
-
-    if slot_dt <= threshold:
-        raise serializers.ValidationError(
-            {"slot_id": "Запись на это время уже закрыта. Выберите слот позже чем через 1 час."}
-        )
-
-    return slot
-
-
-def _get_active_legal_versions():
-    offer_doc = (
-        LegalDocument.objects.filter(doc_type="offer", is_active=True)
-        .order_by("-created_at")
-        .first()
-    )
-    privacy_doc = (
-        LegalDocument.objects.filter(doc_type="privacy", is_active=True)
-        .order_by("-created_at")
-        .first()
-    )
-    consent_doc = (
-        LegalDocument.objects.filter(doc_type="consent", is_active=True)
-        .order_by("-created_at")
-        .first()
-    )
-
-    return {
-        "legal_offer_version": offer_doc.version if offer_doc else "",
-        "legal_privacy_version": privacy_doc.version if privacy_doc else "",
-        "legal_consent_version": consent_doc.version if consent_doc else "",
-    }
 
 
 def _normalize_telegram_username(value: str) -> str:
@@ -89,58 +32,6 @@ def _normalize_telegram_username(value: str) -> str:
     if value.startswith("@"):
         value = value[1:]
     return value
-
-
-def _create_appointment_with_slot_lock(*, slot, appointment_data, files=None):
-    import secrets
-
-    files = files or []
-
-    locked_slot = TimeSlot.objects.select_for_update().get(id=slot.id)
-
-    if not locked_slot.is_active:
-        raise serializers.ValidationError({"slot_id": "Этот слот недоступен для записи."})
-
-    if locked_slot.is_booked:
-        raise serializers.ValidationError({"slot_id": "Этот слот уже занят."})
-
-    legal_versions = _get_active_legal_versions()
-
-    try:
-        appointment = Appointment.objects.create(
-            slot=locked_slot,
-            telegram_link_token=secrets.token_urlsafe(16),
-            vk_link_token=secrets.token_urlsafe(16),
-            **appointment_data,
-            **legal_versions,
-        )
-    except IntegrityError:
-        raise serializers.ValidationError(
-            {"slot_id": "Этот слот уже только что заняли. Пожалуйста, выберите другое время."}
-        )
-
-    for file in files:
-        AppointmentAttachment.objects.create(
-            appointment=appointment,
-            file=file,
-        )
-
-    locked_slot.is_booked = True
-    locked_slot.save(update_fields=["is_booked"])
-
-    def notify():
-        appt = Appointment.objects.select_related("slot").prefetch_related("attachments").get(pk=appointment.pk)
-
-        send_appointment_created_notification(appt)
-
-        if appt.preferred_contact_method == "telegram" and appt.telegram_chat_id:
-            send_created_message_to_patient_with_actions(appt)
-
-        if appt.preferred_contact_method == "vk" and appt.vk_user_id:
-            send_created_message_to_patient_with_actions_vk(appt)
-
-    transaction.on_commit(notify)
-    return appointment
 
 
 class AppointmentAttachmentSerializer(serializers.ModelSerializer):
@@ -200,6 +91,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     telegram_prelink_token = serializers.CharField(required=False, allow_blank=True)
     vk_prelink_token = serializers.CharField(required=False, allow_blank=True)
     vk_user_id = serializers.CharField(required=False, allow_blank=True)
+    vk_id_code = serializers.CharField(required=False, allow_blank=True)
+    vk_id_device_id = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Appointment
@@ -213,6 +106,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "telegram_prelink_token",
             "vk_prelink_token",
             "vk_user_id",
+            "vk_id_code",
+            "vk_id_device_id",
             "reason",
             "consent_given",
             "privacy_accepted",
@@ -286,9 +181,26 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             attrs["telegram_prelink"] = prelink
 
         if preferred_contact_method == "vk":
-            if vk_user_id:
+            vk_id_code = attrs.get("vk_id_code", "").strip()
+            vk_id_device_id = attrs.get("vk_id_device_id", "").strip()
+
+            if vk_id_code and vk_id_device_id:
+                # Верифицируем VK ID через OAuth2 code exchange
+                result = exchange_vk_id_code(code=vk_id_code, device_id=vk_id_device_id)
+
+                if "error" in result or "access_token" not in result:
+                    raise serializers.ValidationError(
+                        {"vk_user_id": "Не удалось подтвердить авторизацию VK ID. Войдите заново."}
+                    )
+
+                verified_user_id = str(result.get("user_id", "")).strip()
+                if not verified_user_id:
+                    raise serializers.ValidationError(
+                        {"vk_user_id": "VK ID не вернул идентификатор пользователя."}
+                    )
+
                 attrs["vk_id_authorized"] = True
-                attrs["vk_id_user_id"] = str(vk_user_id)
+                attrs["vk_id_user_id"] = verified_user_id
 
             elif vk_prelink_token:
                 prelink = VKPrelink.objects.filter(
@@ -324,6 +236,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         validated_data.pop("telegram_prelink_token", None)
         validated_data.pop("vk_prelink_token", None)
         validated_data.pop("vk_user_id", None)
+        validated_data.pop("vk_id_code", None)
+        validated_data.pop("vk_id_device_id", None)
 
         appointment_data = {
             "name": validated_data["name"],

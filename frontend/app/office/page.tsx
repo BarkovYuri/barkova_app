@@ -1,13 +1,8 @@
 import { fetchAPI } from "../../lib/api";
-
-type DoctorProfile = {
-  address?: string;
-  prodoktorov_url?: string;
-  yandex_maps_embed_url?: string;
-};
+import type { DoctorProfile } from "../../lib/types";
 
 export default async function OfficePage() {
-  const doctor: DoctorProfile | null = await fetchAPI("/profile");
+  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
 
   return (
     <main className="min-h-screen bg-white px-6 py-12">

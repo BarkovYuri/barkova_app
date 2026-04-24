@@ -31,13 +31,13 @@ class Appointment(models.Model):
         blank=True,
     )
 
-    telegram_chat_id = models.CharField("Telegram chat id", max_length=50, blank=True)
-    telegram_link_token = models.CharField("Telegram link token", max_length=64, blank=True)
+    telegram_chat_id = models.CharField("Telegram chat id", max_length=50, blank=True, db_index=True)
+    telegram_link_token = models.CharField("Telegram link token", max_length=64, blank=True, db_index=True)
     telegram_linked_at = models.DateTimeField("Telegram привязан", null=True, blank=True)
 
-    vk_user_id = models.CharField("VK user id", max_length=50, blank=True)
+    vk_user_id = models.CharField("VK user id", max_length=50, blank=True, db_index=True)
     vk_peer_id = models.CharField("VK peer id", max_length=50, blank=True)
-    vk_link_token = models.CharField("VK link token", max_length=64, blank=True)
+    vk_link_token = models.CharField("VK link token", max_length=64, blank=True, db_index=True)
     vk_linked_at = models.DateTimeField("VK привязан", null=True, blank=True)
 
     reminder_sent_at = models.DateTimeField("Напоминание отправлено", null=True, blank=True)

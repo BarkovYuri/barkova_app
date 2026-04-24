@@ -1,14 +1,5 @@
 import { fetchAPI } from "../../lib/api";
-
-type DoctorProfile = {
-  full_name: string;
-  address?: string;
-  email?: string;
-  instagram_url?: string;
-  vk_url?: string;
-  dzen_url?: string;
-  yandex_maps_embed_url?: string;
-};
+import type { DoctorProfile } from "../../lib/types";
 
 function InstagramIcon() {
   return (
@@ -96,7 +87,7 @@ function SocialIconLink({
 }
 
 export default async function ContactsPage() {
-  const doctor: DoctorProfile | null = await fetchAPI("/profile");
+  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
 
   return (
     <main className="min-h-screen bg-white px-6 py-12">

@@ -1,14 +1,9 @@
 import { fetchAPI } from "../../lib/api";
+import type { DoctorProfile } from "../../lib/types";
 import MobileMenu from "./MobileMenu";
 
-type DoctorProfile = {
-  full_name: string;
-  photo_url?: string | null;
-  header_avatar_url?: string | null;
-};
-
 export default async function Header() {
-  const doctor: DoctorProfile | null = await fetchAPI("/profile");
+  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
 
   const links = [
     { href: "/", label: "Главная" },

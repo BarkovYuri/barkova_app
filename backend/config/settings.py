@@ -6,8 +6,15 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-DEBUG = os.getenv("DEBUG", "True") == "True"
+_secret_key = os.getenv("SECRET_KEY")
+if not _secret_key:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set. "
+        "Add it to your .env file or environment."
+    )
+SECRET_KEY = _secret_key
+
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -17,7 +24,6 @@ ALLOWED_HOSTS = [
     "doctor-barkova.ru",
     "www.doctor-barkova.ru",
     "5.42.126.206",
-    "factor-bucktooth-ogle.ngrok-free.dev",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -89,7 +95,7 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = "ru-ru"
-TIME_ZONE = "Asia/Bangkok"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 USE_TZ = True
@@ -121,6 +127,14 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "200/hour",
+        "appointment_create": "10/hour",
+        "prelink": "30/hour",
+    },
 }
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -129,11 +143,63 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name} {message}",
+            "style": "{",
+        },
+        "json": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter" if False else "logging.Formatter",  # Fallback format
+            "format": "[%(asctime)s] %(levelname)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "apps": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "telegram_bot": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "vk_bot": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+# ============================================================================
+# BOT CONFIGURATION
+# ============================================================================
+
+# Telegram Bot Settings
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME")
+TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")
 
-
+# VK (VKontakte) Bot Settings
 VK_GROUP_TOKEN = os.getenv("VK_GROUP_TOKEN", "")
 VK_GROUP_ID = os.getenv("VK_GROUP_ID", "")
 VK_GROUP_DOMAIN = os.getenv("VK_GROUP_DOMAIN", "")
@@ -145,6 +211,74 @@ VK_ID_REDIRECT_URL = os.getenv(
     "https://doctor-barkova.ru/auth/vk/callback",
 )
 VK_CALLBACK_SECRET = os.getenv("VK_CALLBACK_SECRET", "")
+
+# Bot API Settings
+VK_API_VERSION = os.getenv("VK_API_VERSION", "5.199")
+API_REQUEST_TIMEOUT = int(os.getenv("API_REQUEST_TIMEOUT", "30"))
+BOT_POLLING_TIMEOUT = int(os.getenv("BOT_POLLING_TIMEOUT", "25"))
+
+# Booking Link
+BOOKING_LINK = os.getenv("BOOKING_LINK", "https://doctor-barkova.ru/booking")
+
+# Публичный базовый URL сайта — используется для ссылок в уведомлениях/клавиатурах
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://doctor-barkova.ru")
+
+# Token Configuration
+TOKEN_EXPIRY_HOURS = int(os.getenv("TOKEN_EXPIRY_HOURS", "24"))
+MAX_RETRY_ATTEMPTS = int(os.getenv("MAX_RETRY_ATTEMPTS", "3"))
+
+
+# ============================================================================
+# CONFIGURATION VALIDATION
+# ============================================================================
+
+def validate_bot_configuration() -> None:
+    """
+    Validate bot configuration at startup.
+    
+    Ensures all required environment variables are set and valid.
+    
+    Raises:
+        ImproperlyConfigured: If required settings are missing or invalid
+    """
+    from django.core.exceptions import ImproperlyConfigured
+    
+    # Validate Telegram settings (optional but warn if partially configured)
+    if TELEGRAM_BOT_TOKEN and not TELEGRAM_BOT_USERNAME:
+        import warnings
+        warnings.warn(
+            "TELEGRAM_BOT_TOKEN is set but TELEGRAM_BOT_USERNAME is not. "
+            "Telegram notifications will not work properly.",
+            RuntimeWarning
+        )
+    
+    # Validate VK settings (optional but warn if partially configured)
+    if VK_GROUP_TOKEN and not VK_GROUP_ID:
+        import warnings
+        warnings.warn(
+            "VK_GROUP_TOKEN is set but VK_GROUP_ID is not. "
+            "VK notifications will not work properly.",
+            RuntimeWarning
+        )
+    
+    # Validate timeout settings
+    if API_REQUEST_TIMEOUT <= 0:
+        raise ImproperlyConfigured("API_REQUEST_TIMEOUT must be > 0")
+    
+    if BOT_POLLING_TIMEOUT <= 0:
+        raise ImproperlyConfigured("BOT_POLLING_TIMEOUT must be > 0")
+    
+    if TOKEN_EXPIRY_HOURS <= 0:
+        raise ImproperlyConfigured("TOKEN_EXPIRY_HOURS must be > 0")
+
+
+# Call validation only if not in migrations
+if os.getenv("DJANGO_SETTINGS_MODULE", "").endswith("settings"):
+    try:
+        validate_bot_configuration()
+    except Exception as exc:
+        import warnings
+        warnings.warn(f"Bot configuration validation warning: {exc}", RuntimeWarning)
 
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")

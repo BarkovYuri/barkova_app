@@ -1,20 +1,8 @@
 import { fetchAPI } from "../../lib/api";
-
-type DoctorProfile = {
-  full_name: string;
-  description: string;
-  education?: string;
-  experience_years?: number;
-  address?: string;
-  prodoktorov_url?: string;
-  photo_url?: string | null;
-  instagram_url?: string;
-  vk_url?: string;
-  dzen_url?: string;
-};
+import type { DoctorProfile } from "../../lib/types";
 
 export default async function AboutPage() {
-  const doctor: DoctorProfile | null = await fetchAPI("/profile");
+  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
 
   if (!doctor) {
     return (

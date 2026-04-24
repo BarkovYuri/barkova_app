@@ -1,17 +1,8 @@
 import { fetchAPI } from "../../../lib/api";
-
-type LegalDocument = {
-  id: number;
-  doc_type: "offer" | "privacy" | "consent";
-  title: string;
-  content: string;
-  version: string;
-  is_active: boolean;
-  created_at: string;
-};
+import type { LegalDocument } from "../../../lib/types";
 
 export default async function PrivacyPage() {
-  const documents: LegalDocument[] = (await fetchAPI("/legal")) || [];
+  const documents = ((await fetchAPI("/legal")) || []) as LegalDocument[];
   const document = documents.find((item) => item.doc_type === "privacy");
 
   return (

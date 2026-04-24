@@ -12,16 +12,27 @@ from rest_framework.views import APIView
 from rest_framework.decorators import authentication_classes
 
 from apps.core.permissions import IsAdminUser
+from apps.core.throttling import AppointmentCreateThrottle, PrelinkThrottle
 from apps.notifications.models import TelegramPrelink, VKPrelink
 from apps.notifications.services import (
     send_appointment_status_notification,
     send_doctor_contact_request_notification,
     send_to_patient,
     send_to_patient_vk,
-    get_vk_remove_keyboard,
     build_vk_booking_keyboard,
     build_vk_active_root_keyboard,
 )
+from apps.appointments.services.linking import (
+    create_telegram_prelink,
+    confirm_telegram_prelink,
+    get_telegram_prelink_status,
+    create_vk_prelink,
+    confirm_vk_prelink,
+    get_vk_prelink_status,
+    create_vk_pending_link,
+    resolve_vk_auto_link,
+)
+from apps.appointments.services.actions import AppointmentActionService
 from .models import Appointment
 from .serializers import (
     AppointmentCreateSerializer,
@@ -43,6 +54,7 @@ from apps.notifications.vk_constants import (
 class AppointmentCreateView(CreateAPIView):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentCreateSerializer
+    throttle_classes = [AppointmentCreateThrottle]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -55,6 +67,8 @@ class AppointmentCreateView(CreateAPIView):
 
 @authentication_classes([])
 class QuickAppointmentCreateView(APIView):
+    throttle_classes = [AppointmentCreateThrottle]
+
     def post(self, request):
         serializer = QuickAppointmentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -100,21 +114,11 @@ class AdminAppointmentUpdateView(UpdateAPIView):
 @authentication_classes([])
 class TelegramPrelinkCreateView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PrelinkThrottle]
 
     def post(self, request):
-        token = secrets.token_urlsafe(16)
-        prelink = TelegramPrelink.objects.create(token=token)
-
-        bot_username = settings.TELEGRAM_BOT_USERNAME
-        bot_url = f"https://t.me/{bot_username}?start=connect_{token}"
-
-        return Response(
-            {
-                "token": prelink.token,
-                "bot_url": bot_url,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        data = create_telegram_prelink(bot_username=settings.TELEGRAM_BOT_USERNAME)
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 @authentication_classes([])
@@ -125,23 +129,10 @@ class TelegramPrelinkLinkView(APIView):
         token = request.data.get("token", "").strip()
         chat_id = str(request.data.get("chat_id", "")).strip()
 
-        if not token or not chat_id:
-            return Response(
-                {"detail": "token и chat_id обязательны."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        prelink = TelegramPrelink.objects.filter(token=token, is_used=False).first()
-        if not prelink:
-            return Response(
-                {"detail": "Токен не найден."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        prelink.chat_id = chat_id
-        prelink.linked_at = timezone.now()
-        prelink.save(update_fields=["chat_id", "linked_at"])
-
+        ok, error_msg = confirm_telegram_prelink(token, chat_id)
+        if not ok:
+            http_status = status.HTTP_400_BAD_REQUEST if "обязательны" in error_msg else status.HTTP_404_NOT_FOUND
+            return Response({"detail": error_msg}, status=http_status)
         return Response({"status": "ok"})
 
 
@@ -151,26 +142,13 @@ class TelegramPrelinkStatusView(APIView):
 
     def get(self, request):
         token = request.query_params.get("token", "").strip()
-
         if not token:
-            return Response(
-                {"detail": "token обязателен."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "token обязателен."}, status=status.HTTP_400_BAD_REQUEST)
 
-        prelink = TelegramPrelink.objects.filter(token=token).first()
-        if not prelink:
-            return Response(
-                {"detail": "Токен не найден."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        return Response(
-            {
-                "linked": bool(prelink.chat_id),
-                "chat_id": prelink.chat_id,
-            }
-        )
+        result = get_telegram_prelink_status(token)
+        if result is None:
+            return Response({"detail": "Токен не найден."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)
 
 
 @authentication_classes([])
@@ -191,144 +169,16 @@ class TelegramAppointmentActionView(APIView):
 
         appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
         if not appointment:
-            return Response(
-                {"detail": "Запись не найдена."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
+            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
         if appointment.telegram_link_token != token:
-            return Response(
-                {"detail": "Неверный токен."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
+            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
         if str(appointment.telegram_chat_id) != chat_id:
-            return Response(
-                {"detail": "Неверный chat_id."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return Response({"detail": "Неверный chat_id."}, status=status.HTTP_403_FORBIDDEN)
 
-        if action == "confirm":
-            changed = appointment.status != "confirmed"
-
-            if changed:
-                appointment.status = "confirmed"
-                appointment.save(update_fields=["status"])
-                send_appointment_status_notification(appointment)
-
-                send_to_patient(
-                    appointment,
-                    (
-                        "✅ Запись подтверждена\n"
-                        f"Дата: {appointment.slot.date}\n"
-                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                        f"{appointment.slot.end_time.strftime('%H:%M')}"
-                    ),
-                    keyboard=build_vk_active_root_keyboard(appointment),
-                )
-
-            return Response({"status": "confirmed", "changed": changed})
-
-        if action == "cancel":
-            changed = appointment.status != "cancelled"
-
-            if changed:
-                appointment.status = "cancelled"
-                appointment.save(update_fields=["status"])
-
-                slot = appointment.slot
-                slot.is_booked = False
-                slot.save(update_fields=["is_booked"])
-
-                send_appointment_status_notification(appointment)
-
-                send_to_patient(
-                    appointment,
-                    (
-                        "❌ Запись отменена\n"
-                        f"Дата: {appointment.slot.date}\n"
-                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                        f"{appointment.slot.end_time.strftime('%H:%M')}"
-                    ),
-                    keyboard=build_vk_booking_keyboard(),
-                )
-
-            return Response({"status": "cancelled", "changed": changed})
-
-        if action == "yes":
-            appointment.reminder_response = "yes"
-            appointment.reminder_response_at = timezone.now()
-            appointment.save(update_fields=["reminder_response", "reminder_response_at"])
-
-            send_to_patient(
-                appointment,
-                (
-                    "✅ Отлично, ждём вас на консультации.\n"
-                    f"Дата: {appointment.slot.date}\n"
-                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                    f"{appointment.slot.end_time.strftime('%H:%M')}"
-                ),
-            )
-
-            return Response({"status": "reminder_yes"})
-
-        if action == "no":
-            appointment.reminder_response = "no"
-            appointment.reminder_response_at = timezone.now()
-
-            changed = appointment.status != "cancelled"
-            if changed:
-                appointment.status = "cancelled"
-
-            appointment.save(
-                update_fields=["reminder_response", "reminder_response_at", "status"]
-            )
-
-            if changed:
-                slot = appointment.slot
-                slot.is_booked = False
-                slot.save(update_fields=["is_booked"])
-                send_appointment_status_notification(appointment)
-
-            send_to_patient(
-                appointment,
-                (
-                    "❌ Запись отменена по вашему ответу на напоминание.\n"
-                    f"Дата: {appointment.slot.date}\n"
-                    f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                    f"{appointment.slot.end_time.strftime('%H:%M')}"
-                ),
-                keyboard=build_vk_booking_keyboard(),
-            )
-
-            return Response({"status": "reminder_no", "changed": changed})
-
-        if action == "doctor":
-            appointment.reminder_response = "doctor_contact"
-            appointment.reminder_response_at = timezone.now()
-            appointment.doctor_contact_requested_at = timezone.now()
-            appointment.save(
-                update_fields=[
-                    "reminder_response",
-                    "reminder_response_at",
-                    "doctor_contact_requested_at",
-                ]
-            )
-
-            send_doctor_contact_request_notification(appointment)
-
-            send_to_patient(
-                appointment,
-                "💬 Передали врачу, что вам нужна связь. С вами свяжутся.",
-                keyboard=build_vk_active_root_keyboard(appointment),
-            )
-
-            return Response({"status": "doctor_contact_requested"})
-
-        return Response(
-            {"detail": "Неизвестное действие."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        result = AppointmentActionService.handle(appointment, action, channel="telegram")
+        if "error" in result:
+            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
 
 
 # =========================
@@ -338,21 +188,11 @@ class TelegramAppointmentActionView(APIView):
 @authentication_classes([])
 class VKPrelinkCreateView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PrelinkThrottle]
 
     def post(self, request):
-        token = secrets.token_urlsafe(16)
-        prelink = VKPrelink.objects.create(token=token)
-
-        group_id = settings.VK_GROUP_ID
-        vk_url = f"https://vk.com/im?sel=-{group_id}"
-
-        return Response(
-            {
-                "token": prelink.token,
-                "vk_url": vk_url,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        data = create_vk_prelink(group_id=settings.VK_GROUP_ID)
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 @authentication_classes([])
@@ -364,24 +204,10 @@ class VKPrelinkLinkView(APIView):
         user_id = str(request.data.get("user_id", "")).strip()
         peer_id = str(request.data.get("peer_id", "")).strip()
 
-        if not token or not user_id or not peer_id:
-            return Response(
-                {"detail": "token, user_id и peer_id обязательны."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        prelink = VKPrelink.objects.filter(token=token, is_used=False).first()
-        if not prelink:
-            return Response(
-                {"detail": "Токен не найден."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        prelink.user_id = user_id
-        prelink.peer_id = peer_id
-        prelink.linked_at = timezone.now()
-        prelink.save(update_fields=["user_id", "peer_id", "linked_at"])
-
+        ok, error_msg = confirm_vk_prelink(token, user_id, peer_id)
+        if not ok:
+            http_status = status.HTTP_400_BAD_REQUEST if "обязательны" in error_msg else status.HTTP_404_NOT_FOUND
+            return Response({"detail": error_msg}, status=http_status)
         return Response({"status": "ok"})
 
 
@@ -391,27 +217,14 @@ class VKPrelinkStatusView(APIView):
 
     def get(self, request):
         token = request.query_params.get("token", "").strip()
-
         if not token:
-            return Response(
-                {"detail": "token обязателен."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "token обязателен."}, status=status.HTTP_400_BAD_REQUEST)
 
-        prelink = VKPrelink.objects.filter(token=token).first()
-        if not prelink:
-            return Response(
-                {"detail": "Токен не найден."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        result = get_vk_prelink_status(token)
+        if result is None:
+            return Response({"detail": "Токен не найден."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(result)
 
-        return Response(
-            {
-                "linked": bool(prelink.user_id and prelink.peer_id),
-                "user_id": prelink.user_id,
-                "peer_id": prelink.peer_id,
-            }
-        )
 
 @authentication_classes([])
 class VKMessagingStatusView(APIView):
@@ -419,56 +232,34 @@ class VKMessagingStatusView(APIView):
 
     def get(self, request):
         vk_user_id = request.query_params.get("vk_user_id", "").strip()
-
         if not vk_user_id:
-            return Response(
-                {"detail": "vk_user_id обязателен."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "vk_user_id обязателен."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Проверяем, можно ли писать пользователю
         from apps.notifications.services import _vk_is_messages_allowed
-
         allowed, error = _vk_is_messages_allowed(vk_user_id)
+        dialog_url = f"https://vk.com/im?sel=-{settings.VK_GROUP_ID}"
 
-        group_id = settings.VK_GROUP_ID
-        dialog_url = f"https://vk.com/im?sel=-{group_id}"
+        return Response({
+            "vk_user_id": vk_user_id,
+            "can_message_user": allowed,
+            "error": error,
+            "dialog_url": dialog_url,
+        })
 
-        return Response(
-            {
-                "vk_user_id": vk_user_id,
-                "can_message_user": allowed,
-                "error": error,
-                "dialog_url": dialog_url,
-            }
-        )
-    
+
 @authentication_classes([])
 class VKPendingLinkCreateView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PrelinkThrottle]
 
     def post(self, request):
         vk_user_id = str(request.data.get("vk_user_id", "")).strip()
-
         if not vk_user_id:
-            return Response(
-                {"detail": "vk_user_id обязателен."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "vk_user_id обязателен."}, status=status.HTTP_400_BAD_REQUEST)
 
-        cache_key = f"vk_pending_link:{vk_user_id}"
-        cache.set(cache_key, {"vk_user_id": vk_user_id}, timeout=15 * 60)
+        data = create_vk_pending_link(vk_user_id=vk_user_id, group_id=settings.VK_GROUP_ID)
+        return Response(data)
 
-        group_id = settings.VK_GROUP_ID
-        dialog_url = f"https://vk.com/im?sel=-{group_id}"
-
-        return Response(
-            {
-                "status": "pending",
-                "vk_user_id": vk_user_id,
-                "dialog_url": dialog_url,
-            }
-        )
 
 @authentication_classes([])
 class VKAutoLinkView(APIView):
@@ -477,36 +268,11 @@ class VKAutoLinkView(APIView):
     def post(self, request):
         user_id = str(request.data.get("user_id", "")).strip()
         peer_id = str(request.data.get("peer_id", "")).strip()
-
         if not user_id or not peer_id:
-            return Response(
-                {"detail": "user_id и peer_id обязательны."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "user_id и peer_id обязательны."}, status=status.HTTP_400_BAD_REQUEST)
 
-        cache_key = f"vk_pending_link:{user_id}"
-        pending = cache.get(cache_key)
-
-        if not pending:
-            return Response({"status": "not_pending"})
-
-        appointment = (
-            Appointment.objects.filter(vk_user_id=user_id)
-            .order_by("-created_at")
-            .first()
-        )
-
-        if not appointment:
-            return Response({"status": "no_appointment"})
-
-        if appointment.vk_peer_id != peer_id:
-            appointment.vk_peer_id = peer_id
-            appointment.vk_linked_at = timezone.now()
-            appointment.save(update_fields=["vk_peer_id", "vk_linked_at"])
-
-        cache.delete(cache_key)
-
-        return Response({"status": "linked"})
+        link_status = resolve_vk_auto_link(user_id=user_id, peer_id=peer_id)
+        return Response({"status": link_status})
 
 
 @authentication_classes([])
@@ -527,155 +293,94 @@ class VKAppointmentActionView(APIView):
 
         appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
         if not appointment:
-            return Response(
-                {"detail": "Запись не найдена."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
+            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
         if appointment.vk_link_token != token:
-            return Response(
-                {"detail": "Неверный токен."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
+            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
         if str(appointment.vk_user_id) != user_id:
+            return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
+
+        result = AppointmentActionService.handle(appointment, action, channel="vk")
+        if "error" in result:
+            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
+
+
+    def post(self, request):
+        appointment_id = request.data.get("appointment_id")
+        token = request.data.get("token", "").strip()
+        action = request.data.get("action", "").strip()
+        user_id = str(request.data.get("user_id", "")).strip()
+
+        if not appointment_id or not token or not action or not user_id:
             return Response(
-                {"detail": "Неверный user_id."},
-                status=status.HTTP_403_FORBIDDEN,
+                {"detail": "appointment_id, token, action и user_id обязательны."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if action == "confirm":
-            changed = appointment.status != "confirmed"
+        appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
+        if not appointment:
+            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
+        if appointment.vk_link_token != token:
+            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
+        if str(appointment.vk_user_id) != user_id:
+            return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
 
-            if changed:
-                appointment.status = "confirmed"
-                appointment.save(update_fields=["status"])
-                send_appointment_status_notification(appointment)
+        result = AppointmentActionService.handle(appointment, action, channel="vk")
+        if "error" in result:
+            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
 
-                send_to_patient_vk(
-                    appointment,
-                    (
-                        "✅ Запись подтверждена\n"
-                        f"Дата: {appointment.slot.date}\n"
-                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                        f"{appointment.slot.end_time.strftime('%H:%M')}"
-                    ),
-                    keyboard=build_vk_active_root_keyboard(appointment),
-                )
 
-            return Response({"status": "confirmed", "changed": changed})
+    def post(self, request):
+        appointment_id = request.data.get("appointment_id")
+        token = request.data.get("token", "").strip()
+        action = request.data.get("action", "").strip()
+        user_id = str(request.data.get("user_id", "")).strip()
 
-        if action == "cancel":
-            changed = appointment.status != "cancelled"
-
-            if changed:
-                appointment.status = "cancelled"
-                appointment.save(update_fields=["status"])
-
-                slot = appointment.slot
-                if slot.is_booked:
-                    slot.is_booked = False
-                    slot.save(update_fields=["is_booked"])
-
-                send_appointment_status_notification(appointment)
-
-                send_to_patient_vk(
-                    appointment,
-                    (
-                        "❌ Запись отменена\n"
-                        f"Дата: {appointment.slot.date}\n"
-                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                        f"{appointment.slot.end_time.strftime('%H:%M')}"
-                    ),
-                    keyboard=build_vk_booking_keyboard(),
-                )
-
-            return Response({"status": "cancelled", "changed": changed})
-
-        if action == "yes":
-            changed = appointment.reminder_response != "yes"
-
-            if changed:
-                appointment.reminder_response = "yes"
-                appointment.reminder_response_at = timezone.now()
-                appointment.save(update_fields=["reminder_response", "reminder_response_at"])
-
-                send_to_patient_vk(
-                    appointment,
-                    (
-                        "✅ Отлично, ждём вас на консультации.\n"
-                        f"Дата: {appointment.slot.date}\n"
-                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                        f"{appointment.slot.end_time.strftime('%H:%M')}"
-                    ),
-                    keyboard=build_vk_active_root_keyboard(appointment),
-                )
-
-            return Response({"status": "reminder_yes", "changed": changed})
-
-        if action == "no":
-            changed = appointment.status != "cancelled" or appointment.reminder_response != "no"
-
-            appointment.reminder_response = "no"
-            appointment.reminder_response_at = timezone.now()
-
-            if appointment.status != "cancelled":
-                appointment.status = "cancelled"
-
-            appointment.save(
-                update_fields=["reminder_response", "reminder_response_at", "status"]
+        if not appointment_id or not token or not action or not user_id:
+            return Response(
+                {"detail": "appointment_id, token, action и user_id обязательны."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-            if changed:
-                slot = appointment.slot
-                if slot.is_booked:
-                    slot.is_booked = False
-                    slot.save(update_fields=["is_booked"])
+        appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
+        if not appointment:
+            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
+        if appointment.vk_link_token != token:
+            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
+        if str(appointment.vk_user_id) != user_id:
+            return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
 
-                send_appointment_status_notification(appointment)
+        result = AppointmentActionService.handle(appointment, action, channel="vk")
+        if "error" in result:
+            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
 
-                send_to_patient_vk(
-                    appointment,
-                    (
-                        "❌ Запись отменена по вашему ответу на напоминание.\n"
-                        f"Дата: {appointment.slot.date}\n"
-                        f"Время: {appointment.slot.start_time.strftime('%H:%M')}–"
-                        f"{appointment.slot.end_time.strftime('%H:%M')}"
-                    ),
-                    keyboard=build_vk_booking_keyboard(),
-                )
 
-            return Response({"status": "reminder_no", "changed": changed})
+    def post(self, request):
+        appointment_id = request.data.get("appointment_id")
+        token = request.data.get("token", "").strip()
+        action = request.data.get("action", "").strip()
+        user_id = str(request.data.get("user_id", "")).strip()
 
-        if action == "doctor":
-            changed = appointment.reminder_response != "doctor_contact"
+        if not appointment_id or not token or not action or not user_id:
+            return Response(
+                {"detail": "appointment_id, token, action и user_id обязательны."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-            if changed:
-                appointment.reminder_response = "doctor_contact"
-                appointment.reminder_response_at = timezone.now()
-                appointment.doctor_contact_requested_at = timezone.now()
-                appointment.save(
-                    update_fields=[
-                        "reminder_response",
-                        "reminder_response_at",
-                        "doctor_contact_requested_at",
-                    ]
-                )
+        appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
+        if not appointment:
+            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
+        if appointment.vk_link_token != token:
+            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
+        if str(appointment.vk_user_id) != user_id:
+            return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
 
-                send_doctor_contact_request_notification(appointment)
-
-                send_to_patient_vk(
-                    appointment,
-                    "💬 Передали врачу, что вам нужна связь. С вами свяжутся.",
-                    keyboard=build_vk_active_root_keyboard(appointment),
-                )
-
-            return Response({"status": "doctor_contact_requested", "changed": changed})
-
-        return Response(
-            {"detail": "Неизвестное действие."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        result = AppointmentActionService.handle(appointment, action, channel="vk")
+        if "error" in result:
+            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
 
 
 @authentication_classes([])
@@ -694,7 +399,9 @@ class VKCallbackView(APIView):
 
         callback_secret = getattr(settings, "VK_CALLBACK_SECRET", "")
         incoming_secret = data.get("secret", "")
-        if callback_secret and incoming_secret != callback_secret:
+        # Если секрет не задан в настройках — отклоняем все запросы,
+        # чтобы не открывать эндпоинт без защиты.
+        if not callback_secret or incoming_secret != callback_secret:
             return HttpResponse("forbidden", status=403)
 
         if event_type not in {VK_EVENT_MESSAGE_NEW, VK_EVENT_MESSAGE_EVENT}:

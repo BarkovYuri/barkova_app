@@ -67,7 +67,6 @@ class AppointmentAdmin(admin.ModelAdmin):
             "fields": (
                 "preferred_contact_method",
                 "telegram_username",
-                "max_contact",
             )
         }),
         ("Слот", {
