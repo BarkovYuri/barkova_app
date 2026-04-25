@@ -30,86 +30,185 @@ export function ContactMethodSection({
   vkIdContainerRef,
 }: Props) {
   return (
-    <div className="rounded-3xl border border-sky-100 bg-sky-50/70 p-4 sm:p-5">
-      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Подтверждение / отмена записи</p>
-      <p className="mt-2 text-sm leading-6 text-gray-600">
-        Выберите удобный способ связи, чтобы врач или администратор могли подтвердить или при необходимости отменить запись.
-      </p>
+    <div className="animate-fade-in rounded-xl border border-neutral-200 bg-gradient-to-b from-neutral-50 to-white p-5 sm:p-6">
+      <div className="mb-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-neutral-600">
+          💬 Способ подтверждения записи
+        </p>
+        <p className="mt-2 text-sm text-neutral-600 leading-relaxed">
+          Выберите удобный способ связи для подтверждения и отмены записи.
+        </p>
+      </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      {/* Contact Method Tabs */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4">
         <button
           type="button"
           onClick={() => setContactMethod("telegram")}
-          className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
-            contactMethod === "telegram"
-              ? "border-sky-600 bg-sky-600 text-white"
-              : "border-gray-200 bg-white text-gray-700 hover:border-sky-300 hover:bg-sky-50"
-          }`}
+          className={`
+            relative rounded-lg border-2 px-4 py-3 text-sm font-semibold
+            transition-all duration-300 transform
+            ${
+              contactMethod === "telegram"
+                ? "border-primary-600 bg-gradient-to-br from-primary-600 to-primary-700 text-white shadow-lg scale-105"
+                : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-400 hover:bg-primary-50 active:scale-95"
+            }
+          `}
         >
-          Telegram
+          <span className="text-lg">💬</span> Telegram
         </button>
         <button
           type="button"
           onClick={() => setContactMethod("vk")}
-          className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
-            contactMethod === "vk"
-              ? "border-sky-600 bg-sky-600 text-white"
-              : "border-gray-200 bg-white text-gray-700 hover:border-sky-300 hover:bg-sky-50"
-          }`}
+          className={`
+            relative rounded-lg border-2 px-4 py-3 text-sm font-semibold
+            transition-all duration-300 transform
+            ${
+              contactMethod === "vk"
+                ? "border-primary-600 bg-gradient-to-br from-primary-600 to-primary-700 text-white shadow-lg scale-105"
+                : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-400 hover:bg-primary-50 active:scale-95"
+            }
+          `}
         >
-          VK
+          <span className="text-lg">👥</span> VK
         </button>
       </div>
 
-      <div key={contactMethod}>
+      {/* Method-specific content */}
+      <div key={contactMethod} className="animate-slide-in-down">
         {contactMethod === "telegram" ? (
-          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4">
-            <p className="text-sm leading-6 text-gray-700">
-              Сначала подключите Telegram, чтобы получать уведомления о записи, подтверждении и отмене консультации.
-            </p>
-            <div className="mt-4 flex flex-col gap-3">
+          <div className="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-5">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">💬</span>
+              <div className="flex-1">
+                <p className="text-sm leading-6 text-neutral-700">
+                  Подключите Telegram для получения уведомлений о подтверждении и отмене записи.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
               <button
                 type="button"
                 onClick={onTelegramConnect}
                 disabled={loadingTelegramLink}
-                className="inline-flex items-center justify-center rounded-2xl bg-blue-500 px-5 py-3.5 text-sm font-medium text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
+                className={`
+                  w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold
+                  transition-all duration-300 transform
+                  ${
+                    loadingTelegramLink
+                      ? "bg-blue-300 text-white cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
+                  }
+                `}
               >
-                {loadingTelegramLink ? "Создаём ссылку..." : "Подключить Telegram"}
+                {loadingTelegramLink ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span>Создаём ссылку...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>→</span>
+                    <span>Подключить Telegram</span>
+                  </>
+                )}
               </button>
+
               <button
                 type="button"
                 onClick={onCheckTelegram}
                 disabled={!telegramPrelinkToken}
-                className="inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-medium text-gray-700 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className={`
+                  w-full rounded-lg border-2 px-4 py-3 text-sm font-semibold
+                  transition-all duration-300
+                  ${
+                    !telegramPrelinkToken
+                      ? "border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed"
+                      : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-400 hover:bg-primary-50"
+                  }
+                `}
               >
-                Проверить подключение
+                🔍 Проверить подключение
               </button>
-              <div className={`inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium ${
-                telegramConnected ? "bg-green-100 text-green-700" : "border border-gray-200 bg-white text-gray-500"
-              }`}>
-                {telegramConnected ? "Telegram подключён" : "Telegram ещё не подключён"}
+
+              <div
+                className={`
+                  rounded-lg px-4 py-3 text-sm font-semibold text-center transition-all
+                  ${
+                    telegramConnected
+                      ? "border-2 border-green-500 bg-green-50 text-green-700"
+                      : "border-2 border-neutral-300 bg-neutral-50 text-neutral-500"
+                  }
+                `}
+              >
+                {telegramConnected ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <span>✓</span>
+                    <span>Telegram подключён</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <span>⏳</span>
+                    <span>Ожидание подключения...</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         ) : (
-          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-5">
-            <p className="text-sm leading-6 text-gray-700">
-              Войдите через VK ID, чтобы получать уведомления и управлять записью во ВКонтакте.
-            </p>
-            <div className="mt-4 min-h-[50px]" ref={vkIdContainerRef} />
-            {vkIdLoadError ? (
-              <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{vkIdLoadError}</div>
-            ) : !vkIdReady ? (
-              <p className="mt-3 text-sm text-gray-500">Загружаем VK...</p>
-            ) : null}
-            <div className={`mt-4 inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-medium ${
-              vkIdAuthorized ? "bg-green-100 text-green-700" : "border border-gray-200 bg-white text-gray-500"
-            }`}>
-              {vkIdAuthorized ? "VK подключён" : "Войдите через VK ID"}
+          <div className="rounded-lg border border-primary-200 bg-gradient-to-br from-primary-50 to-white p-5">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">👥</span>
+              <div className="flex-1">
+                <p className="text-sm leading-6 text-neutral-700">
+                  Войдите через VK ID для получения уведомлений и управления записью.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div
+                className="min-h-[60px] rounded-lg overflow-hidden"
+                ref={vkIdContainerRef}
+              />
+
+              {vkIdLoadError ? (
+                <div className="mt-3 animate-fade-in rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-800">
+                  <p className="font-semibold">Ошибка загрузки VK</p>
+                  <p>{vkIdLoadError}</p>
+                </div>
+              ) : !vkIdReady ? (
+                <div className="mt-3 animate-pulse rounded-lg bg-neutral-200 h-12 flex items-center justify-center">
+                  <p className="text-sm text-neutral-600">Загружаем VK...</p>
+                </div>
+              ) : null}
+
+              <div
+                className={`
+                  mt-4 rounded-lg px-4 py-3 text-sm font-semibold text-center transition-all
+                  ${
+                    vkIdAuthorized
+                      ? "border-2 border-green-500 bg-green-50 text-green-700"
+                      : "border-2 border-neutral-300 bg-neutral-50 text-neutral-500"
+                  }
+                `}
+              >
+                {vkIdAuthorized ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <span>✓</span>
+                    <span>VK подключён</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <span>⏳</span>
+                    <span>Ожидание подключения...</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
       </div>
     </div>
   );
-}
