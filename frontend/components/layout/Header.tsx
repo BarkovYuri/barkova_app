@@ -8,58 +8,58 @@ export default async function Header() {
   const links = [
     { href: "/", label: "Главная" },
     { href: "/about", label: "О враче" },
-    { href: "/booking", label: "Онлайн-консультация" },
-    { href: "/office", label: "Очный прием" },
+    { href: "/booking", label: "Запись" },
     { href: "/contacts", label: "Контакты" },
   ];
 
   const avatarSrc = doctor?.header_avatar_url || doctor?.photo_url || null;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-sky-100/80 bg-white/90 backdrop-blur">
-      <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-6">
-        <a href="/" className="flex min-w-0 items-center gap-3">
+    <header className="sticky top-0 z-30 border-b border-neutral-100 bg-neutral-0/95 backdrop-blur-sm transition-all duration-300 shadow-sm">
+      <div className="container flex items-center justify-between py-4">
+        {/* Logo/Brand */}
+        <a href="/" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
           {avatarSrc ? (
             <img
               src={avatarSrc}
               alt={doctor?.full_name || "Врач"}
-              className="h-10 w-10 shrink-0 rounded-2xl object-cover shadow-sm"
+              className="h-10 w-10 shrink-0 rounded-lg object-cover shadow-sm"
             />
           ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 shadow-sm">
-              <span className="text-sm font-semibold">ЕИ</span>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-600 shadow-sm">
+              <span className="text-xs font-bold">🏥</span>
             </div>
           )}
 
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-gray-900 md:text-base">
+          <div className="min-w-0 hidden sm:block">
+            <div className="truncate text-sm font-bold text-neutral-900">
               {doctor?.full_name || "Врач"}
             </div>
-            <div className="text-xs text-gray-500">врач-инфекционист</div>
+            <div className="text-xs text-neutral-500">врач-инфекционист</div>
           </div>
         </a>
 
-        <nav className="hidden items-center gap-6 md:flex">
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-8">
           {links.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-gray-600 transition hover:text-sky-600"
+              className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 hover:underline"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
+        {/* Desktop CTA Button */}
         <div className="hidden md:block">
-          <a
-            href="/booking"
-            className="rounded-2xl bg-sky-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-700"
-          >
-            Онлайн-консультация
+          <a href="/booking" className="btn-primary text-sm py-2 px-5">
+            Записаться
           </a>
         </div>
 
+        {/* Mobile Menu */}
         <MobileMenu fullName={doctor?.full_name} />
       </div>
     </header>
