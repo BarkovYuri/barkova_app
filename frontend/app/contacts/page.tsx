@@ -79,7 +79,7 @@ function SocialIconLink({
       rel="noreferrer"
       aria-label={label}
       title={label}
-      className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 text-gray-600 transition hover:scale-105 hover:shadow-sm ${hoverClass || ""}`}
+      className={`flex h-12 w-12 items-center justify-center rounded-lg border-2 border-neutral-300 text-neutral-600 transition-all hover:scale-110 hover:shadow-lg hover:border-primary-600 hover:bg-primary-50 ${hoverClass || ""}`}
     >
       {children}
     </a>
@@ -90,60 +90,103 @@ export default async function ContactsPage() {
   const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
 
   return (
-    <main className="min-h-screen bg-white px-6 py-12">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <div className="rounded-3xl border border-gray-100 bg-white p-8 shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">
+    <main className="bg-neutral-0">
+      <div className="container section-vertical-spacing">
+        {/* Header */}
+        <div className="max-w-4xl mx-auto mb-12 animate-fade-in-up">
+          <h1 className="text-h1-mobile md:text-h1-desktop text-neutral-900 mb-4">
             Контакты
-          </p>
-          <h1 className="mt-3 text-4xl font-semibold text-gray-900">
-            Контактная информация
           </h1>
+          <p className="text-base-large text-neutral-600">
+            Свяжитесь со мной удобным для вас способом
+          </p>
+        </div>
 
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <div className="rounded-3xl bg-sky-50 p-6">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Основные контакты
-              </h2>
+        {/* Grid: Contacts + Map */}
+        <div className="grid gap-8 md:grid-cols-[1fr_1.2fr] lg:gap-12">
+          {/* Left: Contact Cards */}
+          <div className="space-y-6">
+            {/* Phone Card */}
+            <div className="card-interactive border-l-4 border-primary-600">
+              <div className="flex items-start gap-4">
+                <div className="text-4xl">☎️</div>
+                <div className="flex-1">
+                  <p className="text-ui-label text-primary-600 font-semibold uppercase tracking-wider">
+                    Телефон
+                  </p>
+                  {doctor?.phone ? (
+                    <a
+                      href={`tel:${doctor.phone}`}
+                      className="mt-2 text-xl font-bold text-neutral-900 hover:text-primary-600 transition"
+                    >
+                      {doctor.phone}
+                    </a>
+                  ) : (
+                    <p className="mt-2 text-neutral-600">Не указан</p>
+                  )}
+                  <p className="mt-1 text-sm text-neutral-500">Позвоните прямо сейчас</p>
+                </div>
+              </div>
+            </div>
 
-              <div className="mt-5 space-y-4 text-gray-700">
-                <p>
-                  <span className="font-medium text-gray-900">Врач:</span>{" "}
-                  {doctor?.full_name || "Не указано"}
-                </p>
-
-                <p>
-                  <span className="font-medium text-gray-900">Email:</span>{" "}
+            {/* Email Card */}
+            <div className="card-interactive border-l-4 border-secondary-600">
+              <div className="flex items-start gap-4">
+                <div className="text-4xl">✉️</div>
+                <div className="flex-1">
+                  <p className="text-ui-label text-secondary-600 font-semibold uppercase tracking-wider">
+                    Email
+                  </p>
                   {doctor?.email ? (
                     <a
                       href={`mailto:${doctor.email}`}
-                      className="text-sky-600 hover:text-sky-700"
+                      className="mt-2 text-lg font-bold text-neutral-900 hover:text-primary-600 transition break-all"
                     >
                       {doctor.email}
                     </a>
                   ) : (
-                    "Не указан"
+                    <p className="mt-2 text-neutral-600">Не указан</p>
                   )}
-                </p>
-
-                <p>
-                  <span className="font-medium text-gray-900">Адрес приема:</span>{" "}
-                  {doctor?.address || "Не указан"}
-                </p>
+                  <p className="mt-1 text-sm text-neutral-500">Отправьте письмо</p>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-3xl bg-white p-6 ring-1 ring-gray-100">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Социальные сети
-              </h2>
+            {/* Address Card */}
+            <div className="card-interactive border-l-4 border-accent-600">
+              <div className="flex items-start gap-4">
+                <div className="text-4xl">📍</div>
+                <div className="flex-1">
+                  <p className="text-ui-label text-accent-600 font-semibold uppercase tracking-wider">
+                    Очный приём
+                  </p>
+                  <p className="mt-2 font-bold text-neutral-900">
+                    {doctor?.address || "Адрес не указан"}
+                  </p>
+                  <a
+                    href={`https://maps.yandex.ru/search/${encodeURIComponent(doctor?.address || "")}/`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-2 text-primary-600 font-medium hover:gap-3 transition-all"
+                  >
+                    Открыть в картах
+                    <span>→</span>
+                  </a>
+                </div>
+              </div>
+            </div>
 
-              <div className="mt-5 flex flex-wrap gap-3">
+            {/* Social Links */}
+            <div className="card bg-gradient-card">
+              <p className="text-ui-label text-neutral-700 font-semibold uppercase tracking-wider">
+                Мессенджеры
+              </p>
+              <div className="mt-6 flex flex-wrap gap-4">
                 {doctor?.instagram_url ? (
                   <SocialIconLink
                     href={doctor.instagram_url}
                     label="Instagram"
-                    hoverClass="hover:border-pink-300 hover:bg-gradient-to-tr hover:from-pink-500 hover:to-purple-500 hover:text-white"
+                    hoverClass="hover:text-pink-600"
                   >
                     <InstagramIcon />
                   </SocialIconLink>
@@ -153,7 +196,7 @@ export default async function ContactsPage() {
                   <SocialIconLink
                     href={doctor.vk_url}
                     label="VK"
-                    hoverClass="hover:border-blue-300 hover:bg-blue-600 hover:text-white"
+                    hoverClass="hover:text-blue-600"
                   >
                     <VkIcon />
                   </SocialIconLink>
@@ -163,7 +206,7 @@ export default async function ContactsPage() {
                   <SocialIconLink
                     href={doctor.dzen_url}
                     label="Дзен"
-                    hoverClass="hover:border-gray-900 hover:bg-black hover:text-white"
+                    hoverClass="hover:text-neutral-900"
                   >
                     <DzenIcon />
                   </SocialIconLink>
@@ -173,7 +216,7 @@ export default async function ContactsPage() {
                   <SocialIconLink
                     href={`mailto:${doctor.email}`}
                     label="Email"
-                    hoverClass="hover:border-gray-700 hover:bg-gray-800 hover:text-white"
+                    hoverClass="hover:text-neutral-900"
                   >
                     <MailIcon />
                   </SocialIconLink>
@@ -181,32 +224,37 @@ export default async function ContactsPage() {
               </div>
             </div>
           </div>
+
+          {/* Right: Map */}
+          {doctor?.yandex_maps_embed_url ? (
+            <div className="card shadow-xl overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-neutral-200">
+                <h2 className="font-semibold text-neutral-900">Где проходит приём</h2>
+              </div>
+              <div className="h-[200px] sm:h-[300px] md:h-[420px] flex-1 overflow-hidden">
+                <iframe
+                  src={doctor.yandex_maps_embed_url}
+                  width="100%"
+                  height="100%"
+                  allowFullScreen
+                  loading="lazy"
+                  className="h-full w-full border-0"
+                  title="Карта места приема"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
 
-        {doctor?.yandex_maps_embed_url ? (
-          <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-5">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Где проходит очный прием
-              </h2>
-              <p className="mt-2 text-gray-600">
-                Ниже показана встроенная карта с точкой приема.
-              </p>
-            </div>
-
-            <div className="h-[420px] w-full">
-              <iframe
-                src={doctor.yandex_maps_embed_url}
-                width="100%"
-                height="100%"
-                allowFullScreen
-                loading="lazy"
-                className="h-full w-full border-0"
-                title="Карта места приема"
-              />
-            </div>
-          </div>
-        ) : null}
+        {/* CTA */}
+        <div className="mt-16 text-center">
+          <p className="text-base-large text-neutral-600 mb-6">
+            Выберите удобный для вас способ связи или запишитесь сразу:
+          </p>
+          <a href="/booking" className="btn-primary text-lg">
+            Записаться на консультацию
+          </a>
+        </div>
       </div>
     </main>
   );
