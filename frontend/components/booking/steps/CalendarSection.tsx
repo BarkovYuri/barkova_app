@@ -51,34 +51,67 @@ export function CalendarSection({
   slotsSectionRef,
 }: Props) {
   return (
-    <section className="rounded-[1.75rem] border border-white/70 bg-white p-4 shadow-xl shadow-sky-100/40 sm:p-6">
-      <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">1</div>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 sm:text-2xl">Выберите дату и время</h2>
-          <p className="mt-1 text-sm text-gray-500">Календарь свободных онлайн-консультаций</p>
+    <section className="animate-fade-in rounded-xl border border-neutral-200 bg-white p-4 shadow-lg sm:p-6">
+      {/* Header */}
+      <div className="mb-6 flex items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-secondary-100 text-lg font-bold text-primary-600">
+          1
+        </div>
+        <div className="flex-1">
+          <h2 className="text-xl font-bold text-neutral-900 sm:text-2xl">Выберите дату и время</h2>
+          <p className="mt-1 text-sm text-neutral-500">Календарь свободных онлайн-консультаций</p>
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50/70 p-3 sm:p-5">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <button type="button" onClick={() => setCurrentMonth(addMonths(currentMonth, -1))} className="rounded-2xl border border-white bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:border-sky-200 hover:text-sky-700">←</button>
-          <p className="text-center text-sm font-semibold capitalize text-gray-900 sm:text-lg">{formatMonthTitle(currentMonth)}</p>
-          <button type="button" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="rounded-2xl border border-white bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:border-sky-200 hover:text-sky-700">→</button>
+      {/* Calendar */}
+      <div className="rounded-xl border border-neutral-200 bg-gradient-to-b from-neutral-50 to-white p-4 sm:p-6">
+        {/* Month Navigation */}
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setCurrentMonth(addMonths(currentMonth, -1))}
+            className="group relative h-10 w-10 flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 transition-all hover:border-primary-400 hover:bg-primary-50 hover:text-primary-600 active:scale-95"
+            aria-label="Previous month"
+          >
+            <span className="text-lg font-bold">←</span>
+          </button>
+          <p className="flex-1 text-center text-lg font-semibold capitalize text-neutral-900 sm:text-xl">
+            {formatMonthTitle(currentMonth)}
+          </p>
+          <button
+            type="button"
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            className="group relative h-10 w-10 flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 transition-all hover:border-primary-400 hover:bg-primary-50 hover:text-primary-600 active:scale-95"
+            aria-label="Next month"
+          >
+            <span className="text-lg font-bold">→</span>
+          </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1.5 text-center sm:gap-2">
+        {/* Weekday Labels */}
+        <div className="grid grid-cols-7 gap-2 mb-3">
           {WEEKDAY_LABELS.map((label) => (
-            <div key={label} className="py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400 sm:text-xs">{label}</div>
+            <div
+              key={label}
+              className="py-2 text-center text-xs font-bold uppercase tracking-widest text-neutral-400"
+            >
+              {label}
+            </div>
           ))}
+        </div>
 
+        {/* Calendar Days */}
+        <div className="grid grid-cols-7 gap-2 text-center sm:gap-2.5">
           {loadingDates
             ? Array.from({ length: 35 }).map((_, index) => (
-                <div key={`skeleton-${index}`} className="h-12 animate-pulse rounded-2xl bg-white/70 sm:h-14" />
+                <div
+                  key={`skeleton-${index}`}
+                  className="h-12 rounded-lg bg-neutral-200 animate-pulse sm:h-14"
+                />
               ))
             : calendarDays.map((day) => {
                 if (!day.date || !day.iso) {
-                  return <div key={day.key} className="h-12 rounded-2xl sm:h-14" />;
+                  return <div key={day.key} className="h-12 sm:h-14" />;
                 }
 
                 const isSelected = selectedDate === day.iso;
@@ -94,16 +127,26 @@ export function CalendarSection({
                       setSelectedDate(day.iso!);
                       setCurrentMonth(startOfMonth(day.date!));
                     }}
-                    className={`flex h-12 flex-col items-center justify-center rounded-2xl border text-center transition sm:h-16 ${
-                      isSelected
-                        ? "border-sky-600 bg-sky-600 text-white shadow-sm"
-                        : isDisabled
-                        ? "cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300"
-                        : "border-white bg-white text-gray-800 hover:border-sky-300 hover:bg-sky-100"
-                    } ${isOutside ? "opacity-40" : ""}`}
+                    className={`
+                      relative flex h-12 sm:h-14 flex-col items-center justify-center rounded-lg
+                      border-2 text-center font-semibold transition-all duration-300 transform
+                      ${
+                        isSelected
+                          ? "border-primary-600 bg-gradient-to-b from-primary-600 to-primary-700 text-white shadow-lg scale-105"
+                          : isDisabled
+                          ? "cursor-not-allowed border-neutral-200 bg-neutral-50 text-neutral-300"
+                          : "border-neutral-200 bg-white text-neutral-800 hover:border-primary-400 hover:bg-primary-50 hover:shadow-md active:scale-95"
+                      }
+                      ${isOutside ? "opacity-40" : ""}
+                    `}
                   >
-                    <span className="text-sm font-semibold">{day.date.getDate()}</span>
-                    <span className={`mt-0.5 text-[10px] sm:mt-1 sm:text-[11px] ${isSelected ? "text-sky-100" : "text-gray-400"}`}>
+                    <span className="text-sm font-bold">{day.date.getDate()}</span>
+                    <span
+                      className={`
+                        mt-0.5 text-[10px] sm:mt-1 sm:text-xs font-medium
+                        ${isSelected ? "text-primary-100" : isDisabled ? "text-neutral-400" : "text-neutral-500"}
+                      `}
+                    >
                       {day.isAvailable
                         ? typeof day.freeSlots === "number"
                           ? `${day.freeSlots} мест`
@@ -116,25 +159,39 @@ export function CalendarSection({
         </div>
       </div>
 
-      <div ref={slotsSectionRef} className="mt-4 rounded-[1.5rem] border border-gray-100 bg-white p-4 sm:mt-6 sm:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-xs font-medium uppercase tracking-[0.16em] text-gray-500 sm:text-sm">Свободное время</h3>
-            {selectedDate ? <p className="mt-2 text-sm font-medium capitalize text-gray-900 sm:text-base">{formatDateLong(selectedDate)}</p> : null}
+      {/* Slots Section */}
+      <div ref={slotsSectionRef} className="mt-6 rounded-xl border border-neutral-200 bg-white p-4 sm:p-6">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex-1">
+            <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">Свободное время</p>
+            {selectedDate ? (
+              <p className="mt-2 text-lg font-bold capitalize text-neutral-900">
+                {formatDateLong(selectedDate)}
+              </p>
+            ) : null}
           </div>
-          {selectedDate ? <div className="rounded-2xl bg-sky-50 px-3 py-2 text-xs text-sky-700 sm:px-4 sm:text-sm">{slots.length} слотов</div> : null}
+          {selectedDate ? (
+            <div className="rounded-lg bg-gradient-to-br from-primary-100 to-secondary-100 px-3 py-2 text-xs font-semibold text-primary-700 sm:px-4 sm:text-sm">
+              {slots.length} {slots.length % 10 === 1 ? "слот" : "слотов"}
+            </div>
+          ) : null}
         </div>
 
         {loadingSlots ? (
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={`slot-skeleton-${index}`} className="h-11 min-w-[92px] animate-pulse rounded-2xl bg-gray-100 sm:min-w-0" />
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={`slot-skeleton-${index}`}
+                className="h-11 rounded-lg bg-neutral-200 animate-pulse"
+              />
             ))}
           </div>
         ) : slots.length === 0 ? (
-          <div className="mt-4 rounded-2xl bg-gray-50 px-4 py-4 text-sm text-gray-500">На выбранную дату свободного времени нет.</div>
+          <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-4 text-center text-sm text-neutral-500">
+            📭 На выбранную дату свободного времени нет.
+          </div>
         ) : (
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {slots.map((slot) => {
               const active = selectedSlotId === slot.id;
               return (
@@ -145,16 +202,26 @@ export function CalendarSection({
                     setSelectedSlotId(slot.id);
                     if (typeof window !== "undefined" && window.innerWidth < 1024) {
                       setTimeout(() => {
-                        formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        formSectionRef.current?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
                       }, 120);
                     }
                   }}
-                  className={`min-w-[96px] rounded-2xl border px-4 py-3 text-sm font-medium transition sm:min-w-0 sm:text-base ${
-                    active
-                      ? "border-sky-600 bg-sky-600 text-white shadow-sm"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-sky-300 hover:bg-sky-50"
-                  }`}
+                  className={`
+                    relative rounded-lg border-2 px-3 py-3 text-sm font-semibold
+                    transition-all duration-300 transform
+                    ${
+                      active
+                        ? "border-primary-600 bg-gradient-to-b from-primary-600 to-primary-700 text-white shadow-lg scale-105"
+                        : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-400 hover:bg-primary-50 hover:shadow-md active:scale-95"
+                    }
+                  `}
                 >
+                  {active && (
+                    <div className="absolute inset-0 rounded-lg animate-pulse border-2 border-primary-600" />
+                  )}
                   {slot.start_time.slice(0, 5)}
                 </button>
               );

@@ -14,36 +14,40 @@ import { ContactMethodSection } from "./steps/ContactMethodSection";
 import { PatientForm } from "./steps/PatientForm";
 import { SuccessView } from "./steps/SuccessView";
 
-
 export default function BookingForm() {
   // ── Refs ────────────────────────────────────────────────────────
   const slotsSectionRef = useRef<HTMLDivElement | null>(null);
-  const formSectionRef  = useRef<HTMLDivElement | null>(null);
+  const formSectionRef = useRef<HTMLDivElement | null>(null);
 
   // ── Дата / календарь / слоты ────────────────────────────────────
   const {
     loading: loadingDates,
-    selectedDate, setSelectedDate,
-    currentMonth, setCurrentMonth,
+    selectedDate,
+    setSelectedDate,
+    currentMonth,
+    setCurrentMonth,
     calendarDays,
   } = useDates();
 
   const {
-    slots, loading: loadingSlots,
-    selectedSlotId, setSelectedSlotId,
-    selectedSlot, refreshSlots,
+    slots,
+    loading: loadingSlots,
+    selectedSlotId,
+    setSelectedSlotId,
+    selectedSlot,
+    refreshSlots,
   } = useSlots(selectedDate, slotsSectionRef);
 
   // ── Данные пациента ─────────────────────────────────────────────
-  const [name, setName]     = useState("");
-  const [phone, setPhone]   = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [reason, setReason] = useState("");
-  const [files, setFiles]   = useState<FileList | null>(null);
+  const [files, setFiles] = useState<FileList | null>(null);
 
   // ── Согласия ────────────────────────────────────────────────────
-  const [consentGiven,    setConsentGiven]    = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [offerAccepted,   setOfferAccepted]   = useState(false);
+  const [offerAccepted, setOfferAccepted] = useState(false);
 
   // ── Способ связи ────────────────────────────────────────────────
   const [contactMethod, setContactMethod] = useState<ContactMethod>("telegram");
@@ -58,7 +62,12 @@ export default function BookingForm() {
 
   // ── Отправка ────────────────────────────────────────────────────
   const {
-    submitting, success, error, setError, createdAppointment, submit,
+    submitting,
+    success,
+    error,
+    setError,
+    createdAppointment,
+    submit,
   } = useBookingSubmit();
 
   // Объединяем ошибки: от хука submit + от Telegram/VK
@@ -71,15 +80,40 @@ export default function BookingForm() {
       selectedSlotId,
       selectedDate,
       selectedSlot,
-      name, phone, reason,
+      name,
+      phone,
+      reason,
       contactMethod,
       telegramPrelinkToken: telegram.token,
       vkIdPayload: vkId.payload as Record<string, unknown> | null,
       files,
-      consentGiven, privacyAccepted, offerAccepted,
+      consentGiven,
+      privacyAccepted,
+      offerAccepted,
       onSlotsRefresh: refreshSlots,
     });
   }
+
+  // ── Progress calculation ─────────────────────────────────────────
+  const hasSelectedDate = !!selectedDate;
+  const hasSelectedSlot = !!selectedSlotId;
+  const hasFilledForm =
+    name.trim() && phone.trim() && consentGiven && privacyAccepted;
+  const hasContactMethod =
+    contactMethod === "telegram"
+      ? telegram.connected
+      : contactMethod === "vk"
+        ? vkId.authorized
+        : true;
+
+  const progressPercentage = Math.round(
+    ((hasSelectedDate ? 1 : 0) +
+      (hasSelectedSlot ? 1 : 0) +
+      (hasFilledForm ? 1 : 0) +
+      (hasContactMethod ? 1 : 0)) /
+      4 *
+      100
+  );
 
   // ── Success ─────────────────────────────────────────────────────
   if (success) {
@@ -95,10 +129,67 @@ export default function BookingForm() {
   // ── Main form ───────────────────────────────────────────────────
   return (
     <>
-      <Script src="https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js" strategy="afterInteractive" />
+      <Script
+        src="https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js"
+        strategy="afterInteractive"
+      />
+
+      {/* Progress Bar - Modern with animation */}
+      <div className="mb-8 animate-fade-in">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-secondary-600 text-sm font-bold text-white">
+              {Math.min(Math.floor(progressPercentage / 25) + 1, 4)}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-900">Ваш прогресс</p>
+              <p className="text-xs text-neutral-500">
+                {progressPercentage === 100 
+                  ? "Готово к отправке!" 
+                  : `Заполнено ${progressPercentage}%`}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm font-bold text-primary-600">{progressPercentage}%</p>
+        </div>
+        <div className="relative h-3 w-full overflow-hidden rounded-full bg-neutral-100 shadow-inner">
+          <div
+            className="h-full bg-gradient-to-r from-primary-600 via-secondary-500 to-green-500 rounded-full transition-all duration-700 ease-out shadow-lg"
+            style={{ 
+              width: `${progressPercentage}%`,
+              boxShadow: `0 0 20px rgba(0, 102, 204, ${progressPercentage / 100})`
+            }}
+          >
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-white to-transparent opacity-30" />
+          </div>
+        </div>
+        {/* Step indicators */}
+        <div className="mt-4 flex justify-between gap-2 px-2">
+          {[
+            { step: 1, label: "Дата", complete: hasSelectedDate },
+            { step: 2, label: "Форма", complete: hasFilledForm },
+            { step: 3, label: "Контакт", complete: hasContactMethod },
+            { step: 4, label: "Отправка", complete: progressPercentage === 100 },
+          ].map(({ step, label, complete }) => (
+            <div key={step} className="flex flex-1 flex-col items-center gap-1">
+              <div
+                className={`h-2 w-full rounded-full transition-all duration-500 ${
+                  complete ? "bg-gradient-to-r from-green-400 to-green-500" : "bg-neutral-200"
+                }`}
+              />
+              <p className={`text-xs font-medium transition-colors ${
+                complete ? "text-green-600" : "text-neutral-500"
+              }`}>
+                {label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.02fr_0.98fr] lg:gap-8">
-
+        {/* Left: Calendar & Slots */}
         <CalendarSection
           loadingDates={loadingDates}
           currentMonth={currentMonth}
@@ -114,29 +205,46 @@ export default function BookingForm() {
           slotsSectionRef={slotsSectionRef}
         />
 
+        {/* Right: Form */}
         <section
           ref={formSectionRef}
-          className="rounded-[1.75rem] border border-white/70 bg-white p-4 shadow-xl shadow-sky-100/40 sm:p-6"
+          className="card shadow-xl animate-fade-in"
         >
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-700">2</div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 sm:text-2xl">Оставьте данные</h2>
-              <p className="mt-1 text-sm text-gray-500">Заполните форму, чтобы отправить заявку на консультацию</p>
+          {/* Header */}
+          <div className="mb-8 pb-6 border-b border-neutral-200">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-100 text-lg font-bold text-primary-600">
+                ✓
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-neutral-900">
+                  Ваши данные
+                </h2>
+                <p className="mt-1 text-sm text-neutral-600">
+                  Заполните форму для подтверждения записи
+                </p>
+              </div>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-6">
             <PatientForm
               selectedDate={selectedDate}
               selectedSlot={selectedSlot}
-              name={name} setName={setName}
-              phone={phone} setPhone={setPhone}
-              reason={reason} setReason={setReason}
-              consentGiven={consentGiven} setConsentGiven={setConsentGiven}
-              privacyAccepted={privacyAccepted} setPrivacyAccepted={setPrivacyAccepted}
-              offerAccepted={offerAccepted} setOfferAccepted={setOfferAccepted}
-              files={files} setFiles={setFiles}
+              name={name}
+              setName={setName}
+              phone={phone}
+              setPhone={setPhone}
+              reason={reason}
+              setReason={setReason}
+              consentGiven={consentGiven}
+              setConsentGiven={setConsentGiven}
+              privacyAccepted={privacyAccepted}
+              setPrivacyAccepted={setPrivacyAccepted}
+              offerAccepted={offerAccepted}
+              setOfferAccepted={setOfferAccepted}
+              files={files}
+              setFiles={setFiles}
               errorText={errorText}
               submitting={submitting}
             >
@@ -156,7 +264,6 @@ export default function BookingForm() {
             </PatientForm>
           </form>
         </section>
-
       </div>
     </>
   );

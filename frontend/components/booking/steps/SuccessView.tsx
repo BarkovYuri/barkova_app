@@ -17,39 +17,137 @@ type Props = {
 
 export function SuccessView({ selectedDate, selectedSlot, contactMethod }: Props) {
   return (
-    <div className="mx-auto max-w-3xl rounded-[2rem] border border-sky-100 bg-white p-5 shadow-xl shadow-sky-100/50 sm:p-8">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-700">✓</div>
+    <div className="mx-auto max-w-2xl animate-fade-in">
+      {/* Success Card */}
+      <div className="relative rounded-xl border border-neutral-200 bg-gradient-to-b from-white to-neutral-50 p-6 shadow-lg sm:p-10">
+        {/* Decorative background */}
+        <div className="absolute inset-0 -z-10 opacity-10">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-green-500 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-primary-500 rounded-full blur-3xl" />
+        </div>
 
-      <h2 className="mt-5 text-2xl font-semibold text-gray-900 sm:text-3xl">
-        Заявка на онлайн-консультацию отправлена
-      </h2>
-      <p className="mt-4 leading-7 text-gray-600">
-        Мы получили вашу заявку. Врач или администратор свяжется с вами для подтверждения записи выбранным способом.
-      </p>
+        {/* Success Icon */}
+        <div className="flex justify-center mb-6">
+          <div className="relative h-24 w-24 animate-bounce" style={{ animationDuration: "1.5s" }}>
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-green-500 text-5xl text-white shadow-lg">
+              ✓
+            </div>
+            {/* Pulse rings */}
+            <div className="absolute inset-0 rounded-full border-2 border-green-400 animate-pulse" />
+          </div>
+        </div>
 
-      {selectedDate && selectedSlot ? (
-        <div className="mt-6 rounded-3xl border border-gray-100 bg-sky-50 p-4 sm:p-6">
-          <p className="text-sm uppercase tracking-[0.16em] text-sky-700">Детали записи</p>
-          <p className="mt-3 text-base text-gray-800 sm:text-lg">
-            <span className="font-medium">Дата:</span> {formatDateLong(selectedDate)}
-          </p>
-          <p className="mt-2 text-base text-gray-800 sm:text-lg">
-            <span className="font-medium">Время:</span>{" "}
-            {selectedSlot.start_time.slice(0, 5)} – {selectedSlot.end_time.slice(0, 5)}
-          </p>
-          <p className="mt-2 text-base text-gray-800 sm:text-lg">
-            <span className="font-medium">Подтверждение:</span>{" "}
-            {contactMethod === "telegram" ? "Telegram" : "VK"}
+        {/* Main content */}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
+            Отлично! Заявка отправлена
+          </h2>
+          <p className="mt-3 text-neutral-600 sm:text-lg">
+            Мы получили вашу заявку на онлайн-консультацию. Врач или администратор свяжется с вами в ближайшее время для подтверждения через{" "}
+            <span className="font-semibold text-primary-600">
+              {contactMethod === "telegram"
+                ? "Telegram"
+                : contactMethod === "vk"
+                ? "VK"
+                : "выбранный способ связи"}
+            </span>
+            .
           </p>
         </div>
-      ) : null}
 
-      <a
-        href="/"
-        className="mt-7 inline-flex rounded-2xl bg-sky-600 px-6 py-3 text-white transition hover:bg-sky-700"
-      >
-        Вернуться на главную
-      </a>
+        {/* Booking Details */}
+        {selectedDate && selectedSlot ? (
+          <div className="mt-8 rounded-lg border border-green-200 bg-green-50 p-5 sm:p-6">
+            <p className="mb-4 text-xs font-bold uppercase tracking-widest text-green-700">
+              📋 Детали записи
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📅</span>
+                <div>
+                  <p className="text-xs text-green-600 uppercase tracking-wide">Дата приема</p>
+                  <p className="text-lg font-semibold text-neutral-900 capitalize">
+                    {formatDateLong(selectedDate)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🕐</span>
+                <div>
+                  <p className="text-xs text-green-600 uppercase tracking-wide">Время приема</p>
+                  <p className="text-lg font-semibold text-neutral-900">
+                    {selectedSlot.start_time.slice(0, 5)} –{" "}
+                    {selectedSlot.end_time.slice(0, 5)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">
+                  {contactMethod === "telegram"
+                    ? "💬"
+                    : contactMethod === "vk"
+                    ? "👥"
+                    : "📱"}
+                </span>
+                <div>
+                  <p className="text-xs text-green-600 uppercase tracking-wide">Подтверждение</p>
+                  <p className="text-lg font-semibold text-neutral-900">
+                    {contactMethod === "telegram"
+                      ? "Telegram"
+                      : contactMethod === "vk"
+                      ? "VK"
+                      : "Способ связи"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Next Steps */}
+        <div className="mt-8 space-y-3 rounded-lg bg-neutral-100 p-5 sm:p-6">
+          <p className="text-sm font-semibold text-neutral-900">📍 Что дальше?</p>
+          <ul className="space-y-2 text-sm text-neutral-700">
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 text-primary-600">✓</span>
+              <span>
+                Вы получите сообщение в {contactMethod === "telegram" ? "Telegram" : "VK"} для
+                подтверждения записи
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 text-primary-600">✓</span>
+              <span>Ссылка на видеоконференцию будет отправлена перед консультацией</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 text-primary-600">✓</span>
+              <span>Убедитесь, что у вас есть доступ в интернет и рабочая веб-камера</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a
+            href="/"
+            className="flex items-center justify-center rounded-lg bg-gradient-to-r from-primary-600 to-secondary-600 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:scale-105 active:scale-95"
+          >
+            ← Вернуться на главную
+          </a>
+          <a
+            href="tel:+7"
+            className="flex items-center justify-center rounded-lg border-2 border-neutral-300 bg-white px-6 py-3 font-semibold text-neutral-900 transition-all hover:border-primary-400 hover:bg-primary-50"
+          >
+            ☎️ Связаться с нами
+          </a>
+        </div>
+      </div>
+
+      {/* Floating confetti-like elements */}
+      <div className="mt-6 flex justify-center gap-4 text-4xl animate-pulse">
+        <span>🎉</span>
+        <span>✨</span>
+        <span>🎊</span>
+      </div>
     </div>
   );
-}
