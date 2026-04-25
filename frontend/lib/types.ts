@@ -29,23 +29,26 @@ export type CalendarDay = {
 };
 
 export type DoctorProfile = {
-  id?: number;
-  full_name: string;
+  id: number;
+  header_avatar_url?: string | null; 
+  // Поля, которые используются в коде AboutPage:
+  full_name: string;        // было name
+  description?: string;     // было bio
+  photo_url?: string | null; // было photo
+  experience_years: number;
+  education?: string;        // добавьте это поле
+  address?: string;          // было office_address
+  prodoktorov_url?: string | null; // ссылка на ПроДокторов
+  instagram_url?: string | null; // <-- Ошибка здесь
+  telegram_url?: string | null;
+  vk_url?: string | null;
+  dzen_url?: string | null;
+  yandex_maps_embed_url?: string | null; 
+  // Старые поля (если они приходят из API, оставьте их)
   title?: string;
-  description?: string;
-  bio?: string;
-  education?: string;
-  experience_years?: number;
-  address?: string;
+  phone?: string;
   email?: string;
-  photo?: string | null;
-  photo_url?: string | null;
-  header_avatar_url?: string | null;
-  prodoktorov_url?: string;
-  yandex_maps_embed_url?: string;
-  instagram_url?: string;
-  vk_url?: string;
-  dzen_url?: string;
+  specialties?: string[];
 };
 
 export type LegalDocument = {

@@ -1,34 +1,37 @@
-FROM node:20-bookworm-slim AS builder
+# ---------- STAGE 1: Builder ----------
+    FROM node:20-bookworm-slim AS builder
 
-WORKDIR /app
-
-ARG NEXT_PUBLIC_VK_APP_ID
-
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_DISABLE_TURBOPACK=1
-ENV NEXT_PUBLIC_VK_APP_ID=${NEXT_PUBLIC_VK_APP_ID}
-
-COPY package.json package-lock.json ./
-RUN npm install
-
-COPY . .
-
-RUN npm run build
-
-
-FROM node:20-bookworm-slim AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_DISABLE_TURBOPACK=1
-
-COPY package.json package-lock.json ./
-RUN npm install --omit=dev
-
-COPY --from=builder /app/.next ./.next
-
-EXPOSE 3000
-
-CMD ["npm", "run", "start"]
+    WORKDIR /app
+    
+    ARG NEXT_PUBLIC_VK_APP_ID
+    ENV NEXT_PUBLIC_VK_APP_ID=${NEXT_PUBLIC_VK_APP_ID}
+    ENV NEXT_TELEMETRY_DISABLED=1
+    ENV NEXT_DISABLE_TURBOPACK=1
+    
+    # Копируем зависимости
+    COPY package.json package-lock.json ./
+    RUN npm install --legacy-peer-deps
+    
+    # Копируем весь фронтенд
+    COPY . .
+    
+    # Собираем продакшн билд
+    RUN npm run build
+    
+    # ---------- STAGE 2: Production ----------
+    FROM node:20-bookworm-slim AS runner
+    
+    WORKDIR /app
+    
+    ENV NODE_ENV=production
+    ENV NEXT_TELEMETRY_DISABLED=1
+    
+    # Копируем только необходимые файлы
+    COPY package.json package-lock.json ./
+    COPY --from=builder /app/node_modules ./node_modules
+    COPY --from=builder /app/.next ./.next
+    COPY --from=builder /app/public ./public
+    
+    EXPOSE 3000
+    
+    CMD ["npm", "start"]
