@@ -151,3 +151,4 @@ export function SuccessView({ selectedDate, selectedSlot, contactMethod }: Props
       </div>
     </div>
   );
+}
