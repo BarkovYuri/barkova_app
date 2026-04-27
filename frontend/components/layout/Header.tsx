@@ -3,6 +3,7 @@ import Image from "next/image";
 
 import { fetchAPI } from "../../lib/api";
 import type { DoctorProfile } from "../../lib/types";
+import { absoluteMediaUrl } from "../../lib/url";
 import MobileMenu from "./MobileMenu";
 
 export default async function Header() {
@@ -16,7 +17,9 @@ export default async function Header() {
     { href: "/contacts", label: "Контакты" },
   ];
 
-  const avatarSrc = doctor?.header_avatar_url || doctor?.photo_url || null;
+  const avatarSrc = absoluteMediaUrl(
+    doctor?.header_avatar_url || doctor?.photo_url || null
+  );
 
   return (
     <header className="sticky top-0 z-30 border-b border-neutral-100 bg-neutral-0/95 backdrop-blur-sm transition-all duration-300 shadow-sm">

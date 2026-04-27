@@ -148,7 +148,77 @@ export function tryMockResponse(
   if (endpoint.startsWith("/profile")) return DOCTOR;
 
   // /blocks/
-  if (endpoint.startsWith("/blocks")) return [];
+  if (endpoint.startsWith("/blocks")) {
+    return [
+      { id: 1, key: "hero.subtitle", title: "Подзаголовок hero", content: "Помогаю взрослым и детям с инфекционными заболеваниями: от диагностики до длительного сопровождения.", updated_at: "" },
+      { id: 2, key: "hero.specialty_chip", title: "", content: "Врач-инфекционист", updated_at: "" },
+      { id: 3, key: "services.section_chip", title: "", content: "Услуги", updated_at: "" },
+      { id: 4, key: "services.section_title", title: "", content: "Как я помогаю", updated_at: "" },
+      { id: 5, key: "how_it_works.section_chip", title: "", content: "Процесс", updated_at: "" },
+      { id: 6, key: "how_it_works.section_title", title: "", content: "Как это работает", updated_at: "" },
+      { id: 7, key: "how_it_works.section_subtitle", title: "", content: "От первой записи до получения рекомендаций — всё прозрачно и предсказуемо", updated_at: "" },
+      { id: 8, key: "faq.section_chip", title: "", content: "Частые вопросы", updated_at: "" },
+      { id: 9, key: "faq.section_title", title: "", content: "Что обычно спрашивают", updated_at: "" },
+      { id: 10, key: "faq.section_subtitle", title: "", content: "Если ваш вопрос не нашёлся ниже — напишите в Telegram или VK, отвечу лично.", updated_at: "" },
+      { id: 11, key: "cta.home.title", title: "", content: "Готовы начать?", updated_at: "" },
+      { id: 12, key: "cta.home.text", title: "", content: "Запишитесь на консультацию уже сегодня и получите профессиональную помощь", updated_at: "" },
+      { id: 13, key: "cta.home.button", title: "", content: "Записаться сейчас", updated_at: "" },
+      { id: 14, key: "cta.about.title", title: "", content: "Готовы получить помощь?", updated_at: "" },
+      { id: 15, key: "cta.about.text", title: "", content: "Запишитесь на консультацию и начните путь к выздоровлению", updated_at: "" },
+      { id: 16, key: "approach.section_chip", title: "", content: "Подход к работе", updated_at: "" },
+      { id: 17, key: "approach.section_title", title: "", content: "Спокойно, понятно и по делу", updated_at: "" },
+    ];
+  }
+
+  // /services/
+  if (endpoint.startsWith("/services")) {
+    return [
+      { id: 1, icon: "clipboard_list", title: "Онлайн-консультация", description: "Быстрая запись через сайт. Выберите дату, время — и приходите на удобный вам формат.", cta_text: "Записаться", cta_link: "/booking", order: 0 },
+      { id: 2, icon: "hospital", title: "Очный приём", description: "Личный приём в кабинете. Полная диагностика и индивидуально подобранное лечение.", cta_text: "Записаться", cta_link: "/booking", order: 1 },
+      { id: 3, icon: "pill", title: "Рекомендации", description: "Профессиональные советы и назначения, основанные на актуальных клинических протоколах.", cta_text: "Записаться", cta_link: "/booking", order: 2 },
+    ];
+  }
+
+  // /how-it-works/
+  if (endpoint.startsWith("/how-it-works")) {
+    return [
+      { id: 1, icon: "calendar_days", title: "Выбор даты", description: "Откройте календарь и выберите удобный день и время. Все свободные слоты подсвечены.", order: 0 },
+      { id: 2, icon: "message_square", title: "Контактные данные", description: "Оставьте имя и телефон, опишите вопрос. Подключите Telegram или VK для уведомлений.", order: 1 },
+      { id: 3, icon: "check_check", title: "Подтверждение", description: "В мессенджер придёт сообщение с подтверждением и ссылкой на видеоконсультацию.", order: 2 },
+      { id: 4, icon: "stethoscope", title: "Приём", description: "В назначенное время — выходите на связь. Получаете план обследований и рекомендации.", order: 3 },
+    ];
+  }
+
+  // /faq/
+  if (endpoint.startsWith("/faq")) {
+    return [
+      { id: 1, question: "Сколько длится онлайн-консультация?", answer: "Базовый приём — 30 минут.", order: 0 },
+      { id: 2, question: "Как проходит видеоконсультация?", answer: "За 10–15 минут до приёма в Telegram или VK придёт ссылка на видеовстречу.", order: 1 },
+      { id: 3, question: "Что подготовить к приёму?", answer: "Свежие анализы, список текущих лекарств, краткую хронологию симптомов.", order: 2 },
+      { id: 4, question: "Можно ли получить рецепт после онлайн-приёма?", answer: "После онлайн-консультации врач может оформить рекомендации и направления.", order: 3 },
+      { id: 5, question: "Сохраняются ли мои данные в тайне?", answer: "Да. Все ваши данные обрабатываются в соответствии с 152-ФЗ.", order: 4 },
+      { id: 6, question: "Что делать, если стало хуже после консультации?", answer: "Если состояние ухудшилось — напишите в тот же мессенджер, где подтверждали запись.", order: 5 },
+    ];
+  }
+
+  // /approach/
+  if (endpoint.startsWith("/approach")) {
+    return [
+      { id: 1, icon: "clipboard_list", title: "Разбор жалоб", description: "Детальный анализ симптомов, анализов и уже проведённых обследований", order: 0 },
+      { id: 2, icon: "list_checks", title: "Структурированный план", description: "Пациент получает ясный план: что делать, что наблюдать, какие обследования нужны", order: 1 },
+      { id: 3, icon: "check_circle", title: "Удобный формат", description: "Онлайн-консультация через сайт или очный приём через ПроДокторов", order: 2 },
+    ];
+  }
+
+  // /trust-badges/
+  if (endpoint.startsWith("/trust-badges")) {
+    return [
+      { id: 1, icon: "shield_check", label: "Безопасность данных", order: 0 },
+      { id: 2, icon: "award", label: "Подтверждённый стаж", order: 1 },
+      { id: 3, icon: "message_circle_heart", label: "Поддержка в Telegram / VK", order: 2 },
+      { id: 4, icon: "calendar_check", label: "Запись 24/7", order: 3 },
+    ];
+  }
 
   // /legal/
   if (endpoint.startsWith("/legal")) return LEGAL;

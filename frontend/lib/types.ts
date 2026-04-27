@@ -76,3 +76,55 @@ export type CreatedAppointment = {
 };
 
 export type ContactMethod = "telegram" | "vk";
+
+// ============================================================================
+// Контент сайта — редактируется врачом через Django-админку
+// ============================================================================
+
+export type SiteBlock = {
+  id: number;
+  key: string;
+  title: string;
+  content: string;
+  updated_at: string;
+};
+
+export type Service = {
+  id: number;
+  icon: string;
+  title: string;
+  description: string;
+  cta_text: string;
+  cta_link: string;
+  order: number;
+};
+
+export type HowItWorksStep = {
+  id: number;
+  icon: string;
+  title: string;
+  description: string;
+  order: number;
+};
+
+export type FaqItem = {
+  id: number;
+  question: string;
+  answer: string;
+  order: number;
+};
+
+export type ApproachItem = {
+  id: number;
+  icon: string;
+  title: string;
+  description: string;
+  order: number;
+};
+
+export type TrustBadge = {
+  id: number;
+  icon: string;
+  label: string;
+  order: number;
+};

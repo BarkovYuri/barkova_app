@@ -2,18 +2,23 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import {
   ArrowRight,
-  CheckCircle2,
-  ClipboardList,
   ExternalLink,
   GraduationCap,
-  ListChecks,
   MapPin,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
+
 import { SectionDivider } from "../../components/common/SectionDivider";
 import { fetchAPI } from "../../lib/api";
+import { resolveIcon } from "../../lib/iconMap";
+import {
+  loadApproachItems,
+  loadSiteBlocks,
+  textOr,
+} from "../../lib/siteContent";
 import type { DoctorProfile } from "../../lib/types";
+import { absoluteMediaUrl } from "../../lib/url";
 
 export async function generateMetadata(): Promise<Metadata> {
   const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
@@ -28,7 +33,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
+  const [doctor, approach, blocks] = await Promise.all([
+    fetchAPI("/profile") as Promise<DoctorProfile | null>,
+    loadApproachItems(),
+    loadSiteBlocks(),
+  ]);
 
   if (!doctor) {
     return (
@@ -45,26 +54,25 @@ export default async function AboutPage() {
     );
   }
 
-  const approach = [
-    {
-      icon: ClipboardList,
-      title: "Разбор жалоб",
-      description:
-        "Детальный анализ симптомов, анализов и уже проведённых обследований",
-    },
-    {
-      icon: ListChecks,
-      title: "Структурированный план",
-      description:
-        "Пациент получает ясный план: что делать, что наблюдать, какие обследования нужны",
-    },
-    {
-      icon: CheckCircle2,
-      title: "Удобный формат",
-      description:
-        "Онлайн-консультация через сайт или очный приём через ПроДокторов",
-    },
-  ];
+  const heroPhoto = absoluteMediaUrl(doctor.photo_url);
+
+  const approachChip = textOr(blocks, "approach.section_chip", "Подход к работе");
+  const approachTitle = textOr(
+    blocks,
+    "approach.section_title",
+    "Спокойно, понятно и по делу"
+  );
+  const ctaTitle = textOr(blocks, "cta.about.title", "Готовы получить помощь?");
+  const ctaText = textOr(
+    blocks,
+    "cta.about.text",
+    "Запишитесь на консультацию и начните путь к выздоровлению"
+  );
+  const ctaButton = textOr(
+    blocks,
+    "cta.home.button",
+    "Записаться сейчас"
+  );
 
   return (
     <main className="bg-neutral-0">
@@ -80,9 +88,9 @@ export default async function AboutPage() {
               <div className="relative">
                 <div className="pointer-events-none absolute -inset-8 rounded-[48px] bg-gradient-to-br from-primary-200/40 to-secondary-100/30 blur-3xl" />
                 <div className="relative h-[360px] w-full sm:h-[480px] md:h-[600px] rounded-3xl overflow-hidden shadow-2xl">
-                  {doctor.photo_url ? (
+                  {heroPhoto ? (
                     <Image
-                      src={doctor.photo_url}
+                      src={heroPhoto}
                       alt={doctor.full_name}
                       fill
                       priority
@@ -193,35 +201,38 @@ export default async function AboutPage() {
       <SectionDivider />
 
       {/* ========== APPROACH SECTION ========== */}
-      <section className="py-16 md:py-24">
-        <div className="container">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center">
-              <p className="chip mx-auto">Подход к работе</p>
-              <h2 className="mt-5 text-neutral-900">
-                Спокойно, понятно и по делу
-              </h2>
-            </div>
+      {approach.length > 0 ? (
+        <section className="py-16 md:py-24">
+          <div className="container">
+            <div className="max-w-5xl mx-auto">
+              <div className="text-center">
+                <p className="chip mx-auto">{approachChip}</p>
+                <h2 className="mt-5 text-neutral-900">{approachTitle}</h2>
+              </div>
 
-            <div className="mt-12 md:mt-16 grid gap-6 grid-cols-1 sm:grid-cols-3">
-              {approach.map(({ icon: Icon, title, description }) => (
-                <div
-                  key={title}
-                  className="group flex flex-col rounded-2xl border border-neutral-200 bg-neutral-50 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:bg-neutral-0 hover:shadow-card-hover"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 transition-colors duration-300 group-hover:bg-primary-600 group-hover:text-neutral-0">
-                    <Icon className="h-7 w-7" strokeWidth={1.75} />
-                  </div>
-                  <h3 className="mt-6 text-neutral-900">{title}</h3>
-                  <p className="mt-3 text-neutral-600 leading-relaxed">
-                    {description}
-                  </p>
-                </div>
-              ))}
+              <div className="mt-12 md:mt-16 grid gap-6 grid-cols-1 sm:grid-cols-3">
+                {approach.map((item) => {
+                  const Icon = resolveIcon(item.icon);
+                  return (
+                    <div
+                      key={item.id}
+                      className="group flex flex-col rounded-2xl border border-neutral-200 bg-neutral-50 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:bg-neutral-0 hover:shadow-card-hover"
+                    >
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 transition-colors duration-300 group-hover:bg-primary-600 group-hover:text-neutral-0">
+                        <Icon className="h-7 w-7" strokeWidth={1.75} />
+                      </div>
+                      <h3 className="mt-6 text-neutral-900">{item.title}</h3>
+                      <p className="mt-3 text-neutral-600 leading-relaxed whitespace-pre-line">
+                        {item.description}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* ========== CTA SECTION ========== */}
       <section className="py-16 md:py-24">
@@ -231,15 +242,15 @@ export default async function AboutPage() {
             <div className="pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-primary-300/40 blur-3xl" />
 
             <div className="relative">
-              <h2 className="text-neutral-0">Готовы получить помощь?</h2>
-              <p className="mt-4 text-base sm:text-lg leading-relaxed text-primary-50 max-w-2xl mx-auto">
-                Запишитесь на консультацию и начните путь к выздоровлению
+              <h2 className="text-neutral-0">{ctaTitle}</h2>
+              <p className="mt-4 text-base sm:text-lg leading-relaxed text-primary-50 max-w-2xl mx-auto whitespace-pre-line">
+                {ctaText}
               </p>
               <a
                 href="/booking"
                 className="mt-8 inline-flex items-center gap-2 bg-neutral-0 text-primary-700 hover:bg-primary-50 font-semibold px-7 py-4 rounded-[14px] shadow-lg transition-all hover:-translate-y-0.5"
               >
-                Записаться сейчас
+                {ctaButton}
                 <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
               </a>
             </div>

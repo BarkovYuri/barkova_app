@@ -1,23 +1,21 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import {
-  ArrowRight,
-  Award,
-  CalendarCheck,
-  ClipboardList,
-  Hospital,
-  MessageCircleHeart,
-  Pill,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 
 import { JsonLd } from "../components/common/JsonLd";
 import { SectionDivider } from "../components/common/SectionDivider";
 import { Faq } from "../components/home/Faq";
 import { HowItWorks } from "../components/home/HowItWorks";
 import { fetchAPI } from "../lib/api";
+import { resolveIcon } from "../lib/iconMap";
+import {
+  loadServices,
+  loadSiteBlocks,
+  loadTrustBadges,
+  textOr,
+} from "../lib/siteContent";
 import type { DoctorProfile } from "../lib/types";
+import { absoluteMediaUrl } from "../lib/url";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://doctor-barkova.ru";
 
@@ -29,11 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description =
     doctor.description?.slice(0, 200) ||
     `Онлайн-консультации и очный приём. Стаж ${doctor.experience_years ?? 0}+ лет. Запись через сайт.`;
-  const photo = doctor.photo_url
-    ? doctor.photo_url.startsWith("http")
-      ? doctor.photo_url
-      : `${SITE_URL}${doctor.photo_url}`
-    : undefined;
+  const photo = absoluteMediaUrl(doctor.photo_url) || undefined;
 
   return {
     title,
@@ -55,7 +49,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
+  const [doctor, services, trustBadges, blocks] = await Promise.all([
+    fetchAPI("/profile") as Promise<DoctorProfile | null>,
+    loadServices(),
+    loadTrustBadges(),
+    loadSiteBlocks(),
+  ]);
 
   if (!doctor) {
     return (
@@ -72,40 +71,32 @@ export default async function Home() {
     );
   }
 
-  const services = [
-    {
-      icon: ClipboardList,
-      title: "Онлайн-консультация",
-      description:
-        "Быстрая запись через сайт. Выберите дату, время — и приходите на удобный вам формат.",
-    },
-    {
-      icon: Hospital,
-      title: "Очный приём",
-      description:
-        "Личный приём в кабинете. Полная диагностика и индивидуально подобранное лечение.",
-    },
-    {
-      icon: Pill,
-      title: "Рекомендации",
-      description:
-        "Профессиональные советы и назначения, основанные на актуальных клинических протоколах.",
-    },
-  ];
-
-  const trustItems = [
-    { icon: ShieldCheck, label: "Безопасность данных" },
-    { icon: Award, label: "Подтверждённый стаж" },
-    { icon: MessageCircleHeart, label: "Поддержка в Telegram / VK" },
-    { icon: CalendarCheck, label: "Запись 24/7" },
-  ];
+  // Тексты с fallback'ами
+  const heroChip = textOr(blocks, "hero.specialty_chip", "Врач-инфекционист");
+  const heroSubtitle =
+    doctor.description ||
+    textOr(
+      blocks,
+      "hero.subtitle",
+      "Помогаю взрослым и детям с инфекционными заболеваниями: от диагностики до длительного сопровождения."
+    );
+  const servicesChip = textOr(blocks, "services.section_chip", "Услуги");
+  const servicesTitle = textOr(
+    blocks,
+    "services.section_title",
+    "Как я помогаю"
+  );
+  const ctaTitle = textOr(blocks, "cta.home.title", "Готовы начать?");
+  const ctaText = textOr(
+    blocks,
+    "cta.home.text",
+    "Запишитесь на консультацию уже сегодня и получите профессиональную помощь"
+  );
+  const ctaButton = textOr(blocks, "cta.home.button", "Записаться сейчас");
 
   // Structured data — Physician schema для Google rich-cards
-  const photoAbsolute = doctor.photo_url
-    ? doctor.photo_url.startsWith("http")
-      ? doctor.photo_url
-      : `${SITE_URL}${doctor.photo_url}`
-    : undefined;
+  const photoAbsolute = absoluteMediaUrl(doctor.photo_url) || undefined;
+  const heroPhoto = absoluteMediaUrl(doctor.photo_url);
 
   const physicianLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -155,16 +146,15 @@ export default async function Home() {
               {/* Specialty Badge */}
               <div className="chip">
                 <Sparkles className="h-3.5 w-3.5" strokeWidth={2.5} />
-                Врач-инфекционист
+                {heroChip}
               </div>
 
               {/* Doctor Name */}
               <h1 className="mt-6 text-neutral-900">{doctor.full_name}</h1>
 
               {/* Description */}
-              <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-neutral-600">
-                {doctor.description ||
-                  "Помогаю взрослым и детям с инфекционными заболеваниями: от диагностики до длительного сопровождения."}
+              <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-neutral-600 whitespace-pre-line">
+                {heroSubtitle}
               </p>
 
               {/* CTA Buttons */}
@@ -214,9 +204,9 @@ export default async function Home() {
 
               {/* Photo */}
               <div className="relative h-[360px] w-full sm:h-[480px] md:h-[600px] rounded-3xl overflow-hidden shadow-2xl">
-                {doctor.photo_url ? (
+                {heroPhoto ? (
                   <Image
-                    src={doctor.photo_url}
+                    src={heroPhoto}
                     alt={doctor.full_name}
                     fill
                     priority
@@ -250,64 +240,71 @@ export default async function Home() {
       </section>
 
       {/* ========== TRUST STRIP ========== */}
-      <section className="relative">
-        <div className="container pb-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {trustItems.map(({ icon: Icon, label }, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700">
-                  <Icon className="h-4 w-4" strokeWidth={2} />
-                </span>
-                <span className="text-xs md:text-sm font-medium text-neutral-700 leading-tight">
-                  {label}
-                </span>
-              </div>
-            ))}
+      {trustBadges.length > 0 ? (
+        <section className="relative">
+          <div className="container pb-16">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              {trustBadges.map((badge) => {
+                const Icon = resolveIcon(badge.icon);
+                return (
+                  <div
+                    key={badge.id}
+                    className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700">
+                      <Icon className="h-4 w-4" strokeWidth={2} />
+                    </span>
+                    <span className="text-xs md:text-sm font-medium text-neutral-700 leading-tight">
+                      {badge.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <SectionDivider />
 
       {/* ========== SERVICES SECTION ========== */}
-      <section className="py-16 md:py-24">
-        <div className="container">
-          <div className="text-center mb-12 md:mb-16">
-            <p className="chip mx-auto">Услуги</p>
-            <h2 className="mt-5 text-neutral-900">Как я помогаю</h2>
-          </div>
+      {services.length > 0 ? (
+        <section className="py-16 md:py-24">
+          <div className="container">
+            <div className="text-center mb-12 md:mb-16">
+              <p className="chip mx-auto">{servicesChip}</p>
+              <h2 className="mt-5 text-neutral-900">{servicesTitle}</h2>
+            </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((service, idx) => {
-              const Icon = service.icon;
-              return (
-                <div
-                  key={idx}
-                  className="group flex flex-col rounded-2xl border border-neutral-200 bg-neutral-0 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:shadow-card-hover"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 transition-colors duration-300 group-hover:bg-primary-600 group-hover:text-neutral-0">
-                    <Icon className="h-7 w-7" strokeWidth={1.75} />
-                  </div>
-                  <h3 className="mt-6 text-neutral-900">{service.title}</h3>
-                  <p className="mt-3 text-neutral-600 leading-relaxed flex-1">
-                    {service.description}
-                  </p>
-                  <a
-                    href="/booking"
-                    className="mt-6 inline-flex items-center gap-2 text-primary-700 font-semibold hover:gap-3 transition-all"
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {services.map((service) => {
+                const Icon = resolveIcon(service.icon);
+                return (
+                  <div
+                    key={service.id}
+                    className="group flex flex-col rounded-2xl border border-neutral-200 bg-neutral-0 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:shadow-card-hover"
                   >
-                    Записаться
-                    <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                  </a>
-                </div>
-              );
-            })}
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 transition-colors duration-300 group-hover:bg-primary-600 group-hover:text-neutral-0">
+                      <Icon className="h-7 w-7" strokeWidth={1.75} />
+                    </div>
+                    <h3 className="mt-6 text-neutral-900">{service.title}</h3>
+                    <p className="mt-3 text-neutral-600 leading-relaxed flex-1 whitespace-pre-line">
+                      {service.description}
+                    </p>
+                    <a
+                      href={service.cta_link || "/booking"}
+                      className="mt-6 inline-flex items-center gap-2 text-primary-700 font-semibold hover:gap-3 transition-all"
+                    >
+                      {service.cta_text || "Записаться"}
+                      <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <SectionDivider />
 
@@ -327,16 +324,15 @@ export default async function Home() {
             <div className="pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-primary-300/40 blur-3xl" />
 
             <div className="relative">
-              <h2 className="text-neutral-0">Готовы начать?</h2>
-              <p className="mt-4 text-base sm:text-lg leading-relaxed text-primary-50 max-w-2xl mx-auto">
-                Запишитесь на консультацию уже сегодня и получите
-                профессиональную помощь
+              <h2 className="text-neutral-0">{ctaTitle}</h2>
+              <p className="mt-4 text-base sm:text-lg leading-relaxed text-primary-50 max-w-2xl mx-auto whitespace-pre-line">
+                {ctaText}
               </p>
               <a
                 href="/booking"
                 className="mt-8 inline-flex items-center gap-2 bg-neutral-0 text-primary-700 hover:bg-primary-50 font-semibold px-7 py-4 rounded-[14px] shadow-lg transition-all hover:-translate-y-0.5"
               >
-                Записаться сейчас
+                {ctaButton}
                 <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
               </a>
             </div>
