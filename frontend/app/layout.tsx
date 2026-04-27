@@ -34,10 +34,10 @@ export const metadata: Metadata = {
     "онлайн консультация инфекциониста",
     "телемедицина",
     "запись к врачу онлайн",
-    "Барькова",
+    "Баркова",
     "Томск",
   ],
-  authors: [{ name: "Барькова Елена Игоревна" }],
+  authors: [{ name: "Баркова Елена Игоревна" }],
   applicationName: SITE_NAME,
   generator: "Next.js",
   referrer: "origin-when-cross-origin",
@@ -46,13 +46,13 @@ export const metadata: Metadata = {
     locale: "ru_RU",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} · Барькова Елена Игоревна`,
+    title: `${SITE_NAME} · Баркова Елена Игоревна`,
     description:
       "Онлайн-консультации и очный приём врача-инфекциониста. Запись через сайт за 30 секунд.",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} · Барькова Елена Игоревна`,
+    title: `${SITE_NAME} · Баркова Елена Игоревна`,
     description:
       "Онлайн-консультации и очный приём врача-инфекциониста. Запись за 30 секунд.",
   },
