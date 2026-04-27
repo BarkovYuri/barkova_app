@@ -4,7 +4,6 @@ from django.shortcuts import render
 from django.urls import path, reverse
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
-from unfold.decorators import action
 
 from .forms import SlotGenerationForm
 from .models import (
@@ -174,7 +173,7 @@ class AvailabilityRuleAdmin(ModelAdmin):
     # Action: перегенерировать слоты по выбранным правилам
     # ------------------------------------------------------------------
 
-    @action(description="Сгенерировать слоты по выбранным правилам")
+    @admin.action(description="Сгенерировать слоты по выбранным правилам")
     def generate_slots_action(self, request, queryset):
         active_rules = queryset.filter(is_active=True)
         created = generate_slots_for_rules(active_rules)
@@ -205,26 +204,6 @@ class AvailabilityRuleAdmin(ModelAdmin):
 # ============================================================================
 
 
-@action(description="Сделать выбранные слоты недоступными")
-def deactivate_slots_action(modeladmin, request, queryset):
-    updated = queryset.update(is_active=False)
-    modeladmin.message_user(
-        request,
-        f"Недоступными отмечено слотов: {updated}",
-        level=messages.SUCCESS,
-    )
-
-
-@action(description="Сделать выбранные слоты доступными")
-def activate_slots_action(modeladmin, request, queryset):
-    updated = queryset.update(is_active=True)
-    modeladmin.message_user(
-        request,
-        f"Доступными отмечено слотов: {updated}",
-        level=messages.SUCCESS,
-    )
-
-
 @admin.register(TimeSlot)
 class TimeSlotAdmin(ModelAdmin):
     list_display = (
@@ -242,11 +221,29 @@ class TimeSlotAdmin(ModelAdmin):
     )
     search_fields = ("date",)
     list_per_page = 50
-    actions = [deactivate_slots_action, activate_slots_action]
+    actions = ["deactivate_slots", "activate_slots"]
 
     @admin.display(description="Время")
     def time_range(self, obj):
         return f"{obj.start_time:%H:%M} – {obj.end_time:%H:%M}"
+
+    @admin.action(description="Сделать выбранные слоты недоступными")
+    def deactivate_slots(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(
+            request,
+            f"Недоступными отмечено слотов: {updated}",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Сделать выбранные слоты доступными")
+    def activate_slots(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(
+            request,
+            f"Доступными отмечено слотов: {updated}",
+            level=messages.SUCCESS,
+        )
 
 
 # ============================================================================
@@ -301,7 +298,7 @@ class DayExceptionAdmin(ModelAdmin):
                 level=messages.SUCCESS,
             )
 
-    @action(description="Закрыть выбранные дни (отключить слоты)")
+    @admin.action(description="Закрыть выбранные дни (отключить слоты)")
     def close_days(self, request, queryset):
         total = 0
         for exc in queryset:
