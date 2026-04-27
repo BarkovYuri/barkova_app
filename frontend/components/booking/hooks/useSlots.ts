@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchAPI } from "../../../lib/api";
 import type { NormalizedDate, Slot, CalendarDay } from "../../../lib/types";
 
@@ -123,12 +123,20 @@ export function useSlots(
   const [loading, setLoading] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
 
+  // На мобильном автоскроллим к секции слотов при ВЫБОРЕ даты пользователем,
+  // но НЕ при первой загрузке (когда useDates выставляет первую доступную
+  // дату автоматически — иначе пользователь сразу проматывается мимо календаря).
+  const isFirstDateLoad = useRef(true);
+
   useEffect(() => {
     if (!selectedDate) {
       setSlots([]);
       setSelectedSlotId(null);
       return;
     }
+
+    const shouldScroll = !isFirstDateLoad.current;
+    isFirstDateLoad.current = false;
 
     async function load() {
       try {
@@ -137,7 +145,11 @@ export function useSlots(
         const data = await fetchAPI(`/available-slots?date=${selectedDate}`);
         setSlots(Array.isArray(data) ? (data as Slot[]) : []);
 
-        if (typeof window !== "undefined" && window.innerWidth < 1024) {
+        if (
+          shouldScroll &&
+          typeof window !== "undefined" &&
+          window.innerWidth < 1024
+        ) {
           setTimeout(() => {
             slotsSectionRef.current?.scrollIntoView({
               behavior: "smooth",

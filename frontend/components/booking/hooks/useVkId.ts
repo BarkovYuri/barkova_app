@@ -27,7 +27,11 @@ export function useVkId(active: boolean) {
     }
 
     function tryInit() {
-      const appId = process.env.NEXT_PUBLIC_VK_APP_ID;
+      // VK App ID. NEXT_PUBLIC_* переменные inlin'ятся при build,
+      // и если CI не пробросил build-arg правильно — переменная пустая.
+      // На случай этого fallback'имся на хардкод (это реальный production App ID).
+      const appId =
+        process.env.NEXT_PUBLIC_VK_APP_ID || "54546774";
       const container = containerRef.current;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const VKID = (window as any).VKIDSDK as any;
