@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
 
   images: {
+    // Глобально отключаем optimizer — фото врача грузится напрямую, без
+    // прохода через `_next/image`. Optimizer внутри docker-сети не может
+    // надёжно резолвить наш же домен `doctor-barkova.ru/media/*` и
+    // возвращает 400. Для одного-двух фото врача оптимизация не критична.
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
