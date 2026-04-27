@@ -1,3 +1,6 @@
+import { Stethoscope, ArrowRight } from "lucide-react";
+import Image from "next/image";
+
 import { fetchAPI } from "../../lib/api";
 import type { DoctorProfile } from "../../lib/types";
 import MobileMenu from "./MobileMenu";
@@ -8,7 +11,8 @@ export default async function Header() {
   const links = [
     { href: "/", label: "Главная" },
     { href: "/about", label: "О враче" },
-    { href: "/booking", label: "Запись" },
+    { href: "/booking", label: "Онлайн-запись" },
+    { href: "/office", label: "Очный приём" },
     { href: "/contacts", label: "Контакты" },
   ];
 
@@ -20,14 +24,16 @@ export default async function Header() {
         {/* Logo/Brand */}
         <a href="/" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
           {avatarSrc ? (
-            <img
+            <Image
               src={avatarSrc}
               alt={doctor?.full_name || "Врач"}
+              width={40}
+              height={40}
               className="h-10 w-10 shrink-0 rounded-lg object-cover shadow-sm"
             />
           ) : (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-600 shadow-sm">
-              <span className="text-xs font-bold">🏥</span>
+              <Stethoscope className="h-5 w-5" strokeWidth={2} />
             </div>
           )}
 
@@ -40,22 +46,23 @@ export default async function Header() {
         </a>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-5 lg:gap-7">
           {links.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-neutral-600 transition hover:text-primary-600 hover:underline"
+              className="text-sm font-medium text-neutral-600 transition-colors hover:text-primary-700"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        {/* Desktop CTA Button */}
-        <div className="hidden md:block">
+        {/* Desktop CTA Button — на lg+, чтобы не давить ссылки на md */}
+        <div className="hidden lg:block">
           <a href="/booking" className="btn-primary text-sm py-2 px-5">
             Записаться
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </a>
         </div>
 

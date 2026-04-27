@@ -1,9 +1,13 @@
 "use client";
 
+import { UserRound } from "lucide-react";
 import Script from "next/script";
 import { useRef, useState } from "react";
 
+import { IS_MOCK_MODE } from "../../lib/api";
+import { isPhoneValid } from "../../lib/phone";
 import type { ContactMethod } from "../../lib/types";
+import { BookingSummary } from "./BookingSummary";
 import { useDates, useSlots } from "./hooks/useSlots";
 import { useTelegramPrelink } from "./hooks/useTelegramPrelink";
 import { useVkId } from "./hooks/useVkId";
@@ -97,8 +101,13 @@ export default function BookingForm() {
   // ── Progress calculation ─────────────────────────────────────────
   const hasSelectedDate = !!selectedDate;
   const hasSelectedSlot = !!selectedSlotId;
-  const hasFilledForm =
-    name.trim() && phone.trim() && consentGiven && privacyAccepted;
+  const hasFilledForm = !!(
+    name.trim() &&
+    isPhoneValid(phone) &&
+    consentGiven &&
+    privacyAccepted &&
+    offerAccepted
+  );
   const hasContactMethod =
     contactMethod === "telegram"
       ? telegram.connected
@@ -129,58 +138,68 @@ export default function BookingForm() {
   // ── Main form ───────────────────────────────────────────────────
   return (
     <>
-      <Script
-        src="https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js"
-        strategy="afterInteractive"
-      />
+      {/* В mock-режиме VK SDK не нужен — он только дёргает unpkg и валит unhandledRejection */}
+      {!IS_MOCK_MODE ? (
+        <Script
+          src="https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js"
+          strategy="afterInteractive"
+        />
+      ) : null}
 
-      {/* Progress Bar - Modern with animation */}
+      {/* Progress Bar */}
       <div className="mb-8 animate-fade-in">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-secondary-600 text-sm font-bold text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold font-heading text-neutral-0 shadow-md shadow-primary-500/30">
               {Math.min(Math.floor(progressPercentage / 25) + 1, 4)}
             </div>
             <div>
-              <p className="text-sm font-semibold text-neutral-900">Ваш прогресс</p>
+              <p className="text-sm font-semibold text-neutral-900">
+                Ваш прогресс
+              </p>
               <p className="text-xs text-neutral-500">
-                {progressPercentage === 100 
-                  ? "Готово к отправке!" 
+                {progressPercentage === 100
+                  ? "Готово к отправке!"
                   : `Заполнено ${progressPercentage}%`}
               </p>
             </div>
           </div>
-          <p className="text-sm font-bold text-primary-600">{progressPercentage}%</p>
+          <p className="text-sm font-bold text-primary-700 font-heading">
+            {progressPercentage}%
+          </p>
         </div>
-        <div className="relative h-3 w-full overflow-hidden rounded-full bg-neutral-100 shadow-inner">
+        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
           <div
-            className="h-full bg-gradient-to-r from-primary-600 via-secondary-500 to-green-500 rounded-full transition-all duration-700 ease-out shadow-lg"
-            style={{ 
+            className="h-full rounded-full transition-all duration-700 ease-out"
+            style={{
               width: `${progressPercentage}%`,
-              boxShadow: `0 0 20px rgba(0, 102, 204, ${progressPercentage / 100})`
+              background:
+                "linear-gradient(90deg, var(--color-primary-600), var(--color-primary-400) 60%, var(--color-secondary-500))",
             }}
-          >
-            {/* Shimmer effect */}
-            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-white to-transparent opacity-30" />
-          </div>
+          />
         </div>
         {/* Step indicators */}
-        <div className="mt-4 flex justify-between gap-2 px-2">
+        <div className="mt-4 flex justify-between gap-2 px-1">
           {[
-            { step: 1, label: "Дата", complete: hasSelectedDate },
-            { step: 2, label: "Форма", complete: hasFilledForm },
-            { step: 3, label: "Контакт", complete: hasContactMethod },
-            { step: 4, label: "Отправка", complete: progressPercentage === 100 },
-          ].map(({ step, label, complete }) => (
-            <div key={step} className="flex flex-1 flex-col items-center gap-1">
+            { label: "Дата", complete: hasSelectedDate },
+            { label: "Время", complete: hasSelectedSlot },
+            { label: "Данные", complete: hasFilledForm },
+            { label: "Канал", complete: hasContactMethod },
+          ].map(({ label, complete }, step) => (
+            <div
+              key={step}
+              className="flex flex-1 flex-col items-center gap-1.5"
+            >
               <div
-                className={`h-2 w-full rounded-full transition-all duration-500 ${
-                  complete ? "bg-gradient-to-r from-green-400 to-green-500" : "bg-neutral-200"
+                className={`h-1.5 w-full rounded-full transition-all duration-500 ${
+                  complete ? "bg-secondary-500" : "bg-neutral-200"
                 }`}
               />
-              <p className={`text-xs font-medium transition-colors ${
-                complete ? "text-green-600" : "text-neutral-500"
-              }`}>
+              <p
+                className={`text-xs font-medium transition-colors ${
+                  complete ? "text-secondary-700" : "text-neutral-500"
+                }`}
+              >
                 {label}
               </p>
             </div>
@@ -188,8 +207,8 @@ export default function BookingForm() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.02fr_0.98fr] lg:gap-8">
-        {/* Left: Calendar & Slots */}
+      <div className="grid gap-4 lg:gap-6 xl:gap-8 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(280px,320px)]">
+        {/* Calendar & Slots */}
         <CalendarSection
           loadingDates={loadingDates}
           currentMonth={currentMonth}
@@ -205,19 +224,18 @@ export default function BookingForm() {
           slotsSectionRef={slotsSectionRef}
         />
 
-        {/* Right: Form */}
+        {/* Form */}
         <section
           ref={formSectionRef}
-          className="card shadow-xl animate-fade-in"
+          className="rounded-3xl border border-neutral-200 bg-neutral-0 shadow-card animate-fade-in p-6 md:p-8"
         >
-          {/* Header */}
           <div className="mb-8 pb-6 border-b border-neutral-200">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-100 text-lg font-bold text-primary-600">
-                ✓
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-100 text-primary-700">
+                <UserRound className="h-6 w-6" strokeWidth={2} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-neutral-900">
+                <h2 className="text-h3-mobile sm:text-h3-desktop text-neutral-900">
                   Ваши данные
                 </h2>
                 <p className="mt-1 text-sm text-neutral-600">
@@ -264,6 +282,18 @@ export default function BookingForm() {
             </PatientForm>
           </form>
         </section>
+
+        {/* Sticky Summary — на xl+ как третья колонка справа,
+         * на меньших экранах опускается под форму на всю ширину */}
+        <div className="lg:col-span-2 xl:col-span-1">
+          <BookingSummary
+            selectedDate={selectedDate}
+            selectedSlot={selectedSlot}
+            contactMethod={contactMethod}
+            contactReady={hasContactMethod}
+            formReady={hasFilledForm}
+          />
+        </div>
       </div>
     </>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addMonths, startOfMonth } from "../hooks/useSlots";
 import type { CalendarDay, Slot } from "../../../lib/types";
 
@@ -51,40 +52,44 @@ export function CalendarSection({
   slotsSectionRef,
 }: Props) {
   return (
-    <section className="animate-fade-in rounded-xl border border-neutral-200 bg-white p-4 shadow-lg sm:p-6">
+    <section className="animate-fade-in rounded-3xl border border-neutral-200 bg-neutral-0 p-4 shadow-card sm:p-6">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-100 to-secondary-100 text-lg font-bold text-primary-600">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-100 text-lg font-bold font-heading text-primary-700">
           1
         </div>
         <div className="flex-1">
-          <h2 className="text-xl font-bold text-neutral-900 sm:text-2xl">Выберите дату и время</h2>
-          <p className="mt-1 text-sm text-neutral-500">Календарь свободных онлайн-консультаций</p>
+          <h2 className="text-h3-mobile sm:text-h3-desktop text-neutral-900">
+            Выберите дату и время
+          </h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Календарь свободных онлайн-консультаций
+          </p>
         </div>
       </div>
 
       {/* Calendar */}
-      <div className="rounded-xl border border-neutral-200 bg-gradient-to-b from-neutral-50 to-white p-4 sm:p-6">
+      <div className="rounded-2xl border border-neutral-200 bg-gradient-to-b from-neutral-50 to-neutral-0 p-4 sm:p-6">
         {/* Month Navigation */}
         <div className="mb-6 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={() => setCurrentMonth(addMonths(currentMonth, -1))}
-            className="group relative h-10 w-10 flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 transition-all hover:border-primary-400 hover:bg-primary-50 hover:text-primary-600 active:scale-95"
+            className="group relative h-11 w-11 flex items-center justify-center rounded-xl border border-neutral-300 bg-neutral-0 text-neutral-600 transition-all hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700"
             aria-label="Previous month"
           >
-            <span className="text-lg font-bold">←</span>
+            <ChevronLeft className="h-5 w-5" strokeWidth={2.25} />
           </button>
-          <p className="flex-1 text-center text-lg font-semibold capitalize text-neutral-900 sm:text-xl">
+          <p className="flex-1 text-center text-lg font-semibold font-heading capitalize text-neutral-900 sm:text-xl">
             {formatMonthTitle(currentMonth)}
           </p>
           <button
             type="button"
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="group relative h-10 w-10 flex items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-600 transition-all hover:border-primary-400 hover:bg-primary-50 hover:text-primary-600 active:scale-95"
+            className="group relative h-11 w-11 flex items-center justify-center rounded-xl border border-neutral-300 bg-neutral-0 text-neutral-600 transition-all hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700"
             aria-label="Next month"
           >
-            <span className="text-lg font-bold">→</span>
+            <ChevronRight className="h-5 w-5" strokeWidth={2.25} />
           </button>
         </div>
 
@@ -128,14 +133,14 @@ export function CalendarSection({
                       setCurrentMonth(startOfMonth(day.date!));
                     }}
                     className={`
-                      relative flex h-12 sm:h-14 flex-col items-center justify-center rounded-lg
-                      border-2 text-center font-semibold transition-all duration-300 transform
+                      relative flex h-12 sm:h-14 flex-col items-center justify-center rounded-xl
+                      border text-center font-semibold transition-all duration-200
                       ${
                         isSelected
-                          ? "border-primary-600 bg-gradient-to-b from-primary-600 to-primary-700 text-white shadow-lg scale-105"
+                          ? "border-primary-600 bg-primary-600 text-neutral-0 shadow-lg shadow-primary-500/30"
                           : isDisabled
                           ? "cursor-not-allowed border-neutral-200 bg-neutral-50 text-neutral-300"
-                          : "border-neutral-200 bg-white text-neutral-800 hover:border-primary-400 hover:bg-primary-50 hover:shadow-md active:scale-95"
+                          : "border-neutral-200 bg-neutral-0 text-neutral-800 hover:border-primary-400 hover:bg-primary-50 hover:-translate-y-0.5"
                       }
                       ${isOutside ? "opacity-40" : ""}
                     `}
@@ -160,7 +165,7 @@ export function CalendarSection({
       </div>
 
       {/* Slots Section */}
-      <div ref={slotsSectionRef} className="mt-6 rounded-xl border border-neutral-200 bg-white p-4 sm:p-6">
+      <div ref={slotsSectionRef} className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-0 p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex-1">
             <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">Свободное время</p>
@@ -171,7 +176,7 @@ export function CalendarSection({
             ) : null}
           </div>
           {selectedDate ? (
-            <div className="rounded-lg bg-gradient-to-br from-primary-100 to-secondary-100 px-3 py-2 text-xs font-semibold text-primary-700 sm:px-4 sm:text-sm">
+            <div className="rounded-full bg-primary-100 px-3 py-1.5 text-xs font-semibold text-primary-700 sm:px-4 sm:text-sm">
               {slots.length} {slots.length % 10 === 1 ? "слот" : "слотов"}
             </div>
           ) : null}
@@ -187,8 +192,8 @@ export function CalendarSection({
             ))}
           </div>
         ) : slots.length === 0 ? (
-          <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-4 text-center text-sm text-neutral-500">
-            📭 На выбранную дату свободного времени нет.
+          <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-6 text-center text-sm text-neutral-500">
+            На выбранную дату свободного времени нет.
           </div>
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -210,18 +215,15 @@ export function CalendarSection({
                     }
                   }}
                   className={`
-                    relative rounded-lg border-2 px-3 py-3 text-sm font-semibold
-                    transition-all duration-300 transform
+                    relative rounded-xl border px-3 py-3 text-sm font-semibold
+                    transition-all duration-200
                     ${
                       active
-                        ? "border-primary-600 bg-gradient-to-b from-primary-600 to-primary-700 text-white shadow-lg scale-105"
-                        : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-400 hover:bg-primary-50 hover:shadow-md active:scale-95"
+                        ? "border-primary-600 bg-primary-600 text-neutral-0 shadow-lg shadow-primary-500/30"
+                        : "border-neutral-300 bg-neutral-0 text-neutral-700 hover:border-primary-400 hover:bg-primary-50 hover:-translate-y-0.5"
                     }
                   `}
                 >
-                  {active && (
-                    <div className="absolute inset-0 rounded-lg animate-pulse border-2 border-primary-600" />
-                  )}
                   {slot.start_time.slice(0, 5)}
                 </button>
               );

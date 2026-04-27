@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Hourglass,
+  Loader2,
+  MessageSquare,
+  RefreshCw,
+  Send,
+  Users,
+} from "lucide-react";
 import type { ContactMethod } from "../../../lib/types";
 
 type Props = {
@@ -30,10 +40,11 @@ export function ContactMethodSection({
   vkIdContainerRef,
 }: Props) {
   return (
-    <div className="animate-fade-in rounded-xl border border-neutral-200 bg-gradient-to-b from-neutral-50 to-white p-5 sm:p-6">
-      <div className="mb-4">
-        <p className="text-xs font-bold uppercase tracking-widest text-neutral-600">
-          💬 Способ подтверждения записи
+    <div className="animate-fade-in rounded-2xl border border-neutral-200 bg-gradient-to-b from-neutral-50 to-neutral-0 p-5 sm:p-6">
+      <div className="mb-5">
+        <p className="inline-flex items-center gap-2 text-ui-label uppercase text-neutral-500">
+          <MessageSquare className="h-4 w-4 text-primary-600" strokeWidth={2} />
+          Способ подтверждения записи
         </p>
         <p className="mt-2 text-sm text-neutral-600 leading-relaxed">
           Выберите удобный способ связи для подтверждения и отмены записи.
@@ -45,72 +56,60 @@ export function ContactMethodSection({
         <button
           type="button"
           onClick={() => setContactMethod("telegram")}
-          className={`
-            relative rounded-lg border-2 px-4 py-3 text-sm font-semibold
-            transition-all duration-300 transform
-            ${
-              contactMethod === "telegram"
-                ? "border-primary-600 bg-gradient-to-br from-primary-600 to-primary-700 text-white shadow-lg scale-105"
-                : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-400 hover:bg-primary-50 active:scale-95"
-            }
-          `}
+          className={`relative inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3.5 text-sm font-semibold transition-all duration-200 ${
+            contactMethod === "telegram"
+              ? "border-primary-600 bg-primary-600 text-neutral-0 shadow-lg shadow-primary-500/30"
+              : "border-neutral-300 bg-neutral-0 text-neutral-700 hover:border-primary-400 hover:bg-primary-50"
+          }`}
         >
-          <span className="text-lg">💬</span> Telegram
+          <Send className="h-4 w-4" strokeWidth={2.25} />
+          Telegram
         </button>
         <button
           type="button"
           onClick={() => setContactMethod("vk")}
-          className={`
-            relative rounded-lg border-2 px-4 py-3 text-sm font-semibold
-            transition-all duration-300 transform
-            ${
-              contactMethod === "vk"
-                ? "border-primary-600 bg-gradient-to-br from-primary-600 to-primary-700 text-white shadow-lg scale-105"
-                : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-400 hover:bg-primary-50 active:scale-95"
-            }
-          `}
+          className={`relative inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3.5 text-sm font-semibold transition-all duration-200 ${
+            contactMethod === "vk"
+              ? "border-primary-600 bg-primary-600 text-neutral-0 shadow-lg shadow-primary-500/30"
+              : "border-neutral-300 bg-neutral-0 text-neutral-700 hover:border-primary-400 hover:bg-primary-50"
+          }`}
         >
-          <span className="text-lg">👥</span> VK
+          <Users className="h-4 w-4" strokeWidth={2.25} />
+          VK
         </button>
       </div>
 
       {/* Method-specific content */}
-      <div key={contactMethod} className="animate-slide-in-down">
+      <div key={contactMethod} className="animate-fade-in">
         {contactMethod === "telegram" ? (
-          <div className="rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-5">
+          <div className="rounded-2xl border border-primary-100 bg-primary-50/50 p-5">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">💬</span>
-              <div className="flex-1">
-                <p className="text-sm leading-6 text-neutral-700">
-                  Подключите Telegram для получения уведомлений о подтверждении и отмене записи.
-                </p>
-              </div>
+              <Send
+                className="h-5 w-5 mt-0.5 text-primary-700"
+                strokeWidth={2}
+              />
+              <p className="flex-1 text-sm leading-6 text-neutral-700">
+                Подключите Telegram для получения уведомлений о подтверждении и
+                отмене записи.
+              </p>
             </div>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-5 space-y-3">
               <button
                 type="button"
                 onClick={onTelegramConnect}
                 disabled={loadingTelegramLink}
-                className={`
-                  w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold
-                  transition-all duration-300 transform
-                  ${
-                    loadingTelegramLink
-                      ? "bg-blue-300 text-white cursor-not-allowed"
-                      : "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
-                  }
-                `}
+                className="btn-primary w-full"
               >
                 {loadingTelegramLink ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span>Создаём ссылку...</span>
+                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.5} />
+                    Создаём ссылку...
                   </>
                 ) : (
                   <>
-                    <span>→</span>
-                    <span>Подключить Telegram</span>
+                    <Send className="h-4 w-4" strokeWidth={2.25} />
+                    Подключить Telegram
                   </>
                 )}
               </button>
@@ -119,96 +118,91 @@ export function ContactMethodSection({
                 type="button"
                 onClick={onCheckTelegram}
                 disabled={!telegramPrelinkToken}
-                className={`
-                  w-full rounded-lg border-2 px-4 py-3 text-sm font-semibold
-                  transition-all duration-300
-                  ${
-                    !telegramPrelinkToken
-                      ? "border-neutral-200 bg-neutral-50 text-neutral-400 cursor-not-allowed"
-                      : "border-neutral-300 bg-white text-neutral-700 hover:border-primary-400 hover:bg-primary-50"
-                  }
-                `}
+                className="btn-secondary w-full"
               >
-                🔍 Проверить подключение
+                <RefreshCw className="h-4 w-4" strokeWidth={2.25} />
+                Проверить подключение
               </button>
 
-              <div
-                className={`
-                  rounded-lg px-4 py-3 text-sm font-semibold text-center transition-all
-                  ${
-                    telegramConnected
-                      ? "border-2 border-green-500 bg-green-50 text-green-700"
-                      : "border-2 border-neutral-300 bg-neutral-50 text-neutral-500"
-                  }
-                `}
-              >
-                {telegramConnected ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <span>✓</span>
-                    <span>Telegram подключён</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <span>⏳</span>
-                    <span>Ожидание подключения...</span>
-                  </div>
-                )}
-              </div>
+              <ConnectionPill
+                connected={telegramConnected}
+                connectedLabel="Telegram подключён"
+                pendingLabel="Ожидание подключения..."
+              />
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-primary-200 bg-gradient-to-br from-primary-50 to-white p-5">
+          <div className="rounded-2xl border border-primary-100 bg-primary-50/50 p-5">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">👥</span>
-              <div className="flex-1">
-                <p className="text-sm leading-6 text-neutral-700">
-                  Войдите через VK ID для получения уведомлений и управления записью.
-                </p>
-              </div>
+              <Users
+                className="h-5 w-5 mt-0.5 text-primary-700"
+                strokeWidth={2}
+              />
+              <p className="flex-1 text-sm leading-6 text-neutral-700">
+                Войдите через VK ID для получения уведомлений и управления
+                записью.
+              </p>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-5">
               <div
-                className="min-h-[60px] rounded-lg overflow-hidden"
+                className="min-h-[60px] rounded-xl overflow-hidden"
                 ref={vkIdContainerRef}
               />
 
               {vkIdLoadError ? (
-                <div className="mt-3 animate-fade-in rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-sm text-red-800">
-                  <p className="font-semibold">Ошибка загрузки VK</p>
-                  <p>{vkIdLoadError}</p>
+                <div className="mt-3 animate-fade-in rounded-2xl border border-error-100 bg-error-50 px-4 py-3 text-sm text-error-700">
+                  <p className="inline-flex items-center gap-2 font-semibold">
+                    <AlertTriangle className="h-4 w-4" strokeWidth={2.25} />
+                    Ошибка загрузки VK
+                  </p>
+                  <p className="mt-1 text-error-600">{vkIdLoadError}</p>
                 </div>
               ) : !vkIdReady ? (
-                <div className="mt-3 animate-pulse rounded-lg bg-neutral-200 h-12 flex items-center justify-center">
+                <div className="mt-3 skeleton h-12 flex items-center justify-center">
                   <p className="text-sm text-neutral-600">Загружаем VK...</p>
                 </div>
               ) : null}
 
-              <div
-                className={`
-                  mt-4 rounded-lg px-4 py-3 text-sm font-semibold text-center transition-all
-                  ${
-                    vkIdAuthorized
-                      ? "border-2 border-green-500 bg-green-50 text-green-700"
-                      : "border-2 border-neutral-300 bg-neutral-50 text-neutral-500"
-                  }
-                `}
-              >
-                {vkIdAuthorized ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <span>✓</span>
-                    <span>VK подключён</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <span>⏳</span>
-                    <span>Ожидание подключения...</span>
-                  </div>
-                )}
+              <div className="mt-4">
+                <ConnectionPill
+                  connected={vkIdAuthorized}
+                  connectedLabel="VK подключён"
+                  pendingLabel="Ожидание подключения..."
+                />
               </div>
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ConnectionPill({
+  connected,
+  connectedLabel,
+  pendingLabel,
+}: {
+  connected: boolean;
+  connectedLabel: string;
+  pendingLabel: string;
+}) {
+  return (
+    <div
+      className={`rounded-2xl px-4 py-3 text-sm font-semibold text-center transition-all border ${
+        connected
+          ? "border-secondary-300 bg-secondary-50 text-secondary-700"
+          : "border-neutral-200 bg-neutral-50 text-neutral-500"
+      }`}
+    >
+      <div className="flex items-center justify-center gap-2">
+        {connected ? (
+          <CheckCircle2 className="h-4 w-4" strokeWidth={2.5} />
+        ) : (
+          <Hourglass className="h-4 w-4" strokeWidth={2} />
+        )}
+        <span>{connected ? connectedLabel : pendingLabel}</span>
       </div>
     </div>
   );

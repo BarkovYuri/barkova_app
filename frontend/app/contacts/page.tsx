@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
+import { ArrowRight, MapPin, Phone } from "lucide-react";
 import { fetchAPI } from "../../lib/api";
 import type { DoctorProfile } from "../../lib/types";
+
+export const metadata: Metadata = {
+  title: "Контакты",
+  description:
+    "Связаться с врачом-инфекционистом: телефон, email, мессенджеры (Telegram, VK, Дзен, Instagram), адрес очного приёма.",
+  openGraph: {
+    title: "Контакты · Кабинет врача-инфекциониста",
+    description:
+      "Связаться с врачом-инфекционистом удобным способом: Telegram, VK, телефон, email.",
+  },
+  alternates: { canonical: "/contacts" },
+};
 
 function InstagramIcon() {
   return (
@@ -107,11 +121,13 @@ export default async function ContactsPage() {
           {/* Left: Contact Cards */}
           <div className="space-y-6">
             {/* Phone Card */}
-            <div className="card-interactive border-l-4 border-primary-600">
+            <div className="card-interactive">
               <div className="flex items-start gap-4">
-                <div className="text-4xl">☎️</div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-100 text-primary-700">
+                  <Phone className="h-6 w-6" strokeWidth={2} />
+                </span>
                 <div className="flex-1">
-                  <p className="text-ui-label text-primary-600 font-semibold uppercase tracking-wider">
+                  <p className="text-ui-label text-neutral-500 uppercase">
                     Телефон
                   </p>
                   {doctor?.phone ? (
@@ -130,11 +146,13 @@ export default async function ContactsPage() {
             </div>
 
             {/* Email Card */}
-            <div className="card-interactive border-l-4 border-secondary-600">
+            <div className="card-interactive">
               <div className="flex items-start gap-4">
-                <div className="text-4xl">✉️</div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary-100 text-secondary-700">
+                  <MailIcon />
+                </span>
                 <div className="flex-1">
-                  <p className="text-ui-label text-secondary-600 font-semibold uppercase tracking-wider">
+                  <p className="text-ui-label text-neutral-500 uppercase">
                     Email
                   </p>
                   {doctor?.email ? (
@@ -153,11 +171,13 @@ export default async function ContactsPage() {
             </div>
 
             {/* Address Card */}
-            <div className="card-interactive border-l-4 border-accent-600">
+            <div className="card-interactive">
               <div className="flex items-start gap-4">
-                <div className="text-4xl">📍</div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent-100 text-accent-600">
+                  <MapPin className="h-6 w-6" strokeWidth={2} />
+                </span>
                 <div className="flex-1">
-                  <p className="text-ui-label text-accent-600 font-semibold uppercase tracking-wider">
+                  <p className="text-ui-label text-neutral-500 uppercase">
                     Очный приём
                   </p>
                   <p className="mt-2 font-bold text-neutral-900">
@@ -167,18 +187,18 @@ export default async function ContactsPage() {
                     href={`https://maps.yandex.ru/search/${encodeURIComponent(doctor?.address || "")}/`}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-2 text-primary-600 font-medium hover:gap-3 transition-all"
+                    className="mt-3 inline-flex items-center gap-2 text-primary-700 font-semibold hover:gap-3 transition-all"
                   >
                     Открыть в картах
-                    <span>→</span>
+                    <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
                   </a>
                 </div>
               </div>
             </div>
 
             {/* Social Links */}
-            <div className="card bg-gradient-card">
-              <p className="text-ui-label text-neutral-700 font-semibold uppercase tracking-wider">
+            <div className="rounded-2xl border border-neutral-200 bg-gradient-to-br from-neutral-0 to-primary-50 p-6 md:p-8">
+              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 Мессенджеры
               </p>
               <div className="mt-6 flex flex-wrap gap-4">
@@ -251,8 +271,9 @@ export default async function ContactsPage() {
           <p className="text-base-large text-neutral-600 mb-6">
             Выберите удобный для вас способ связи или запишитесь сразу:
           </p>
-          <a href="/booking" className="btn-primary text-lg">
+          <a href="/booking" className="btn-primary">
             Записаться на консультацию
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </a>
         </div>
       </div>
