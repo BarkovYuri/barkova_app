@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 
 from .models import (
     ApproachItem,
@@ -12,7 +13,7 @@ from .models import (
 
 
 @admin.register(SiteBlock)
-class SiteBlockAdmin(admin.ModelAdmin):
+class SiteBlockAdmin(ModelAdmin):
     list_display = ("key", "title", "short_content", "updated_at")
     search_fields = ("key", "title", "content")
     ordering = ("key",)
@@ -26,7 +27,7 @@ class SiteBlockAdmin(admin.ModelAdmin):
 
 
 @admin.register(Service)
-class ServiceAdmin(admin.ModelAdmin):
+class ServiceAdmin(ModelAdmin):
     list_display = ("title", "icon", "order", "is_active", "updated_at")
     list_editable = ("order", "is_active")
     list_filter = ("is_active",)
@@ -40,7 +41,7 @@ class ServiceAdmin(admin.ModelAdmin):
 
 
 @admin.register(HowItWorksStep)
-class HowItWorksStepAdmin(admin.ModelAdmin):
+class HowItWorksStepAdmin(ModelAdmin):
     list_display = ("order_display", "title", "icon", "is_active", "updated_at")
     list_editable = ("is_active",)
     list_filter = ("is_active",)
@@ -55,7 +56,7 @@ class HowItWorksStepAdmin(admin.ModelAdmin):
 
 
 @admin.register(FaqItem)
-class FaqItemAdmin(admin.ModelAdmin):
+class FaqItemAdmin(ModelAdmin):
     list_display = ("order", "question", "is_active", "updated_at")
     list_editable = ("order", "is_active")
     list_filter = ("is_active",)
@@ -68,7 +69,7 @@ class FaqItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(ApproachItem)
-class ApproachItemAdmin(admin.ModelAdmin):
+class ApproachItemAdmin(ModelAdmin):
     list_display = ("title", "icon", "order", "is_active", "updated_at")
     list_editable = ("order", "is_active")
     list_filter = ("is_active",)
@@ -77,7 +78,7 @@ class ApproachItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(TrustBadge)
-class TrustBadgeAdmin(admin.ModelAdmin):
+class TrustBadgeAdmin(ModelAdmin):
     list_display = ("label", "icon", "order", "is_active", "updated_at")
     list_editable = ("order", "is_active")
     list_filter = ("is_active",)
@@ -86,7 +87,7 @@ class TrustBadgeAdmin(admin.ModelAdmin):
 
 
 @admin.register(LegalDocument)
-class LegalDocumentAdmin(admin.ModelAdmin):
+class LegalDocumentAdmin(ModelAdmin):
     list_display = ("title", "doc_type", "version", "is_active", "created_at")
     list_filter = ("doc_type", "is_active")
     search_fields = ("title", "version")

@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Appointment, AppointmentAttachment
 
 
-# 📎 Inline файлы
-class AppointmentAttachmentInline(admin.TabularInline):
+# Inline файлы
+class AppointmentAttachmentInline(TabularInline):
     model = AppointmentAttachment
     extra = 0
     readonly_fields = ("file_preview",)
@@ -23,7 +24,7 @@ class AppointmentAttachmentInline(admin.TabularInline):
 
 # 👨‍⚕️ Основная админка
 @admin.register(Appointment)
-class AppointmentAdmin(admin.ModelAdmin):
+class AppointmentAdmin(ModelAdmin):
 
     # 🔥 список
     list_display = (
@@ -141,5 +142,5 @@ class AppointmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(AppointmentAttachment)
-class AppointmentAttachmentAdmin(admin.ModelAdmin):
+class AppointmentAttachmentAdmin(ModelAdmin):
     list_display = ("appointment", "uploaded_at")

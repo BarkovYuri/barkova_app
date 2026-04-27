@@ -23,7 +23,8 @@ class TimeSlotSerializer(serializers.ModelSerializer):
 
 
 class AvailabilityRuleSerializer(serializers.ModelSerializer):
-    weekday_display = serializers.CharField(source="get_weekday_display", read_only=True)
+    weekday_display = serializers.SerializerMethodField()
+    effective_weekdays = serializers.SerializerMethodField()
 
     class Meta:
         model = AvailabilityRule
@@ -32,12 +33,24 @@ class AvailabilityRuleSerializer(serializers.ModelSerializer):
             "start_date",
             "end_date",
             "weekday",
+            "weekdays",
+            "effective_weekdays",
             "weekday_display",
             "start_time",
             "end_time",
             "slot_duration",
             "is_active",
         ]
+
+    def get_weekday_display(self, obj):
+        from .models import WEEKDAY_SHORT
+        days = obj.effective_weekdays
+        if not days:
+            return "—"
+        return ", ".join(WEEKDAY_SHORT[d] for d in sorted(days))
+
+    def get_effective_weekdays(self, obj):
+        return obj.effective_weekdays
 
 
 class GenerateSlotsSerializer(serializers.Serializer):

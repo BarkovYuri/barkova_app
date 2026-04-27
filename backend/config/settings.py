@@ -32,6 +32,11 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 INSTALLED_APPS = [
+    # Unfold должен быть ПЕРЕД django.contrib.admin
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -49,6 +54,148 @@ INSTALLED_APPS = [
     "apps.appointments",
     "apps.notifications.apps.NotificationsConfig",
 ]
+
+
+# ============================================================================
+# Django Unfold — настройка визуала админки
+# ============================================================================
+
+UNFOLD = {
+    "SITE_TITLE": "Кабинет врача",
+    "SITE_HEADER": "Кабинет врача",
+    "SITE_SUBHEADER": "Управление сайтом и записями",
+    "SITE_URL": "/",
+    "SITE_DROPDOWN": [
+        {
+            "icon": "language",
+            "title": "На сайт",
+            "link": "/",
+        },
+    ],
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "ENVIRONMENT": None,
+    "DASHBOARD_CALLBACK": None,
+    "LOGIN": {
+        "image": None,
+        "redirect_after": lambda request: "/admin/",
+    },
+    "STYLES": [],
+    "SCRIPTS": [],
+    "BORDER_RADIUS": "8px",
+    "COLORS": {
+        "primary": {
+            "50": "240 250 251",
+            "100": "216 241 243",
+            "200": "179 227 232",
+            "300": "132 205 213",
+            "400": "76 177 189",
+            "500": "47 149 163",
+            "600": "14 116 144",
+            "700": "21 94 117",
+            "800": "22 78 99",
+            "900": "13 58 72",
+            "950": "8 42 53",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "Записи и расписание",
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "Записи пациентов",
+                        "icon": "event_note",
+                        "link": "/admin/appointments/appointment/",
+                    },
+                    {
+                        "title": "Слоты времени",
+                        "icon": "schedule",
+                        "link": "/admin/scheduling/timeslot/",
+                    },
+                    {
+                        "title": "Правила расписания",
+                        "icon": "calendar_month",
+                        "link": "/admin/scheduling/availabilityrule/",
+                    },
+                    {
+                        "title": "Выходные дни",
+                        "icon": "event_busy",
+                        "link": "/admin/scheduling/dayexception/",
+                    },
+                ],
+            },
+            {
+                "title": "Контент сайта",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Профиль врача",
+                        "icon": "badge",
+                        "link": "/admin/doctors/doctorprofile/",
+                    },
+                    {
+                        "title": "Услуги (главная)",
+                        "icon": "medical_services",
+                        "link": "/admin/content/service/",
+                    },
+                    {
+                        "title": "Шаги «Как это работает»",
+                        "icon": "format_list_numbered",
+                        "link": "/admin/content/howitworksstep/",
+                    },
+                    {
+                        "title": "FAQ",
+                        "icon": "help_outline",
+                        "link": "/admin/content/faqitem/",
+                    },
+                    {
+                        "title": "Подход к работе",
+                        "icon": "psychology",
+                        "link": "/admin/content/approachitem/",
+                    },
+                    {
+                        "title": "Бейджи доверия",
+                        "icon": "verified",
+                        "link": "/admin/content/trustbadge/",
+                    },
+                    {
+                        "title": "Текстовые блоки",
+                        "icon": "text_snippet",
+                        "link": "/admin/content/siteblock/",
+                    },
+                    {
+                        "title": "Юридические документы",
+                        "icon": "gavel",
+                        "link": "/admin/content/legaldocument/",
+                    },
+                ],
+            },
+            {
+                "title": "Система",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Пользователи",
+                        "icon": "person",
+                        "link": "/admin/auth/user/",
+                    },
+                    {
+                        "title": "Группы",
+                        "icon": "group",
+                        "link": "/admin/auth/group/",
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
