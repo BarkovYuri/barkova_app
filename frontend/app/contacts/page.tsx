@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowRight, MapPin, Phone } from "lucide-react";
 import { fetchAPI } from "../../lib/api";
+import { loadSiteBlocks, textOr } from "../../lib/siteContent";
 import type { DoctorProfile } from "../../lib/types";
 
 export const metadata: Metadata = {
@@ -101,7 +102,29 @@ function SocialIconLink({
 }
 
 export default async function ContactsPage() {
-  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
+  const [doctor, blocks] = await Promise.all([
+    fetchAPI("/profile") as Promise<DoctorProfile | null>,
+    loadSiteBlocks(),
+  ]);
+
+  const title = textOr(blocks, "contacts.section_title", "Контакты");
+  const subtitle = textOr(
+    blocks,
+    "contacts.section_subtitle",
+    "Свяжитесь со мной удобным для вас способом"
+  );
+  const socialTitle = textOr(blocks, "contacts.social.title", "Мессенджеры");
+  const mapTitle = textOr(blocks, "contacts.map.title", "Где проходит приём");
+  const ctaText = textOr(
+    blocks,
+    "contacts.cta.text",
+    "Выберите удобный для вас способ связи или запишитесь сразу:"
+  );
+  const ctaButton = textOr(
+    blocks,
+    "contacts.cta.button",
+    "Записаться на консультацию"
+  );
 
   return (
     <main className="bg-neutral-0">
@@ -109,10 +132,10 @@ export default async function ContactsPage() {
         {/* Header */}
         <div className="max-w-4xl mx-auto mb-12 animate-fade-in-up">
           <h1 className="text-h1-mobile md:text-h1-desktop text-neutral-900 mb-4">
-            Контакты
+            {title}
           </h1>
-          <p className="text-base-large text-neutral-600">
-            Свяжитесь со мной удобным для вас способом
+          <p className="text-base-large text-neutral-600 whitespace-pre-line">
+            {subtitle}
           </p>
         </div>
 
@@ -199,7 +222,7 @@ export default async function ContactsPage() {
             {/* Social Links */}
             <div className="rounded-2xl border border-neutral-200 bg-gradient-to-br from-neutral-0 to-primary-50 p-6 md:p-8">
               <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                Мессенджеры
+                {socialTitle}
               </p>
               <div className="mt-6 flex flex-wrap gap-4">
                 {doctor?.instagram_url ? (
@@ -249,7 +272,7 @@ export default async function ContactsPage() {
           {doctor?.yandex_maps_embed_url ? (
             <div className="card shadow-xl overflow-hidden flex flex-col">
               <div className="px-6 py-4 border-b border-neutral-200">
-                <h2 className="font-semibold text-neutral-900">Где проходит приём</h2>
+                <h2 className="font-semibold text-neutral-900">{mapTitle}</h2>
               </div>
               <div className="h-[200px] sm:h-[300px] md:h-[420px] flex-1 overflow-hidden">
                 <iframe
@@ -268,11 +291,11 @@ export default async function ContactsPage() {
 
         {/* CTA */}
         <div className="mt-16 text-center">
-          <p className="text-base-large text-neutral-600 mb-6">
-            Выберите удобный для вас способ связи или запишитесь сразу:
+          <p className="text-base-large text-neutral-600 mb-6 whitespace-pre-line">
+            {ctaText}
           </p>
           <a href="/booking" className="btn-primary">
-            Записаться на консультацию
+            {ctaButton}
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </a>
         </div>

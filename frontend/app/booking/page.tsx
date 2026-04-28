@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Sparkles } from "lucide-react";
 import Script from "next/script";
+
 import BookingForm from "../../components/booking/BookingForm";
+import { loadSiteBlocks, textOr } from "../../lib/siteContent";
 
 export const metadata: Metadata = {
   title: "Онлайн-запись на консультацию",
@@ -15,7 +17,20 @@ export const metadata: Metadata = {
   alternates: { canonical: "/booking" },
 };
 
-export default function BookingPage() {
+export default async function BookingPage() {
+  const blocks = await loadSiteBlocks();
+  const chip = textOr(blocks, "booking.section_chip", "Онлайн-консультация");
+  const title = textOr(
+    blocks,
+    "booking.section_title",
+    "Запись на онлайн-консультацию"
+  );
+  const subtitle = textOr(
+    blocks,
+    "booking.section_subtitle",
+    "Выберите удобную дату и время, затем оставьте свои данные для онлайн-консультации."
+  );
+
   return (
     <>
       {/* Telegram WebApp SDK — нужен когда страница открыта как Mini App.
@@ -35,16 +50,13 @@ export default function BookingPage() {
           <div className="mb-10 max-w-3xl animate-fade-in-up">
             <span className="chip">
               <Sparkles className="h-3.5 w-3.5" strokeWidth={2.5} />
-              Онлайн-консультация
+              {chip}
             </span>
 
-            <h1 className="mt-5 text-neutral-900">
-              Запись на онлайн-консультацию
-            </h1>
+            <h1 className="mt-5 text-neutral-900">{title}</h1>
 
-            <p className="mt-5 text-base-large text-neutral-600">
-              Выберите удобную дату и время, затем оставьте свои данные для
-              онлайн-консультации.
+            <p className="mt-5 text-base-large text-neutral-600 whitespace-pre-line">
+              {subtitle}
             </p>
           </div>
 

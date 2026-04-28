@@ -123,6 +123,104 @@ SITE_BLOCKS = [
         "title": "Заголовок секции «Подход к работе»",
         "content": "Спокойно, понятно и по делу",
     },
+    # ──────────── /booking ────────────
+    {
+        "key": "booking.section_chip",
+        "title": "Чип на странице записи",
+        "content": "Онлайн-консультация",
+    },
+    {
+        "key": "booking.section_title",
+        "title": "Заголовок страницы записи",
+        "content": "Запись на онлайн-консультацию",
+    },
+    {
+        "key": "booking.section_subtitle",
+        "title": "Подзаголовок страницы записи",
+        "content": (
+            "Выберите удобную дату и время, затем оставьте свои данные для "
+            "онлайн-консультации."
+        ),
+    },
+    # ──────────── /office ────────────
+    {
+        "key": "office.section_chip",
+        "title": "Чип на странице очного приёма",
+        "content": "Очный приём",
+    },
+    {
+        "key": "office.section_title",
+        "title": "Заголовок очного приёма",
+        "content": "Запись на очную консультацию",
+    },
+    {
+        "key": "office.section_subtitle",
+        "title": "Подзаголовок очного приёма",
+        "content": (
+            "Запись на очный приём осуществляется через платформу ПроДокторов"
+        ),
+    },
+    {
+        "key": "office.location.title",
+        "title": "Заголовок блока «Местоположение»",
+        "content": "Местоположение",
+    },
+    {
+        "key": "office.location.subtitle",
+        "title": "Подзаголовок блока «Местоположение»",
+        "content": "На карте показана точка, где проходит очная консультация",
+    },
+    {
+        "key": "office.directions.title",
+        "title": "Заголовок «Как добраться»",
+        "content": "Как добраться?",
+    },
+    {
+        "key": "office.cta.text",
+        "title": "Текст CTA на /office",
+        "content": "Готовы записаться на очный приём?",
+    },
+    {
+        "key": "office.cta.button_prodoktorov",
+        "title": "Кнопка «Через ПроДокторов»",
+        "content": "Запишитесь через ПроДокторов",
+    },
+    {
+        "key": "office.cta.button_online",
+        "title": "Кнопка «Онлайн-консультация»",
+        "content": "Записаться на онлайн-консультацию",
+    },
+    # ──────────── /contacts ────────────
+    {
+        "key": "contacts.section_title",
+        "title": "Заголовок страницы контактов",
+        "content": "Контакты",
+    },
+    {
+        "key": "contacts.section_subtitle",
+        "title": "Подзаголовок страницы контактов",
+        "content": "Свяжитесь со мной удобным для вас способом",
+    },
+    {
+        "key": "contacts.social.title",
+        "title": "Заголовок блока «Мессенджеры»",
+        "content": "Мессенджеры",
+    },
+    {
+        "key": "contacts.map.title",
+        "title": "Заголовок карты на /contacts",
+        "content": "Где проходит приём",
+    },
+    {
+        "key": "contacts.cta.text",
+        "title": "Текст CTA на /contacts",
+        "content": "Выберите удобный для вас способ связи или запишитесь сразу:",
+    },
+    {
+        "key": "contacts.cta.button",
+        "title": "Кнопка CTA на /contacts",
+        "content": "Записаться на консультацию",
+    },
 ]
 
 

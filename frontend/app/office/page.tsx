@@ -9,6 +9,7 @@ import {
   Train,
 } from "lucide-react";
 import { fetchAPI } from "../../lib/api";
+import { loadSiteBlocks, textOr } from "../../lib/siteContent";
 import type { DoctorProfile } from "../../lib/types";
 
 export const metadata: Metadata = {
@@ -24,7 +25,48 @@ export const metadata: Metadata = {
 };
 
 export default async function OfficePage() {
-  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
+  const [doctor, blocks] = await Promise.all([
+    fetchAPI("/profile") as Promise<DoctorProfile | null>,
+    loadSiteBlocks(),
+  ]);
+
+  const chip = textOr(blocks, "office.section_chip", "Очный приём");
+  const title = textOr(
+    blocks,
+    "office.section_title",
+    "Запись на очную консультацию"
+  );
+  const subtitle = textOr(
+    blocks,
+    "office.section_subtitle",
+    "Запись на очный приём осуществляется через платформу ПроДокторов"
+  );
+  const locationTitle = textOr(blocks, "office.location.title", "Местоположение");
+  const locationSubtitle = textOr(
+    blocks,
+    "office.location.subtitle",
+    "На карте показана точка, где проходит очная консультация"
+  );
+  const directionsTitle = textOr(
+    blocks,
+    "office.directions.title",
+    "Как добраться?"
+  );
+  const ctaText = textOr(
+    blocks,
+    "office.cta.text",
+    "Готовы записаться на очный приём?"
+  );
+  const ctaButtonProdoktorov = textOr(
+    blocks,
+    "office.cta.button_prodoktorov",
+    "Запишитесь через ПроДокторов"
+  );
+  const ctaButtonOnline = textOr(
+    blocks,
+    "office.cta.button_online",
+    "Записаться на онлайн-консультацию"
+  );
 
   const transports = [
     {
@@ -49,12 +91,10 @@ export default async function OfficePage() {
       <div className="container section-vertical-spacing">
         {/* Header */}
         <div className="max-w-4xl mx-auto mb-12 animate-fade-in-up">
-          <p className="chip">Очный приём</p>
-          <h1 className="mt-5 text-neutral-900">
-            Запись на очную консультацию
-          </h1>
-          <p className="mt-6 text-base-large text-neutral-600 max-w-2xl">
-            Запись на очный приём осуществляется через платформу ПроДокторов
+          <p className="chip">{chip}</p>
+          <h1 className="mt-5 text-neutral-900">{title}</h1>
+          <p className="mt-6 text-base-large text-neutral-600 max-w-2xl whitespace-pre-line">
+            {subtitle}
           </p>
         </div>
 
@@ -122,10 +162,10 @@ export default async function OfficePage() {
           <div className="card shadow-xl overflow-hidden mb-12 max-w-4xl mx-auto w-full p-0">
             <div className="px-6 py-5 border-b border-neutral-200">
               <h2 className="text-h3-mobile font-semibold text-neutral-900">
-                Местоположение
+                {locationTitle}
               </h2>
-              <p className="mt-1 text-sm text-neutral-600">
-                На карте показана точка, где проходит очная консультация
+              <p className="mt-1 text-sm text-neutral-600 whitespace-pre-line">
+                {locationSubtitle}
               </p>
             </div>
             <div className="h-[220px] sm:h-[320px] md:h-[440px]">
@@ -146,7 +186,7 @@ export default async function OfficePage() {
         <div className="max-w-4xl mx-auto">
           <div className="rounded-2xl border border-neutral-200 bg-gradient-to-br from-neutral-0 to-primary-50 p-6 md:p-10">
             <h2 className="text-h3-mobile md:text-h3-desktop text-neutral-900 mb-8">
-              Как добраться?
+              {directionsTitle}
             </h2>
             <div className="grid gap-8 sm:grid-cols-3">
               {transports.map(({ icon: Icon, title, description }, idx) => (
@@ -168,8 +208,8 @@ export default async function OfficePage() {
 
         {/* CTA */}
         <div className="mt-16 text-center max-w-4xl mx-auto">
-          <p className="text-base-large text-neutral-600 mb-6">
-            Готовы записаться на очный приём?
+          <p className="text-base-large text-neutral-600 mb-6 whitespace-pre-line">
+            {ctaText}
           </p>
           {doctor?.prodoktorov_url ? (
             <a
@@ -178,12 +218,12 @@ export default async function OfficePage() {
               rel="noreferrer"
               className="btn-primary"
             >
-              Запишитесь через ПроДокторов
+              {ctaButtonProdoktorov}
               <ExternalLink className="h-4 w-4" strokeWidth={2.5} />
             </a>
           ) : (
             <a href="/booking" className="btn-primary">
-              Записаться на онлайн-консультацию
+              {ctaButtonOnline}
               <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
             </a>
           )}

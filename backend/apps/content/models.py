@@ -257,6 +257,33 @@ class TrustBadge(models.Model):
 
 
 # ============================================================================
+# Транспорт — секция «Как добраться» на /office (3+ пункта)
+# ============================================================================
+
+
+class TransportItem(models.Model):
+    icon = models.CharField(
+        "Иконка",
+        max_length=40,
+        choices=ICON_CHOICES,
+        default="train",
+    )
+    title = models.CharField("Название способа", max_length=255)
+    description = models.TextField("Описание")
+    order = models.PositiveIntegerField("Порядок", default=0)
+    is_active = models.BooleanField("Показывать", default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Способ добраться"
+        verbose_name_plural = "Способы добраться (страница «Очный приём»)"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.title
+
+
+# ============================================================================
 # Юридические документы (как было)
 # ============================================================================
 

@@ -5,6 +5,7 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 
+from .admin_forms import AvailabilityRuleAdminForm
 from .forms import SlotGenerationForm
 from .models import (
     AvailabilityRule,
@@ -34,6 +35,7 @@ class AvailabilityRuleAdmin(ModelAdmin):
     """
 
     change_list_template = "admin/scheduling/availabilityrule/change_list.html"
+    form = AvailabilityRuleAdminForm
 
     list_display = (
         "id",

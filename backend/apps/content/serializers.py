@@ -7,6 +7,7 @@ from .models import (
     LegalDocument,
     Service,
     SiteBlock,
+    TransportItem,
     TrustBadge,
 )
 
