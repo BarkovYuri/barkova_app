@@ -93,6 +93,9 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     vk_user_id = serializers.CharField(required=False, allow_blank=True)
     vk_id_code = serializers.CharField(required=False, allow_blank=True)
     vk_id_device_id = serializers.CharField(required=False, allow_blank=True)
+    # Telegram WebApp Mini App: подписанная Telegram'ом строка с user data.
+    # Если пришла валидная — пользователь автоматически привязан, prelink не нужен.
+    tg_init_data = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Appointment
@@ -108,6 +111,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "vk_user_id",
             "vk_id_code",
             "vk_id_device_id",
+            "tg_init_data",
             "reason",
             "consent_given",
             "privacy_accepted",
@@ -163,22 +167,36 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         vk_user_id = attrs.get("vk_user_id", "").strip()
 
         if preferred_contact_method == "telegram":
-            if not telegram_prelink_token:
+            tg_init_data = attrs.get("tg_init_data", "").strip()
+
+            # Сценарий A: пользователь зашёл из Mini App — initData валиден,
+            # chat_id известен сразу, prelink не нужен.
+            if tg_init_data:
+                from apps.integrations.telegram_webapp import extract_telegram_user
+
+                tg_user = extract_telegram_user(tg_init_data)
+                if not tg_user:
+                    raise serializers.ValidationError(
+                        {"tg_init_data": "Не удалось проверить подпись Telegram."}
+                    )
+                attrs["telegram_webapp_user"] = tg_user
+            # Сценарий B: классический flow через ссылку на бота
+            elif telegram_prelink_token:
+                prelink = TelegramPrelink.objects.filter(
+                    token=telegram_prelink_token,
+                    is_used=False,
+                ).first()
+
+                if not prelink or not prelink.chat_id:
+                    raise serializers.ValidationError(
+                        {"telegram_prelink_token": "Telegram ещё не подключён."}
+                    )
+
+                attrs["telegram_prelink"] = prelink
+            else:
                 raise serializers.ValidationError(
                     {"telegram_prelink_token": "Сначала подключите Telegram."}
                 )
-
-            prelink = TelegramPrelink.objects.filter(
-                token=telegram_prelink_token,
-                is_used=False,
-            ).first()
-
-            if not prelink or not prelink.chat_id:
-                raise serializers.ValidationError(
-                    {"telegram_prelink_token": "Telegram ещё не подключён."}
-                )
-
-            attrs["telegram_prelink"] = prelink
 
         if preferred_contact_method == "vk":
             vk_id_code = attrs.get("vk_id_code", "").strip()
@@ -229,6 +247,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         slot = validated_data.pop("slot")
 
         telegram_prelink = validated_data.pop("telegram_prelink", None)
+        telegram_webapp_user = validated_data.pop("telegram_webapp_user", None)
         vk_prelink = validated_data.pop("vk_prelink", None)
         vk_id_authorized = validated_data.pop("vk_id_authorized", False)
         vk_id_user_id = validated_data.pop("vk_id_user_id", "")
@@ -238,14 +257,33 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         validated_data.pop("vk_user_id", None)
         validated_data.pop("vk_id_code", None)
         validated_data.pop("vk_id_device_id", None)
+        validated_data.pop("tg_init_data", None)
+
+        # Telegram chat_id и linked_at — из prelink ИЛИ из WebApp initData
+        from django.utils import timezone
+
+        if telegram_webapp_user:
+            tg_chat_id = telegram_webapp_user["chat_id"]
+            tg_linked_at = timezone.now()
+            tg_username = telegram_webapp_user.get("username") or validated_data.get(
+                "telegram_username", ""
+            )
+        elif telegram_prelink:
+            tg_chat_id = telegram_prelink.chat_id
+            tg_linked_at = telegram_prelink.linked_at
+            tg_username = validated_data.get("telegram_username", "")
+        else:
+            tg_chat_id = ""
+            tg_linked_at = None
+            tg_username = validated_data.get("telegram_username", "")
 
         appointment_data = {
             "name": validated_data["name"],
             "phone": validated_data["phone"],
-            "telegram_username": validated_data.get("telegram_username", ""),
+            "telegram_username": tg_username,
             "preferred_contact_method": validated_data.get("preferred_contact_method", ""),
-            "telegram_chat_id": telegram_prelink.chat_id if telegram_prelink else "",
-            "telegram_linked_at": telegram_prelink.linked_at if telegram_prelink else None,
+            "telegram_chat_id": tg_chat_id,
+            "telegram_linked_at": tg_linked_at,
             "vk_user_id": (
                 vk_prelink.user_id if vk_prelink else (vk_id_user_id if vk_id_authorized else "")
             ),

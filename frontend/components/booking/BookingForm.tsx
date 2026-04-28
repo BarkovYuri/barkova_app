@@ -2,10 +2,14 @@
 
 import { UserRound } from "lucide-react";
 import Script from "next/script";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { IS_MOCK_MODE } from "../../lib/api";
 import { isPhoneValid } from "../../lib/phone";
+import {
+  applyTelegramTheme,
+  useTelegramWebApp,
+} from "../../lib/telegramWebApp";
 import type { ContactMethod } from "../../lib/types";
 import { BookingSummary } from "./BookingSummary";
 import { useDates, useSlots } from "./hooks/useSlots";
@@ -56,10 +60,23 @@ export default function BookingForm() {
   // ── Способ связи ────────────────────────────────────────────────
   const [contactMethod, setContactMethod] = useState<ContactMethod>("telegram");
 
+  // ── Telegram Mini App ───────────────────────────────────────────
+  const { webApp, isInTelegram } = useTelegramWebApp();
+  const tgInitData = webApp?.initData ?? "";
+
+  // Применяем тему Telegram при первой возможности и фиксируем способ связи
+  useEffect(() => {
+    if (webApp) {
+      applyTelegramTheme(webApp);
+      setContactMethod("telegram");
+    }
+  }, [webApp]);
+
   const telegram = useTelegramPrelink();
-  const vkId = useVkId(contactMethod === "vk");
+  const vkId = useVkId(contactMethod === "vk" && !isInTelegram);
 
   function handleSetContactMethod(method: ContactMethod) {
+    if (isInTelegram) return; // в Mini App канал зафиксирован
     setContactMethod(method);
     if (method === "telegram") telegram.reset();
   }
@@ -80,7 +97,7 @@ export default function BookingForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    await submit({
+    const ok = await submit({
       selectedSlotId,
       selectedDate,
       selectedSlot,
@@ -95,7 +112,25 @@ export default function BookingForm() {
       privacyAccepted,
       offerAccepted,
       onSlotsRefresh: refreshSlots,
+      tgInitData,
     });
+
+    // Если открыто как Mini App — даём пользователю увидеть SuccessView,
+    // потом закрываем Mini App и возвращаемся в чат с ботом.
+    if (ok && webApp) {
+      try {
+        webApp.HapticFeedback?.notificationOccurred?.("success");
+      } catch {
+        // ignore
+      }
+      setTimeout(() => {
+        try {
+          webApp.close();
+        } catch {
+          // ignore
+        }
+      }, 2500);
+    }
   }
 
   // ── Progress calculation ─────────────────────────────────────────
@@ -108,12 +143,14 @@ export default function BookingForm() {
     privacyAccepted &&
     offerAccepted
   );
+  // В Mini App канал уже подтверждён автоматически через initData
   const hasContactMethod =
-    contactMethod === "telegram"
+    isInTelegram ||
+    (contactMethod === "telegram"
       ? telegram.connected
       : contactMethod === "vk"
         ? vkId.authorized
-        : true;
+        : true);
 
   const progressPercentage = Math.round(
     ((hasSelectedDate ? 1 : 0) +
@@ -266,19 +303,31 @@ export default function BookingForm() {
               errorText={errorText}
               submitting={submitting}
             >
-              <ContactMethodSection
-                contactMethod={contactMethod}
-                setContactMethod={handleSetContactMethod}
-                onTelegramConnect={telegram.connect}
-                onCheckTelegram={telegram.checkStatus}
-                loadingTelegramLink={telegram.loading}
-                telegramConnected={telegram.connected}
-                telegramPrelinkToken={telegram.token}
-                vkIdReady={vkId.ready}
-                vkIdLoadError={vkId.loadError}
-                vkIdAuthorized={vkId.authorized}
-                vkIdContainerRef={vkId.containerRef}
-              />
+              {isInTelegram ? (
+                <div className="rounded-2xl border border-secondary-200 bg-secondary-50 px-4 py-3 text-sm text-secondary-800 flex items-start gap-2">
+                  <span aria-hidden>✅</span>
+                  <span>
+                    <b>Telegram подключён автоматически.</b>
+                    <span className="block text-secondary-700 mt-0.5">
+                      Подтверждение и напоминания придут в этот же чат.
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <ContactMethodSection
+                  contactMethod={contactMethod}
+                  setContactMethod={handleSetContactMethod}
+                  onTelegramConnect={telegram.connect}
+                  onCheckTelegram={telegram.checkStatus}
+                  loadingTelegramLink={telegram.loading}
+                  telegramConnected={telegram.connected}
+                  telegramPrelinkToken={telegram.token}
+                  vkIdReady={vkId.ready}
+                  vkIdLoadError={vkId.loadError}
+                  vkIdAuthorized={vkId.authorized}
+                  vkIdContainerRef={vkId.containerRef}
+                />
+              )}
             </PatientForm>
           </form>
         </section>

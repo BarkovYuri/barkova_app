@@ -20,6 +20,9 @@ type SubmitParams = {
   privacyAccepted: boolean;
   offerAccepted: boolean;
   onSlotsRefresh: () => Promise<void>;
+  /** Если открыто как Telegram Mini App — initData передаём на бэкенд
+   *  для авто-привязки без prelink-flow. */
+  tgInitData?: string;
 };
 
 export function useBookingSubmit() {
@@ -44,6 +47,7 @@ export function useBookingSubmit() {
       privacyAccepted,
       offerAccepted,
       onSlotsRefresh,
+      tgInitData,
     } = params;
 
     setError("");
@@ -60,7 +64,12 @@ export function useBookingSubmit() {
       setError("Введите номер телефона.");
       return false;
     }
-    if (contactMethod === "telegram" && !telegramPrelinkToken) {
+    // В Mini App Telegram уже подтверждён через initData — prelink не требуется.
+    if (
+      contactMethod === "telegram" &&
+      !telegramPrelinkToken &&
+      !tgInitData
+    ) {
       setError("Сначала подключите Telegram.");
       return false;
     }
@@ -87,7 +96,11 @@ export function useBookingSubmit() {
       formData.append("offer_accepted", String(offerAccepted));
 
       if (contactMethod === "telegram") {
-        formData.append("telegram_prelink_token", telegramPrelinkToken);
+        if (tgInitData) {
+          formData.append("tg_init_data", tgInitData);
+        } else if (telegramPrelinkToken) {
+          formData.append("telegram_prelink_token", telegramPrelinkToken);
+        }
       }
 
       if (contactMethod === "vk" && vkIdPayload) {
