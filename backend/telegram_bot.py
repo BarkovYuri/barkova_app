@@ -123,24 +123,34 @@ def backend_post(path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         raise
 
 
-def send_message(chat_id: int | str, text: str) -> Dict[str, Any]:
+def send_message(
+    chat_id: int | str,
+    text: str,
+    reply_markup: Optional[Dict[str, Any]] = None,
+    parse_mode: str = "HTML",
+) -> Dict[str, Any]:
     """
     Send a text message to user.
 
     Args:
         chat_id: Telegram chat ID
-        text: Message text
+        text: Message text. By default treated as HTML — use <b>, <i>, etc.
+        reply_markup: Inline / reply keyboard.
+        parse_mode: "HTML" by default. Pass "" to disable parsing.
 
     Returns:
         API response
     """
-    return telegram_api(
-        "sendMessage",
-        {
-            "chat_id": str(chat_id),
-            "text": text,
-        },
-    )
+    payload: Dict[str, Any] = {
+        "chat_id": str(chat_id),
+        "text": text,
+    }
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+    if reply_markup is not None:
+        payload["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+
+    return telegram_api("sendMessage", payload)
 
 
 def answer_callback_query(callback_query_id: str, text: str) -> Dict[str, Any]:
@@ -163,26 +173,37 @@ def answer_callback_query(callback_query_id: str, text: str) -> Dict[str, Any]:
     )
 
 
-def edit_message_text(chat_id: int | str, message_id: int | str, text: str) -> Dict[str, Any]:
+def edit_message_text(
+    chat_id: int | str,
+    message_id: int | str,
+    text: str,
+    reply_markup: Optional[Dict[str, Any]] = None,
+    parse_mode: str = "HTML",
+) -> Dict[str, Any]:
     """
     Edit previously sent message text.
 
     Args:
         chat_id: Telegram chat ID
         message_id: Message ID to edit
-        text: New message text
+        text: New message text (HTML by default)
+        reply_markup: New inline keyboard
+        parse_mode: "HTML" by default. Pass "" to disable.
 
     Returns:
         API response
     """
-    return telegram_api(
-        "editMessageText",
-        {
-            "chat_id": str(chat_id),
-            "message_id": str(message_id),
-            "text": text,
-        },
-    )
+    payload: Dict[str, Any] = {
+        "chat_id": str(chat_id),
+        "message_id": str(message_id),
+        "text": text,
+    }
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+    if reply_markup is not None:
+        payload["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+
+    return telegram_api("editMessageText", payload)
 
 
 def handle_start(chat_id: int, text: str) -> None:
@@ -204,7 +225,20 @@ def handle_start(chat_id: int, text: str) -> None:
 
     # Plain /start command
     if len(parts) == 1:
-        send_message(chat_id, "Здравствуйте! Telegram-уведомления подключены.")
+        send_message(
+            chat_id,
+            (
+                "👋  <b>Здравствуйте!</b>\n\n"
+                "Я — бот <b>Барковой Елены Игоревны</b>, врача-инфекциониста.\n\n"
+                "Через меня вы будете получать:\n"
+                "• подтверждения и напоминания о записи\n"
+                "• сообщения от врача о деталях приёма\n"
+                "• возможность отмены или переноса записи\n\n"
+                "━━━━━━━━━━━━━━━\n"
+                "<i>Чтобы записаться на консультацию — нажмите кнопку "
+                "<b>«Записаться»</b> в меню снизу или перейдите на сайт.</i>"
+            ),
+        )
         return
 
     payload = parts[1].strip()
@@ -227,28 +261,137 @@ def handle_start(chat_id: int, text: str) -> None:
             send_message(
                 chat_id,
                 (
-                    "Здравствуйте!\n"
-                    "Вы перешли сюда для подтверждения записи к врачу-инфекционисту.\n\n"
-                    "ℹ️ Ваш аккаунт Telegram успешно привязан к системе записи.\n\n"
-                    "**Что будет дальше:**\n"
-                    "1. Мы пришлем вам уведомление для подтверждения визита.\n"
-                    "2. За 2 часа до приема бот напомнит вам о нем и уточнит, сможете ли вы присутствовать.\n"
-                    "3. Если вам потребуется отменить прием, вы сможете сделать это прямо в этом чате, нажав кнопку «Отменить запись» или просто написав сообщение в этот чат.\n\n"
-                    "🔔 Пожалуйста, сейчас перейдите обратно на сайт для продолжения записи."
+                    "✅  <b>Telegram успешно привязан</b>\n\n"
+                    "Я буду присылать вам уведомления о записи к "
+                    "<b>врачу-инфекционисту Барковой Елене Игоревне</b>.\n\n"
+                    "━━━━━━━━━━━━━━━\n"
+                    "<b>Что будет дальше:</b>\n"
+                    "1️⃣  Вы получите подтверждение записи.\n"
+                    "2️⃣  За 2 часа до приёма я напомню и спрошу, сможете "
+                    "ли вы присутствовать.\n"
+                    "3️⃣  Отменить или перенести запись можно прямо в "
+                    "этом чате.\n\n"
+                    "🔔  <i>Сейчас вернитесь на сайт, чтобы завершить "
+                    "запись.</i>"
                 ),
             )
 
         except ValidationError as exc:
             logger.warning(f"Invalid token in /start command: {exc}")
-            send_message(chat_id, f"Ошибка: неверный токен.")
-        except Exception as exc:
+            send_message(
+                chat_id,
+                "⚠️  <b>Ошибка: неверный токен.</b>\n\n"
+                "<i>Возможно, ссылка устарела. Создайте запись на сайте "
+                "заново.</i>",
+            )
+        except Exception:
             logger.exception(f"Error linking Telegram account for chat {chat_id}")
-            send_message(chat_id, "Не удалось подключить Telegram. Пожалуйста, попробуйте позже.")
+            send_message(
+                chat_id,
+                "⚠️  <b>Не удалось подключить Telegram</b>\n\n"
+                "<i>Попробуйте чуть позже или вернитесь к боту "
+                "по ссылке с сайта ещё раз.</i>",
+            )
 
         return
 
     # Unknown /start parameter
-    send_message(chat_id, "Команда распознана, но сценарий не найден.")
+    send_message(
+        chat_id,
+        "🤔  <i>Команда распознана, но сценарий не найден. "
+        "Попробуйте начать с кнопки «Записаться».</i>",
+    )
+
+
+def _public_url(path: str = "/") -> str:
+    """Сборка публичной URL'и сайта (для Web App кнопок)."""
+    base = os.getenv("PUBLIC_BASE_URL", "https://doctor-barkova.ru").rstrip("/")
+    if not path.startswith("/"):
+        path = "/" + path
+    return f"{base}{path}"
+
+
+def handle_book(chat_id: int) -> None:
+    """Команда /book — открывает Mini App записи."""
+    send_message(
+        chat_id,
+        (
+            "📅  <b>Запись на консультацию</b>\n\n"
+            "Нажмите кнопку ниже — откроется удобная форма записи прямо "
+            "здесь, в Telegram."
+        ),
+        reply_markup={
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "📅  Открыть запись",
+                        "web_app": {"url": _public_url("/booking?tg=1")},
+                    }
+                ]
+            ]
+        },
+    )
+
+
+def handle_my_appointments(chat_id: int) -> None:
+    """Команда /myappointments — открывает Mini App со списком записей."""
+    appointment = find_active_appointment_for_chat(chat_id)
+    if not appointment:
+        send_message(
+            chat_id,
+            (
+                "📭  <b>У вас нет активных записей</b>\n\n"
+                "<i>Нажмите кнопку «Записаться» в меню, чтобы создать новую.</i>"
+            ),
+        )
+        return
+
+    slot = appointment.slot
+    send_message(
+        chat_id,
+        (
+            "📋  <b>Ваша запись</b>\n\n"
+            f"📅  <b>{slot.date.strftime('%d.%m.%Y')}</b>\n"
+            f"🕐  <b>{slot.start_time.strftime('%H:%M')} – "
+            f"{slot.end_time.strftime('%H:%M')}</b>\n"
+            f"📌  Статус: <i>{appointment.get_status_display()}</i>"
+        ),
+        reply_markup={
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "📅  Перенести",
+                        "web_app": {
+                            "url": _public_url(
+                                f"/booking?tg=1&reschedule={appointment.id}"
+                            )
+                        },
+                    },
+                    {
+                        "text": "❌  Отменить",
+                        "callback_data": f"cancel:{appointment.id}:_",
+                    },
+                ]
+            ]
+        },
+    )
+
+
+def handle_help(chat_id: int) -> None:
+    """Команда /help — справка."""
+    send_message(
+        chat_id,
+        (
+            "ℹ️  <b>Справка</b>\n\n"
+            "Через этого бота вы можете:\n\n"
+            "📅  <b>/book</b> — записаться на онлайн-консультацию\n"
+            "📋  <b>/myappointments</b> — посмотреть свои записи\n"
+            "👋  <b>/start</b> — приветствие и главное меню\n\n"
+            "━━━━━━━━━━━━━━━\n"
+            "<i>Если возникли вопросы — просто напишите сообщение в этот "
+            "чат, врач или администратор ответит.</i>"
+        ),
+    )
 
 
 def handle_callback(callback_query: Dict[str, Any]) -> None:
@@ -448,13 +591,27 @@ def main() -> None:
                     if text.startswith("/start"):
                         handle_start(chat_id, text)
 
+                    elif text.startswith("/book"):
+                        handle_book(chat_id)
+
+                    elif text.startswith("/myappointments") or text.startswith("/my_appointments"):
+                        handle_my_appointments(chat_id)
+
+                    elif text.startswith("/help"):
+                        handle_help(chat_id)
+
                     # Handle regular messages (check for cancel request)
                     elif text.strip():
                         appointment = find_active_appointment_for_chat(chat_id)
                         if appointment:
                             send_cancel_confirmation(chat_id, appointment)
                         else:
-                            send_message(chat_id, "У вас нет активной записи для отмены.")
+                            send_message(
+                                chat_id,
+                                "📭  <b>У вас нет активной записи</b>\n\n"
+                                "<i>Чтобы записаться на консультацию — "
+                                "нажмите кнопку «Записаться» в меню снизу.</i>",
+                            )
 
                 except Exception as exc:
                     logger.exception(f"Error processing update {item.get('update_id')}")
