@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "apps.content",
     "apps.scheduling",
     "apps.appointments",
+    "apps.integrations",
     "apps.notifications.apps.NotificationsConfig",
 ]
 
