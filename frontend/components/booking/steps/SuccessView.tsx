@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Clock,
   MessageCircle,
-  Phone,
   Send,
   Sparkles,
   Users,
@@ -171,15 +170,11 @@ export function SuccessView({
           </ul>
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <a href="/" className="btn-primary flex-1">
+        {/* Action Button */}
+        <div className="mt-8 flex justify-center">
+          <a href="/" className="btn-primary">
             <ArrowLeft className="h-4 w-4" strokeWidth={2.5} />
             Вернуться на главную
-          </a>
-          <a href="tel:+7" className="btn-secondary flex-1">
-            <Phone className="h-4 w-4" strokeWidth={2.5} />
-            Связаться с нами
           </a>
         </div>
       </div>

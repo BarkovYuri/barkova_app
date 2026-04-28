@@ -104,6 +104,18 @@ UNFOLD = {
         "show_all_applications": False,
         "navigation": [
             {
+                "title": "Врач",
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "Профиль врача",
+                        "icon": "badge",
+                        "link": "/admin/doctors/doctorprofile/",
+                    },
+                ],
+            },
+            {
                 "title": "Записи и расписание",
                 "separator": True,
                 "collapsible": False,
@@ -133,13 +145,8 @@ UNFOLD = {
             {
                 "title": "Контент сайта",
                 "separator": True,
-                "collapsible": True,
+                "collapsible": False,
                 "items": [
-                    {
-                        "title": "Профиль врача",
-                        "icon": "badge",
-                        "link": "/admin/doctors/doctorprofile/",
-                    },
                     {
                         "title": "Услуги (главная)",
                         "icon": "medical_services",
