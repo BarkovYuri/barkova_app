@@ -16,6 +16,7 @@ import type {
   HowItWorksStep,
   Service,
   SiteBlock,
+  TransportItem,
   TrustBadge,
 } from "./types";
 
@@ -71,5 +72,10 @@ export async function loadApproachItems(): Promise<ApproachItem[]> {
 
 export async function loadTrustBadges(): Promise<TrustBadge[]> {
   const data = (await fetchAPI("/trust-badges")) as TrustBadge[] | null;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function loadTransportItems(): Promise<TransportItem[]> {
+  const data = (await fetchAPI("/transport")) as TransportItem[] | null;
   return Array.isArray(data) ? data : [];
 }

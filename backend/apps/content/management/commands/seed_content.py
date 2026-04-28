@@ -21,6 +21,7 @@ from apps.content.models import (
     HowItWorksStep,
     Service,
     SiteBlock,
+    TransportItem,
     TrustBadge,
 )
 
@@ -393,6 +394,28 @@ APPROACH = [
 ]
 
 
+TRANSPORT = [
+    {
+        "icon": "train",
+        "title": "На метро",
+        "description": "Ближайшая станция метро в 5 минутах пешком от кабинета",
+        "order": 0,
+    },
+    {
+        "icon": "car",
+        "title": "На автомобиле",
+        "description": "Рядом с кабинетом есть парковка для пациентов",
+        "order": 1,
+    },
+    {
+        "icon": "car_taxi_front",
+        "title": "На такси",
+        "description": "Яндекс.Такси, Uber или Gett — удобно и быстро",
+        "order": 2,
+    },
+]
+
+
 TRUST_BADGES = [
     {"icon": "shield_check", "label": "Безопасность данных", "order": 0},
     {"icon": "award", "label": "Подтверждённый стаж", "order": 1},
@@ -423,6 +446,7 @@ class Command(BaseCommand):
             (HowItWorksStep, "title", HOW_IT_WORKS, "шаг"),
             (FaqItem, "question", FAQ, "вопрос FAQ"),
             (ApproachItem, "title", APPROACH, "пункт подхода"),
+            (TransportItem, "title", TRANSPORT, "способ добраться"),
             (TrustBadge, "label", TRUST_BADGES, "бейдж доверия"),
         ]
 

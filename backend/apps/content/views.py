@@ -7,6 +7,7 @@ from .models import (
     LegalDocument,
     Service,
     SiteBlock,
+    TransportItem,
     TrustBadge,
 )
 from .serializers import (
@@ -16,6 +17,7 @@ from .serializers import (
     LegalDocumentSerializer,
     ServiceSerializer,
     SiteBlockSerializer,
+    TransportItemSerializer,
     TrustBadgeSerializer,
 )
 
@@ -83,3 +85,14 @@ class TrustBadgeListView(ListAPIView):
 
     def get_queryset(self):
         return TrustBadge.objects.filter(is_active=True).order_by("order", "id")
+
+
+class TransportItemListView(ListAPIView):
+    """Способы добраться на /office."""
+
+    serializer_class = TransportItemSerializer
+
+    def get_queryset(self):
+        return TransportItem.objects.filter(is_active=True).order_by(
+            "order", "id"
+        )

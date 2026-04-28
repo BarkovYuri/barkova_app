@@ -128,3 +128,11 @@ export type TrustBadge = {
   label: string;
   order: number;
 };
+
+export type TransportItem = {
+  id: number;
+  icon: string;
+  title: string;
+  description: string;
+  order: number;
+};

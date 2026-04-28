@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import {
   ArrowRight,
   Building2,
-  Car,
-  CarTaxiFront,
   ExternalLink,
   MapPin,
-  Train,
 } from "lucide-react";
+
 import { fetchAPI } from "../../lib/api";
-import { loadSiteBlocks, textOr } from "../../lib/siteContent";
+import { resolveIcon } from "../../lib/iconMap";
+import {
+  loadSiteBlocks,
+  loadTransportItems,
+  textOr,
+} from "../../lib/siteContent";
 import type { DoctorProfile } from "../../lib/types";
 
 export const metadata: Metadata = {
@@ -24,11 +27,39 @@ export const metadata: Metadata = {
   alternates: { canonical: "/office" },
 };
 
+const FALLBACK_TRANSPORT = [
+  {
+    id: -1,
+    icon: "train",
+    title: "На метро",
+    description: "Ближайшая станция метро в 5 минутах пешком от кабинета",
+    order: 0,
+  },
+  {
+    id: -2,
+    icon: "car",
+    title: "На автомобиле",
+    description: "Рядом с кабинетом есть парковка для пациентов",
+    order: 1,
+  },
+  {
+    id: -3,
+    icon: "car_taxi_front",
+    title: "На такси",
+    description: "Яндекс.Такси, Uber или Gett — удобно и быстро",
+    order: 2,
+  },
+];
+
 export default async function OfficePage() {
-  const [doctor, blocks] = await Promise.all([
+  const [doctor, blocks, transportFromApi] = await Promise.all([
     fetchAPI("/profile") as Promise<DoctorProfile | null>,
     loadSiteBlocks(),
+    loadTransportItems(),
   ]);
+
+  const transports =
+    transportFromApi.length > 0 ? transportFromApi : FALLBACK_TRANSPORT;
 
   const chip = textOr(blocks, "office.section_chip", "Очный приём");
   const title = textOr(
@@ -67,24 +98,6 @@ export default async function OfficePage() {
     "office.cta.button_online",
     "Записаться на онлайн-консультацию"
   );
-
-  const transports = [
-    {
-      icon: Train,
-      title: "На метро",
-      description: "Ближайшая станция метро в 5 минутах пешком от кабинета",
-    },
-    {
-      icon: Car,
-      title: "На автомобиле",
-      description: "Рядом с кабинетом есть парковка для пациентов",
-    },
-    {
-      icon: CarTaxiFront,
-      title: "На такси",
-      description: "Яндекс.Такси, Uber или Gett — удобно и быстро",
-    },
-  ];
 
   return (
     <main className="bg-neutral-0">
@@ -189,19 +202,22 @@ export default async function OfficePage() {
               {directionsTitle}
             </h2>
             <div className="grid gap-8 sm:grid-cols-3">
-              {transports.map(({ icon: Icon, title, description }, idx) => (
-                <div key={idx} className="text-center">
-                  <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 mb-4">
-                    <Icon className="h-7 w-7" strokeWidth={1.75} />
-                  </span>
-                  <h3 className="text-base font-bold text-neutral-900 mb-2">
-                    {title}
-                  </h3>
-                  <p className="text-sm text-neutral-600 leading-relaxed">
-                    {description}
-                  </p>
-                </div>
-              ))}
+              {transports.map((item) => {
+                const Icon = resolveIcon(item.icon);
+                return (
+                  <div key={item.id} className="text-center">
+                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 mb-4">
+                      <Icon className="h-7 w-7" strokeWidth={1.75} />
+                    </span>
+                    <h3 className="text-base font-bold text-neutral-900 mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">
+                      {item.description}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -50,6 +50,12 @@ class ApproachItemSerializer(serializers.ModelSerializer):
         fields = ["id", "icon", "title", "description", "order"]
 
 
+class TransportItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TransportItem
+        fields = ["id", "icon", "title", "description", "order"]
+
+
 class TrustBadgeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TrustBadge

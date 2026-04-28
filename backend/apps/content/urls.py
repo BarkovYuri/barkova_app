@@ -7,6 +7,7 @@ from .views import (
     HowItWorksStepListView,
     ServiceListView,
     SiteBlockListView,
+    TransportItemListView,
     TrustBadgeListView,
 )
 
@@ -23,4 +24,5 @@ urlpatterns = [
     path("faq/", FaqItemListView.as_view(), name="faq-items"),
     path("approach/", ApproachItemListView.as_view(), name="approach-items"),
     path("trust-badges/", TrustBadgeListView.as_view(), name="trust-badges"),
+    path("transport/", TransportItemListView.as_view(), name="transport-items"),
 ]

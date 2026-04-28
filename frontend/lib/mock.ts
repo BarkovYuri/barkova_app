@@ -220,6 +220,15 @@ export function tryMockResponse(
     ];
   }
 
+  // /transport/
+  if (endpoint.startsWith("/transport")) {
+    return [
+      { id: 1, icon: "train", title: "На метро", description: "Ближайшая станция метро в 5 минутах пешком от кабинета", order: 0 },
+      { id: 2, icon: "car", title: "На автомобиле", description: "Рядом с кабинетом есть парковка для пациентов", order: 1 },
+      { id: 3, icon: "car_taxi_front", title: "На такси", description: "Яндекс.Такси, Uber или Gett — удобно и быстро", order: 2 },
+    ];
+  }
+
   // /legal/
   if (endpoint.startsWith("/legal")) return LEGAL;
 

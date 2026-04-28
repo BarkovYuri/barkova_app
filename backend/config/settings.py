@@ -105,7 +105,7 @@ UNFOLD = {
         "show_all_applications": False,
         "navigation": [
             {
-                "title": "Врач",
+                "title": "Главное",
                 "separator": True,
                 "collapsible": False,
                 "items": [
@@ -114,18 +114,18 @@ UNFOLD = {
                         "icon": "badge",
                         "link": "/admin/doctors/doctorprofile/",
                     },
-                ],
-            },
-            {
-                "title": "Записи и расписание",
-                "separator": True,
-                "collapsible": False,
-                "items": [
                     {
                         "title": "Записи пациентов",
                         "icon": "event_note",
                         "link": "/admin/appointments/appointment/",
                     },
+                ],
+            },
+            {
+                "title": "Расписание приёма",
+                "separator": True,
+                "collapsible": False,
+                "items": [
                     {
                         "title": "Слоты времени",
                         "icon": "schedule",
@@ -144,12 +144,17 @@ UNFOLD = {
                 ],
             },
             {
-                "title": "Контент сайта",
+                "title": "Главная страница сайта",
                 "separator": True,
                 "collapsible": False,
                 "items": [
                     {
-                        "title": "Услуги (главная)",
+                        "title": "Бейджи доверия (под фото)",
+                        "icon": "verified",
+                        "link": "/admin/content/trustbadge/",
+                    },
+                    {
+                        "title": "Услуги «Как я помогаю»",
                         "icon": "medical_services",
                         "link": "/admin/content/service/",
                     },
@@ -159,22 +164,43 @@ UNFOLD = {
                         "link": "/admin/content/howitworksstep/",
                     },
                     {
-                        "title": "FAQ",
+                        "title": "Вопросы FAQ",
                         "icon": "help_outline",
                         "link": "/admin/content/faqitem/",
                     },
+                ],
+            },
+            {
+                "title": "Страница «О враче»",
+                "separator": True,
+                "collapsible": False,
+                "items": [
                     {
                         "title": "Подход к работе",
                         "icon": "psychology",
                         "link": "/admin/content/approachitem/",
                     },
+                ],
+            },
+            {
+                "title": "Страница «Очный приём»",
+                "separator": True,
+                "collapsible": False,
+                "items": [
                     {
-                        "title": "Бейджи доверия",
-                        "icon": "verified",
-                        "link": "/admin/content/trustbadge/",
+                        "title": "Способы добраться",
+                        "icon": "directions",
+                        "link": "/admin/content/transportitem/",
                     },
+                ],
+            },
+            {
+                "title": "Тексты сайта",
+                "separator": True,
+                "collapsible": False,
+                "items": [
                     {
-                        "title": "Текстовые блоки",
+                        "title": "Заголовки и тексты",
                         "icon": "text_snippet",
                         "link": "/admin/content/siteblock/",
                     },
