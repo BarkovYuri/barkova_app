@@ -353,6 +353,10 @@ def handle_my_appointments(chat_id: int) -> None:
         return
 
     slot = appointment.slot
+    # Реальный токен записи — для callback'ов отмены/подтверждения.
+    # Без него backend вернёт 403 (см. TelegramAppointmentActionView).
+    token = appointment.telegram_link_token or ""
+
     send_message(
         chat_id,
         (
@@ -375,7 +379,7 @@ def handle_my_appointments(chat_id: int) -> None:
                     },
                     {
                         "text": "❌  Отменить",
-                        "callback_data": f"cancel:{appointment.id}:_",
+                        "callback_data": f"cancel:{appointment.id}:{token}",
                     },
                 ]
             ]
