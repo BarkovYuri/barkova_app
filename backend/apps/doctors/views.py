@@ -4,13 +4,11 @@ from django.core.cache import cache
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .cache import PROFILE_CACHE_KEY, PROFILE_CACHE_TTL
 from .models import DoctorProfile
 from .serializers import DoctorProfileSerializer
 
 logger = logging.getLogger("apps.doctors")
-
-PROFILE_CACHE_KEY = "doctors:profile"
-PROFILE_CACHE_TTL = 300  # 5 минут
 
 
 class DoctorProfileView(APIView):

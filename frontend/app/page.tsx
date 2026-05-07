@@ -17,6 +17,11 @@ import {
 import type { DoctorProfile } from "../lib/types";
 import { absoluteMediaUrl } from "../lib/url";
 
+// ISR: страница пересобирается не чаще раза в минуту. Без этого Next 16
+// может статически отрендерить её при build и игнорировать изменения в
+// админке (стаж, фото, тексты) до следующего деплоя.
+export const revalidate = 60;
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://doctor-barkova.ru";
 
 export async function generateMetadata(): Promise<Metadata> {

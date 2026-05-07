@@ -15,6 +15,10 @@ import {
 } from "../../lib/siteContent";
 import type { DoctorProfile } from "../../lib/types";
 
+// ISR: пересобирается не чаще раза в минуту. Без этого Next 16 может
+// статически отрендерить страницу при build и не обновить контент из админки.
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "Очный приём",
   description:

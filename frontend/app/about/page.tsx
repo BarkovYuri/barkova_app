@@ -20,6 +20,10 @@ import {
 import type { DoctorProfile } from "../../lib/types";
 import { absoluteMediaUrl } from "../../lib/url";
 
+// ISR: пересобирается не чаще раза в минуту. Без этого Next 16 может
+// статически отрендерить страницу при build и не обновить контент из админки.
+export const revalidate = 60;
+
 export async function generateMetadata(): Promise<Metadata> {
   const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
   const title = doctor ? `О враче · ${doctor.full_name}` : "О враче";
