@@ -11,3 +11,5 @@ gunicorn
 requests
 celery[redis]
 redis
+python-json-logger==2.0.7
+sentry-sdk[django,celery]==2.20.0

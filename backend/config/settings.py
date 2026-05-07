@@ -16,20 +16,32 @@ SECRET_KEY = _secret_key
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = [
+_DEFAULT_ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "backend",
     "nginx",
     "doctor-barkova.ru",
     "www.doctor-barkova.ru",
-    "5.42.126.206",
 ]
 
-CSRF_TRUSTED_ORIGINS = [
+_extra_hosts = [
+    h.strip()
+    for h in os.getenv("ALLOWED_HOSTS_EXTRA", "").split(",")
+    if h.strip()
+]
+ALLOWED_HOSTS = _DEFAULT_ALLOWED_HOSTS + _extra_hosts
+
+_DEFAULT_CSRF_TRUSTED_ORIGINS = [
     "https://doctor-barkova.ru",
     "https://www.doctor-barkova.ru",
 ]
+_extra_csrf = [
+    o.strip()
+    for o in os.getenv("CSRF_TRUSTED_ORIGINS_EXTRA", "").split(",")
+    if o.strip()
+]
+CSRF_TRUSTED_ORIGINS = _DEFAULT_CSRF_TRUSTED_ORIGINS + _extra_csrf
 
 INSTALLED_APPS = [
     # Unfold должен быть ПЕРЕД django.contrib.admin
@@ -325,6 +337,19 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
 
+LOG_FORMAT = os.getenv("LOG_FORMAT", "json" if not DEBUG else "verbose").lower()
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+_json_formatter: dict[str, str] = {
+    "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+}
+try:
+    import pythonjsonlogger.jsonlogger  # noqa: F401
+
+    _json_formatter["()"] = "pythonjsonlogger.jsonlogger.JsonFormatter"
+except ImportError:
+    _json_formatter["()"] = "logging.Formatter"
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -333,20 +358,17 @@ LOGGING = {
             "format": "[{asctime}] {levelname} {name} {message}",
             "style": "{",
         },
-        "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter" if False else "logging.Formatter",  # Fallback format
-            "format": "[%(asctime)s] %(levelname)s %(name)s %(message)s",
-        },
+        "json": _json_formatter,
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
+            "formatter": LOG_FORMAT if LOG_FORMAT in ("json", "verbose") else "verbose",
         },
     },
     "root": {
         "handlers": ["console"],
-        "level": "INFO",
+        "level": LOG_LEVEL,
     },
     "loggers": {
         "django": {
@@ -356,21 +378,57 @@ LOGGING = {
         },
         "apps": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": LOG_LEVEL,
             "propagate": False,
         },
         "telegram_bot": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": LOG_LEVEL,
             "propagate": False,
         },
         "vk_bot": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": LOG_LEVEL,
             "propagate": False,
         },
     },
 }
+
+# ============================================================================
+# SENTRY (optional — only enabled when SENTRY_DSN is set)
+# ============================================================================
+
+SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.celery import CeleryIntegration
+        from sentry_sdk.integrations.django import DjangoIntegration
+        from sentry_sdk.integrations.logging import LoggingIntegration
+        from sentry_sdk.integrations.redis import RedisIntegration
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[
+                DjangoIntegration(),
+                CeleryIntegration(),
+                RedisIntegration(),
+                LoggingIntegration(level=None, event_level=None),
+            ],
+            environment=os.getenv("SENTRY_ENVIRONMENT", "production" if not DEBUG else "development"),
+            release=os.getenv("SENTRY_RELEASE") or None,
+            send_default_pii=False,
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+            profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+        )
+    except ImportError:
+        import warnings
+
+        warnings.warn(
+            "SENTRY_DSN is set but sentry-sdk is not installed. "
+            "Add `sentry-sdk` to requirements.txt to enable error reporting.",
+            RuntimeWarning,
+        )
 
 # ============================================================================
 # BOT CONFIGURATION

@@ -12,6 +12,8 @@ admin.site.index_title = "Управление сайтом и записями"
 urlpatterns = [
     path("admin/", admin.site.urls),
 
+    path("api/", include("apps.core.urls")),
+
     path("api/profile/", DoctorProfileView.as_view(), name="api-profile"),
 
     # apps.content: /api/blocks/, /api/legal/, /api/services/, /api/how-it-works/,

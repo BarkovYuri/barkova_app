@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: doctor_db
+          POSTGRES_USER: doctor_user
+          POSTGRES_PASSWORD: doctor_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U doctor_user -d doctor_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings
+      SECRET_KEY: ci-secret-key-not-for-production
+      DEBUG: "True"
+      DB_NAME: doctor_db
+      DB_USER: doctor_user
+      DB_PASSWORD: doctor_pass
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      LOG_FORMAT: verbose
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      # Lint/typecheck are non-blocking until the legacy baseline is cleaned up.
+      # Treat them as advisory output in CI for now.
+      - name: Ruff lint
+        run: ruff check . || true
+        continue-on-error: true
+
+      - name: Ruff format check
+        run: ruff format --check . || true
+        continue-on-error: true
+
+      - name: Mypy
+        run: mypy apps config || true
+        continue-on-error: true
+
+      - name: Django system checks
+        run: python manage.py check --deploy --fail-level WARNING || true
+        continue-on-error: true
+
+      - name: Run migrations
+        run: python manage.py migrate --noinput
+
+      - name: Run tests
+        run: pytest -ra
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: /api
+          NEXT_PUBLIC_VK_APP_ID: "0"
+        run: npm run build
