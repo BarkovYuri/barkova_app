@@ -138,3 +138,27 @@ export type TransportItem = {
   description: string;
   order: number;
 };
+
+export type ConsultationFeature = {
+  id: number;
+  consultation_type: "online" | "office";
+  icon: string;
+  title: string;
+  description: string;
+  order: number;
+};
+
+export type ConditionItem = {
+  id: number;
+  text: string;
+  order: number;
+};
+
+export type ConditionCategory = {
+  id: number;
+  icon: string;
+  title: string;
+  description: string;
+  order: number;
+  items: ConditionItem[];
+};

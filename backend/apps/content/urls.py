@@ -3,6 +3,8 @@ from django.urls import path
 from .views import (
     ActiveLegalDocumentListView,
     ApproachItemListView,
+    ConditionCategoryListView,
+    ConsultationFeatureListView,
     FaqItemListView,
     HowItWorksStepListView,
     ServiceListView,
@@ -25,4 +27,10 @@ urlpatterns = [
     path("approach/", ApproachItemListView.as_view(), name="approach-items"),
     path("trust-badges/", TrustBadgeListView.as_view(), name="trust-badges"),
     path("transport/", TransportItemListView.as_view(), name="transport-items"),
+    path(
+        "consultation-features/",
+        ConsultationFeatureListView.as_view(),
+        name="consultation-features",
+    ),
+    path("conditions/", ConditionCategoryListView.as_view(), name="conditions"),
 ]

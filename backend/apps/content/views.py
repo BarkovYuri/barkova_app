@@ -2,6 +2,8 @@ from rest_framework.generics import ListAPIView
 
 from .models import (
     ApproachItem,
+    ConditionCategory,
+    ConsultationFeature,
     FaqItem,
     HowItWorksStep,
     LegalDocument,
@@ -12,6 +14,8 @@ from .models import (
 )
 from .serializers import (
     ApproachItemSerializer,
+    ConditionCategorySerializer,
+    ConsultationFeatureSerializer,
     FaqItemSerializer,
     HowItWorksStepSerializer,
     LegalDocumentSerializer,
@@ -95,4 +99,32 @@ class TransportItemListView(ListAPIView):
     def get_queryset(self):
         return TransportItem.objects.filter(is_active=True).order_by(
             "order", "id"
+        )
+
+
+class ConsultationFeatureListView(ListAPIView):
+    """«Что входит» — для /booking (?type=online) и /office (?type=office)."""
+
+    serializer_class = ConsultationFeatureSerializer
+
+    def get_queryset(self):
+        qs = ConsultationFeature.objects.filter(is_active=True).order_by(
+            "order", "id"
+        )
+        consultation_type = self.request.query_params.get("type")
+        if consultation_type in {"online", "office"}:
+            qs = qs.filter(consultation_type=consultation_type)
+        return qs
+
+
+class ConditionCategoryListView(ListAPIView):
+    """«С чем можно обратиться» — для /about (с вложенными items)."""
+
+    serializer_class = ConditionCategorySerializer
+
+    def get_queryset(self):
+        return (
+            ConditionCategory.objects.filter(is_active=True)
+            .prefetch_related("items")
+            .order_by("order", "id")
         )

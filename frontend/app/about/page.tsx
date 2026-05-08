@@ -9,11 +9,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { ConditionsBlock } from "../../components/about/ConditionsBlock";
 import { SectionDivider } from "../../components/common/SectionDivider";
 import { fetchAPI } from "../../lib/api";
 import { resolveIcon } from "../../lib/iconMap";
 import {
   loadApproachItems,
+  loadConditions,
   loadSiteBlocks,
   textOr,
 } from "../../lib/siteContent";
@@ -37,10 +39,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const [doctor, approach, blocks] = await Promise.all([
+  const [doctor, approach, blocks, conditions] = await Promise.all([
     fetchAPI("/profile") as Promise<DoctorProfile | null>,
     loadApproachItems(),
     loadSiteBlocks(),
+    loadConditions(),
   ]);
 
   if (!doctor) {
@@ -77,6 +80,12 @@ export default async function AboutPage() {
     "cta.home.button",
     "Записаться сейчас"
   );
+  const conditionsTitle = textOr(
+    blocks,
+    "conditions.section_title",
+    "С чем можно обратиться"
+  );
+  const conditionsSubtitle = textOr(blocks, "conditions.section_subtitle", "");
 
   return (
     <main id="main" className="bg-neutral-0">
@@ -237,6 +246,13 @@ export default async function AboutPage() {
           </div>
         </section>
       ) : null}
+
+      {/* ========== С ЧЕМ МОЖНО ОБРАТИТЬСЯ ========== */}
+      <ConditionsBlock
+        title={conditionsTitle}
+        subtitle={conditionsSubtitle || undefined}
+        categories={conditions}
+      />
 
       {/* ========== CTA SECTION ========== */}
       <section className="py-16 md:py-24">

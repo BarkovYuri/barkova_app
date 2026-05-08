@@ -1,8 +1,11 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
     ApproachItem,
+    ConditionCategory,
+    ConditionItem,
+    ConsultationFeature,
     FaqItem,
     HowItWorksStep,
     LegalDocument,
@@ -148,6 +151,51 @@ class TransportItemAdmin(ModelAdmin):
     list_filter = ("is_active",)
     search_fields = ("title", "description")
     ordering = ("order", "id")
+
+
+@admin.register(ConsultationFeature)
+class ConsultationFeatureAdmin(ModelAdmin):
+    list_display = (
+        "title",
+        "consultation_type",
+        "icon",
+        "order",
+        "is_active",
+        "updated_at",
+    )
+    list_editable = ("order", "is_active")
+    list_filter = ("consultation_type", "is_active")
+    search_fields = ("title", "description")
+    ordering = ("consultation_type", "order", "id")
+    fieldsets = (
+        (None, {"fields": ("consultation_type", "icon", "title", "description")}),
+        ("Отображение", {"fields": ("order", "is_active")}),
+    )
+
+
+class ConditionItemInline(TabularInline):
+    model = ConditionItem
+    extra = 1
+    fields = ("text", "order", "is_active")
+    ordering = ("order", "id")
+
+
+@admin.register(ConditionCategory)
+class ConditionCategoryAdmin(ModelAdmin):
+    list_display = ("title", "icon", "order", "items_count", "is_active", "updated_at")
+    list_editable = ("order", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("title", "description", "items__text")
+    ordering = ("order", "id")
+    inlines = [ConditionItemInline]
+    fieldsets = (
+        (None, {"fields": ("icon", "title", "description")}),
+        ("Отображение", {"fields": ("order", "is_active")}),
+    )
+
+    @admin.display(description="Пунктов")
+    def items_count(self, obj):
+        return obj.items.count()
 
 
 @admin.register(LegalDocument)

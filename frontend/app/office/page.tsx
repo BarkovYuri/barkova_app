@@ -6,9 +6,11 @@ import {
   MapPin,
 } from "lucide-react";
 
+import { WhatsIncluded } from "../../components/common/WhatsIncluded";
 import { fetchAPI } from "../../lib/api";
 import { resolveIcon } from "../../lib/iconMap";
 import {
+  loadConsultationFeatures,
   loadSiteBlocks,
   loadTransportItems,
   textOr,
@@ -56,10 +58,11 @@ const FALLBACK_TRANSPORT = [
 ];
 
 export default async function OfficePage() {
-  const [doctor, blocks, transportFromApi] = await Promise.all([
+  const [doctor, blocks, transportFromApi, features] = await Promise.all([
     fetchAPI("/profile") as Promise<DoctorProfile | null>,
     loadSiteBlocks(),
     loadTransportItems(),
+    loadConsultationFeatures("office"),
   ]);
 
   const transports =
@@ -102,6 +105,12 @@ export default async function OfficePage() {
     "office.cta.button_online",
     "Записаться на онлайн-консультацию"
   );
+  const featuresTitle = textOr(
+    blocks,
+    "office.features_title",
+    "Что входит в очный приём"
+  );
+  const featuresSubtitle = textOr(blocks, "office.features_subtitle", "");
 
   return (
     <main id="main" className="bg-neutral-0">
@@ -199,8 +208,17 @@ export default async function OfficePage() {
           </div>
         ) : null}
 
-        {/* How to get there section */}
+        {/* What's included */}
         <div className="max-w-4xl mx-auto">
+          <WhatsIncluded
+            title={featuresTitle}
+            subtitle={featuresSubtitle || undefined}
+            features={features}
+          />
+        </div>
+
+        {/* How to get there section */}
+        <div className="max-w-4xl mx-auto mt-12 md:mt-16">
           <div className="rounded-2xl border border-neutral-200 bg-gradient-to-br from-neutral-0 to-primary-50 p-6 md:p-10">
             <h2 className="text-h3-mobile md:text-h3-desktop text-neutral-900 mb-8">
               {directionsTitle}

@@ -12,6 +12,8 @@
 import { fetchAPI } from "./api";
 import type {
   ApproachItem,
+  ConditionCategory,
+  ConsultationFeature,
   FaqItem,
   HowItWorksStep,
   Service,
@@ -77,5 +79,19 @@ export async function loadTrustBadges(): Promise<TrustBadge[]> {
 
 export async function loadTransportItems(): Promise<TransportItem[]> {
   const data = (await fetchAPI("/transport")) as TransportItem[] | null;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function loadConsultationFeatures(
+  type: "online" | "office"
+): Promise<ConsultationFeature[]> {
+  const data = (await fetchAPI(
+    `/consultation-features?type=${type}`
+  )) as ConsultationFeature[] | null;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function loadConditions(): Promise<ConditionCategory[]> {
+  const data = (await fetchAPI("/conditions")) as ConditionCategory[] | null;
   return Array.isArray(data) ? data : [];
 }

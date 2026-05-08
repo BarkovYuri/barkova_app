@@ -284,6 +284,114 @@ class TransportItem(models.Model):
 
 
 # ============================================================================
+# «Что входит» — для /booking (онлайн) и /office (очный приём)
+# ============================================================================
+
+
+CONSULTATION_TYPE_CHOICES = [
+    ("online", "Онлайн-консультация (/booking)"),
+    ("office", "Очный приём (/office)"),
+]
+
+
+class ConsultationFeature(models.Model):
+    """
+    Пункт списка «Что входит» на странице записи.
+
+    Один пункт — одна карточка/строка вроде «УЗИ органов брюшной
+    полости» с иконкой и кратким описанием.
+    """
+
+    consultation_type = models.CharField(
+        "Тип консультации",
+        max_length=10,
+        choices=CONSULTATION_TYPE_CHOICES,
+        db_index=True,
+    )
+    icon = models.CharField(
+        "Иконка",
+        max_length=40,
+        choices=ICON_CHOICES,
+        default="check_circle",
+    )
+    title = models.CharField("Название пункта", max_length=255)
+    description = models.TextField(
+        "Описание (опционально)",
+        blank=True,
+        help_text="Короткое уточнение под названием. Можно оставить пустым.",
+    )
+    order = models.PositiveIntegerField(
+        "Порядок",
+        default=0,
+        help_text="Чем меньше — тем выше в списке.",
+    )
+    is_active = models.BooleanField("Показывать на сайте", default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Пункт «Что входит»"
+        verbose_name_plural = "«Что входит» (booking / office)"
+        ordering = ["consultation_type", "order", "id"]
+
+    def __str__(self):
+        return f"[{self.get_consultation_type_display()}] {self.title}"
+
+
+# ============================================================================
+# «С чем можно обратиться» — на странице /about
+# ============================================================================
+
+
+class ConditionCategory(models.Model):
+    """Группа состояний/заболеваний, например «Печень» или «Паразитология»."""
+
+    icon = models.CharField(
+        "Иконка",
+        max_length=40,
+        choices=ICON_CHOICES,
+        default="activity",
+    )
+    title = models.CharField("Название группы", max_length=255)
+    description = models.TextField(
+        "Подзаголовок (опционально)",
+        blank=True,
+    )
+    order = models.PositiveIntegerField("Порядок", default=0)
+    is_active = models.BooleanField("Показывать", default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Группа «С чем можно обратиться»"
+        verbose_name_plural = "«С чем можно обратиться» (страница «О враче»)"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.title
+
+
+class ConditionItem(models.Model):
+    """Один пункт списка внутри группы."""
+
+    category = models.ForeignKey(
+        ConditionCategory,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="Группа",
+    )
+    text = models.CharField("Текст пункта", max_length=500)
+    order = models.PositiveIntegerField("Порядок", default=0)
+    is_active = models.BooleanField("Показывать", default=True)
+
+    class Meta:
+        verbose_name = "Пункт"
+        verbose_name_plural = "Пункты"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.text[:80]
+
+
+# ============================================================================
 # Юридические документы (как было)
 # ============================================================================
 

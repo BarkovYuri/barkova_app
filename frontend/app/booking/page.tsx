@@ -3,7 +3,12 @@ import { Sparkles } from "lucide-react";
 import Script from "next/script";
 
 import BookingForm from "../../components/booking/BookingForm";
-import { loadSiteBlocks, textOr } from "../../lib/siteContent";
+import { WhatsIncluded } from "../../components/common/WhatsIncluded";
+import {
+  loadConsultationFeatures,
+  loadSiteBlocks,
+  textOr,
+} from "../../lib/siteContent";
 
 export const metadata: Metadata = {
   title: "Онлайн-запись на консультацию",
@@ -18,7 +23,10 @@ export const metadata: Metadata = {
 };
 
 export default async function BookingPage() {
-  const blocks = await loadSiteBlocks();
+  const [blocks, features] = await Promise.all([
+    loadSiteBlocks(),
+    loadConsultationFeatures("online"),
+  ]);
   const chip = textOr(blocks, "booking.section_chip", "Онлайн-консультация");
   const title = textOr(
     blocks,
@@ -29,6 +37,16 @@ export default async function BookingPage() {
     blocks,
     "booking.section_subtitle",
     "Выберите удобную дату и время, затем оставьте свои данные для онлайн-консультации."
+  );
+  const featuresTitle = textOr(
+    blocks,
+    "booking.features_title",
+    "Что входит в онлайн-консультацию"
+  );
+  const featuresSubtitle = textOr(
+    blocks,
+    "booking.features_subtitle",
+    ""
   );
 
   return (
@@ -64,6 +82,12 @@ export default async function BookingPage() {
           </div>
 
           <BookingForm />
+
+          <WhatsIncluded
+            title={featuresTitle}
+            subtitle={featuresSubtitle || undefined}
+            features={features}
+          />
         </div>
       </main>
     </>

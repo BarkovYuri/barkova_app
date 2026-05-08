@@ -192,6 +192,23 @@ UNFOLD = {
                         "icon": "psychology",
                         "link": "/admin/content/approachitem/",
                     },
+                    {
+                        "title": "С чем можно обратиться",
+                        "icon": "checklist",
+                        "link": "/admin/content/conditioncategory/",
+                    },
+                ],
+            },
+            {
+                "title": "Страница «Запись» / «Очный приём»",
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "«Что входит» (booking + office)",
+                        "icon": "fact_check",
+                        "link": "/admin/content/consultationfeature/",
+                    },
                 ],
             },
             {

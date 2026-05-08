@@ -2,6 +2,9 @@ from rest_framework import serializers
 
 from .models import (
     ApproachItem,
+    ConditionCategory,
+    ConditionItem,
+    ConsultationFeature,
     FaqItem,
     HowItWorksStep,
     LegalDocument,
@@ -60,6 +63,31 @@ class TrustBadgeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TrustBadge
         fields = ["id", "icon", "label", "order"]
+
+
+class ConsultationFeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConsultationFeature
+        fields = ["id", "consultation_type", "icon", "title", "description", "order"]
+
+
+class ConditionItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionItem
+        fields = ["id", "text", "order"]
+
+
+class ConditionCategorySerializer(serializers.ModelSerializer):
+    items = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ConditionCategory
+        fields = ["id", "icon", "title", "description", "order", "items"]
+
+    def get_items(self, obj):
+        active_items = [item for item in obj.items.all() if item.is_active]
+        active_items.sort(key=lambda i: (i.order, i.id))
+        return ConditionItemSerializer(active_items, many=True).data
 
 
 class LegalDocumentSerializer(serializers.ModelSerializer):
