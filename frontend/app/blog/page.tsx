@@ -22,6 +22,14 @@ export const metadata: Metadata = {
   },
 };
 
+function pluralizeArticles(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "статья";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "статьи";
+  return "статей";
+}
+
 export default async function BlogIndexPage() {
   const [articles, categories] = await Promise.all([
     loadArticles(),
@@ -73,11 +81,24 @@ export default async function BlogIndexPage() {
             </a>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
-            {articles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
-          </div>
+          <>
+            {/* Разделитель между подборками и общим списком. Тонкая
+                линия + заголовок + счётчик материалов. */}
+            <div className="mb-6 mt-2 flex items-baseline justify-between gap-4 border-t border-neutral-200 pt-8">
+              <h2 className="text-h3-mobile sm:text-h3-desktop text-neutral-900">
+                Все статьи
+              </h2>
+              <p className="text-sm text-neutral-500 shrink-0">
+                {articles.length} {pluralizeArticles(articles.length)} в блоге
+              </p>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+              {articles.map((article) => (
+                <ArticleCard key={article.id} article={article} />
+              ))}
+            </div>
+          </>
         )}
       </section>
     </main>
