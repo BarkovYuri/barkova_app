@@ -5,6 +5,7 @@ from .views import (
     ApproachItemListView,
     ArticleDetailView,
     ArticleListView,
+    ArticleViewIncrementView,
     ConditionCategoryListView,
     ConsultationFeatureListView,
     FaqItemListView,
@@ -40,5 +41,10 @@ urlpatterns = [
         "articles/<slug:slug>/",
         ArticleDetailView.as_view(),
         name="article-detail",
+    ),
+    path(
+        "articles/<slug:slug>/view/",
+        ArticleViewIncrementView.as_view(),
+        name="article-view",
     ),
 ]

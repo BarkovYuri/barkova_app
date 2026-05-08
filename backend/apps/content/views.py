@@ -1,4 +1,9 @@
+from django.db.models import F
+from django.shortcuts import get_object_or_404
+from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import (
     ApproachItem,
@@ -139,6 +144,28 @@ class ArticleDetailView(RetrieveAPIView):
 
     def get_queryset(self):
         return Article.objects.filter(is_published=True)
+
+
+class ArticleViewIncrementView(APIView):
+    """Атомарный инкремент счётчика просмотров.
+
+    Защита от накрутки на стороне фронта: один инкремент за сессию
+    (sessionStorage). На бэке дополнительно стоит scope-throttle
+    «article_view» — 60 инкрементов в час с одного IP.
+    """
+
+    throttle_scope = "article_view"
+
+    def post(self, request, slug: str):
+        article = get_object_or_404(Article, slug=slug, is_published=True)
+        Article.objects.filter(pk=article.pk).update(
+            views_count=F("views_count") + 1
+        )
+        article.refresh_from_db(fields=["views_count"])
+        return Response(
+            {"slug": article.slug, "views_count": article.views_count},
+            status=status.HTTP_200_OK,
+        )
 
 
 class ConditionCategoryListView(ListAPIView):

@@ -111,3 +111,17 @@ export async function loadArticleBySlug(
   const data = (await fetchAPI(`/articles/${slug}`)) as ArticleDetail | null;
   return data;
 }
+
+export async function incrementArticleView(
+  slug: string
+): Promise<{ slug: string; views_count: number } | null> {
+  try {
+    const data = (await fetchAPI(`/articles/${slug}/view`, {
+      method: "POST",
+    })) as { slug: string; views_count: number } | null;
+    return data;
+  } catch {
+    // Ошибка инкремента (429, сеть, …) — не критична для UX.
+    return null;
+  }
+}

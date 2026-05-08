@@ -493,6 +493,15 @@ class Article(models.Model):
         blank=True,
     )
 
+    views_count = models.PositiveIntegerField(
+        "Количество просмотров",
+        default=0,
+        help_text=(
+            "Увеличивается автоматически при заходе на страницу. "
+            "Можно вручную сбросить или поправить, если нужно."
+        ),
+    )
+
     created_at = models.DateTimeField("Создано", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлено", auto_now=True)
 

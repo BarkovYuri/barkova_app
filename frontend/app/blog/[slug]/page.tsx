@@ -5,9 +5,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 
 import { ArticleBody } from "../../../components/blog/ArticleBody";
+import { ArticleViewCounter } from "../../../components/blog/ArticleViewCounter";
+import { RelatedArticles } from "../../../components/blog/RelatedArticles";
 import { JsonLd } from "../../../components/common/JsonLd";
 import { buildBreadcrumbSchema } from "../../../lib/seo";
-import { loadArticleBySlug } from "../../../lib/siteContent";
+import { loadArticleBySlug, loadArticles } from "../../../lib/siteContent";
 import { absoluteMediaUrl } from "../../../lib/url";
 
 export const revalidate = 60;
@@ -63,7 +65,10 @@ export async function generateMetadata({
 
 export default async function ArticlePage({ params }: { params: Params }) {
   const { slug } = await params;
-  const article = await loadArticleBySlug(slug);
+  const [article, allArticles] = await Promise.all([
+    loadArticleBySlug(slug),
+    loadArticles(),
+  ]);
   if (!article) {
     notFound();
   }
@@ -118,12 +123,18 @@ export default async function ArticlePage({ params }: { params: Params }) {
 
         <header className="mt-6 mb-8">
           <h1 className="text-neutral-900">{article.title}</h1>
-          {dateLabel ? (
-            <p className="mt-4 inline-flex items-center gap-1.5 text-sm text-neutral-500">
-              <CalendarDays className="h-3.5 w-3.5" strokeWidth={2.2} />
-              {dateLabel}
-            </p>
-          ) : null}
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+            {dateLabel ? (
+              <p className="inline-flex items-center gap-1.5 text-sm text-neutral-500">
+                <CalendarDays className="h-3.5 w-3.5" strokeWidth={2.2} />
+                {dateLabel}
+              </p>
+            ) : null}
+            <ArticleViewCounter
+              slug={article.slug}
+              initialCount={article.views_count ?? 0}
+            />
+          </div>
           {article.excerpt ? (
             <p className="mt-5 text-base sm:text-lg text-neutral-600 leading-relaxed">
               {article.excerpt}
@@ -145,6 +156,19 @@ export default async function ArticlePage({ params }: { params: Params }) {
         ) : null}
 
         <ArticleBody markdown={article.body} />
+
+        {/* Глазик с числом просмотров после тела — для тех, кто читает
+            до конца. Тот же компонент уже стоит в шапке, но на длинной
+            статье полезен и здесь. */}
+        <div className="mt-10 flex justify-end">
+          <ArticleViewCounter
+            slug={article.slug}
+            initialCount={article.views_count ?? 0}
+          />
+        </div>
+
+        {/* Похожие статьи — внутренние ссылки усиливают SEO */}
+        <RelatedArticles articles={allArticles} currentSlug={article.slug} />
 
         {/* CTA в конце статьи — самое важное для конверсии */}
         <div className="mt-16 rounded-3xl border border-primary-200 bg-gradient-to-br from-primary-50 via-neutral-0 to-secondary-50 p-6 sm:p-10 text-center">

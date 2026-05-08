@@ -360,6 +360,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "appointment_create": "10/hour",
         "prelink": "30/hour",
+        "article_view": "120/hour",
     },
 }
 

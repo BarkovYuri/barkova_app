@@ -106,6 +106,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
             "cover_url",
             "cover_alt",
             "published_at",
+            "views_count",
         ]
 
     def get_cover_url(self, obj):
@@ -132,6 +133,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             "meta_title",
             "meta_description",
             "keywords",
+            "views_count",
         ]
 
     def get_cover_url(self, obj):

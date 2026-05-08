@@ -63,6 +63,7 @@ export type ArticleListItem = {
   cover_url: string | null;
   cover_alt: string;
   published_at: string | null;
+  views_count: number;
 };
 
 export type ArticleDetail = ArticleListItem & {
