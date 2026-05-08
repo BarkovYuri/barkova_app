@@ -78,8 +78,12 @@ export default async function Home() {
 
   // Тексты с fallback'ами
   const heroChip = textOr(blocks, "hero.specialty_chip", "Врач-инфекционист");
+  // На главной hero — короткий, поэтому из description берём только первый
+  // абзац (до пустой строки). Полный текст идёт на /about. Если description
+  // пуст — fallback на SiteBlock «hero.subtitle».
+  const firstParagraph = doctor.description?.split(/\n\s*\n/)[0]?.trim();
   const heroSubtitle =
-    doctor.description ||
+    firstParagraph ||
     textOr(
       blocks,
       "hero.subtitle",

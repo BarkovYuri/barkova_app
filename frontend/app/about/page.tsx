@@ -119,7 +119,7 @@ export default async function AboutPage() {
 
               <h1 className="mt-6 text-neutral-900">{doctor.full_name}</h1>
 
-              <p className="mt-6 max-w-3xl text-base sm:text-lg leading-relaxed text-neutral-600">
+              <p className="mt-6 max-w-3xl text-base sm:text-lg leading-relaxed text-neutral-600 whitespace-pre-line">
                 {doctor.description || "Описание пока не заполнено."}
               </p>
 
