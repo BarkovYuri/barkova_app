@@ -338,11 +338,14 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
-    ],
+    # Глобальный AnonRateThrottle намеренно не подключаем: frontend
+    # делает SSR-запросы к /api/* с одного IP докер-контейнера, и общий
+    # лимит 200/hour сжигается за минуту, ломая весь сайт. Точечные
+    # лимиты на критичные endpoint'ы (создание записи, prelink) остаются —
+    # они подключены через throttle_classes/throttle_scope в нужных views
+    # (см. apps/core/throttling.py).
+    "DEFAULT_THROTTLE_CLASSES": [],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "200/hour",
         "appointment_create": "10/hour",
         "prelink": "30/hour",
     },
