@@ -3,11 +3,18 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from datetime import datetime, timedelta
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from apps.core.permissions import IsAdminUser
 
 from .models import AvailabilityRule, TimeSlot
+from .reservation import (
+    RESERVATION_TTL_SECONDS,
+    get_reserved_slot_ids,
+    release_slot,
+    reserve_slot,
+)
 from .serializers import (
     AvailabilityRuleSerializer,
     DayToggleSerializer,
@@ -57,8 +64,57 @@ class AvailableSlotsView(APIView):
             if slot_dt > threshold:
                 slots.append(slot)
 
-        serializer = TimeSlotSerializer(slots, many=True)
+        reserved_ids = get_reserved_slot_ids([s.id for s in slots])
+        serializer = TimeSlotSerializer(
+            slots,
+            many=True,
+            context={"reserved_slot_ids": reserved_ids},
+        )
         return Response(serializer.data)
+
+
+class SlotReserveView(APIView):
+    """Soft-reservation: пользователь выбрал слот, держим за ним 5 минут."""
+
+    throttle_scope = "prelink"
+
+    def post(self, request, slot_id: int):
+        slot = get_object_or_404(
+            TimeSlot,
+            pk=slot_id,
+            is_active=True,
+            is_booked=False,
+        )
+        reservation = reserve_slot(slot.id)
+        if reservation is None:
+            return Response(
+                {"detail": "Слот уже зарезервирован другим пользователем."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(
+            {
+                "slot_id": slot.id,
+                "reservation_token": reservation.token,
+                "expires_in": RESERVATION_TTL_SECONDS,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class SlotReleaseView(APIView):
+    """Освобождает резервирование (например, пользователь поменял слот)."""
+
+    throttle_scope = "prelink"
+
+    def post(self, request, slot_id: int):
+        token = (request.data or {}).get("reservation_token", "")
+        if not token:
+            return Response(
+                {"reservation_token": "Токен обязателен."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        released = release_slot(slot_id, token)
+        return Response({"released": released})
 
 
 class NearestAvailableSlotView(APIView):

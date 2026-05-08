@@ -181,5 +181,17 @@ export function useSlots(
     }
   }
 
-  return { slots, loading, selectedSlotId, setSelectedSlotId, selectedSlot, refreshSlots };
+  function clearSelectedSlot() {
+    setSelectedSlotId(null);
+  }
+
+  return {
+    slots,
+    loading,
+    selectedSlotId,
+    setSelectedSlotId,
+    selectedSlot,
+    refreshSlots,
+    clearSelectedSlot,
+  };
 }

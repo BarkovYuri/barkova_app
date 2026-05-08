@@ -23,6 +23,9 @@ type SubmitParams = {
   /** Если открыто как Telegram Mini App — initData передаём на бэкенд
    *  для авто-привязки без prelink-flow. */
   tgInitData?: string;
+  /** Soft-reservation токен. Если есть — backend освободит лок после
+   *  успешного create. Если нет — старый flow, защита через DB-constraint. */
+  reservationToken?: string;
 };
 
 export function useBookingSubmit() {
@@ -48,6 +51,7 @@ export function useBookingSubmit() {
       offerAccepted,
       onSlotsRefresh,
       tgInitData,
+      reservationToken,
     } = params;
 
     setError("");
@@ -107,6 +111,10 @@ export function useBookingSubmit() {
         if (vkIdPayload.user_id)  formData.append("vk_user_id",     String(vkIdPayload.user_id));
         if (vkIdPayload.code)     formData.append("vk_id_code",     String(vkIdPayload.code));
         if (vkIdPayload.device_id) formData.append("vk_id_device_id", String(vkIdPayload.device_id));
+      }
+
+      if (reservationToken) {
+        formData.append("reservation_token", reservationToken);
       }
 
       if (files) {

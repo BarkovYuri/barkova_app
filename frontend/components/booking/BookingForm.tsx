@@ -13,6 +13,7 @@ import {
 import type { ContactMethod } from "../../lib/types";
 import { BookingSummary } from "./BookingSummary";
 import { useDates, useSlots } from "./hooks/useSlots";
+import { useSlotReservation } from "./hooks/useSlotReservation";
 import { useTelegramPrelink } from "./hooks/useTelegramPrelink";
 import { useVkId } from "./hooks/useVkId";
 import { useBookingSubmit } from "./hooks/useBookingSubmit";
@@ -44,7 +45,18 @@ export default function BookingForm() {
     setSelectedSlotId,
     selectedSlot,
     refreshSlots,
+    clearSelectedSlot,
   } = useSlots(selectedDate, slotsSectionRef);
+
+  // Soft-reservation: при выборе слота держим за пользователем 5 минут.
+  // 409 от backend → слот успели забрать; сбрасываем выбор и обновляем список.
+  const { getToken: getReservationToken } = useSlotReservation({
+    selectedSlotId,
+    onConflict: async () => {
+      clearSelectedSlot();
+      await refreshSlots();
+    },
+  });
 
   // ── Данные пациента ─────────────────────────────────────────────
   const [name, setName] = useState("");
@@ -113,6 +125,7 @@ export default function BookingForm() {
       offerAccepted,
       onSlotsRefresh: refreshSlots,
       tgInitData,
+      reservationToken: getReservationToken(selectedSlotId),
     });
 
     // Если открыто как Mini App — даём пользователю увидеть SuccessView,

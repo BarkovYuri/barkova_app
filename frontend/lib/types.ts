@@ -8,6 +8,7 @@ export type Slot = {
   end_time: string;
   is_booked: boolean;
   is_active: boolean;
+  is_reserved?: boolean;
 };
 
 export type AvailableDateItem =

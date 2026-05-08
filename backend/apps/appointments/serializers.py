@@ -96,6 +96,10 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     # Telegram WebApp Mini App: подписанная Telegram'ом строка с user data.
     # Если пришла валидная — пользователь автоматически привязан, prelink не нужен.
     tg_init_data = serializers.CharField(required=False, allow_blank=True)
+    # Soft-reservation токен. Если передан и валиден — освобождаем лок после
+    # успешного create. Если не передан — старый flow, защита через
+    # unique_active_appointment_per_slot constraint.
+    reservation_token = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Appointment
@@ -112,6 +116,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "vk_id_code",
             "vk_id_device_id",
             "tg_init_data",
+            "reservation_token",
             "reason",
             "consent_given",
             "privacy_accepted",
@@ -258,6 +263,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         validated_data.pop("vk_id_code", None)
         validated_data.pop("vk_id_device_id", None)
         validated_data.pop("tg_init_data", None)
+        reservation_token = validated_data.pop("reservation_token", "") or ""
 
         # Telegram chat_id и linked_at — из prelink ИЛИ из WebApp initData
         from django.utils import timezone
@@ -308,6 +314,13 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         if vk_prelink:
             vk_prelink.is_used = True
             vk_prelink.save(update_fields=["is_used"])
+
+        # Best-effort освобождение soft-reservation. Промахи здесь
+        # неопасны — TTL всё равно истечёт через 5 минут.
+        if reservation_token:
+            from apps.scheduling.reservation import release_slot
+
+            release_slot(slot.id, reservation_token)
 
         return appointment
 

@@ -5,6 +5,7 @@ from .models import AvailabilityRule, TimeSlot
 
 class TimeSlotSerializer(serializers.ModelSerializer):
     datetime = serializers.SerializerMethodField()
+    is_reserved = serializers.SerializerMethodField()
 
     class Meta:
         model = TimeSlot
@@ -16,10 +17,17 @@ class TimeSlotSerializer(serializers.ModelSerializer):
             "datetime",
             "is_booked",
             "is_active",
+            "is_reserved",
         ]
 
     def get_datetime(self, obj):
         return f"{obj.date} {obj.start_time.strftime('%H:%M')}"
+
+    def get_is_reserved(self, obj):
+        reserved_ids = self.context.get("reserved_slot_ids")
+        if reserved_ids is None:
+            return False
+        return obj.id in reserved_ids
 
 
 class AvailabilityRuleSerializer(serializers.ModelSerializer):

@@ -523,6 +523,18 @@ if os.getenv("DJANGO_SETTINGS_MODULE", "").endswith("settings"):
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1")
+
+# Shared cache backend. Без него django.core.cache по умолчанию локален
+# (locmem) на каждый gunicorn-воркер — инвалидация кэша срабатывает только
+# в одном процессе, остальные продолжают отдавать stale данные.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.getenv("REDIS_CACHE_URL", "redis://redis:6379/2"),
+        "TIMEOUT": 300,
+        "KEY_PREFIX": "doctor_app",
+    },
+}
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

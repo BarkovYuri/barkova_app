@@ -28,6 +28,16 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
     defaults:
       run:
         working-directory: backend
@@ -42,6 +52,9 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_PORT: "5432"
       LOG_FORMAT: verbose
+      REDIS_CACHE_URL: redis://127.0.0.1:6379/2
+      CELERY_BROKER_URL: redis://127.0.0.1:6379/0
+      CELERY_RESULT_BACKEND: redis://127.0.0.1:6379/1
 
     steps:
       - uses: actions/checkout@v4
