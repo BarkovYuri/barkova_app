@@ -63,7 +63,7 @@ export function CalendarSection({
             Выберите дату и время
           </h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Календарь свободных онлайн-консультаций
+            Календарь свободных онлайн-разборов
           </p>
         </div>
       </div>

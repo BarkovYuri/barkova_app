@@ -127,7 +127,7 @@ export default async function ContactsPage() {
   const ctaButton = textOr(
     blocks,
     "contacts.cta.button",
-    "Записаться на консультацию"
+    "Записаться на онлайн-разбор"
   );
 
   return (

@@ -87,7 +87,7 @@ def booking_created_vk(appointment) -> str:
 def reminder(appointment) -> str:
     """Напоминание за 2 часа до приёма."""
     return (
-        "⏰  <b>Напоминание о консультации</b>\n\n"
+        "⏰  <b>Напоминание об онлайн-разборе</b>\n\n"
         f"{_slot_card(appointment)}\n\n"
         "━━━━━━━━━━━━━━━\n"
         "<b>Сможете присутствовать?</b>\n"

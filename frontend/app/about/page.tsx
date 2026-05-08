@@ -73,7 +73,7 @@ export default async function AboutPage() {
   const ctaText = textOr(
     blocks,
     "cta.about.text",
-    "Запишитесь на консультацию и начните путь к выздоровлению"
+    "Запишитесь на онлайн-разбор и начните путь к выздоровлению"
   );
   const ctaButton = textOr(
     blocks,
@@ -134,7 +134,7 @@ export default async function AboutPage() {
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
                 <a href="/booking" className="btn-primary">
-                  Записаться на консультацию
+                  Записаться на онлайн-разбор
                   <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
                 </a>
 

@@ -18,7 +18,7 @@ from django.core.management.base import BaseCommand
 
 COMMANDS = [
     {"command": "start", "description": "Главное меню бота"},
-    {"command": "book", "description": "Записаться на консультацию"},
+    {"command": "book", "description": "Записаться на онлайн-разбор"},
     {"command": "myappointments", "description": "Мои записи"},
     {"command": "help", "description": "Справка"},
 ]

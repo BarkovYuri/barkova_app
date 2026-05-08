@@ -98,7 +98,7 @@ export default function Footer() {
             <h4 className="text-ui-label text-neutral-500 uppercase">Контакт</h4>
             <div className="mt-5 space-y-4 text-sm">
               <p className="text-neutral-700 leading-relaxed">
-                Готовы начать? Запишитесь на консультацию уже сегодня.
+                Готовы начать? Запишитесь на онлайн-разбор уже сегодня.
               </p>
               <a href="/booking" className="btn-primary text-sm py-3 px-5">
                 Записаться

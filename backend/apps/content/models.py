@@ -20,7 +20,7 @@ class SiteBlock(models.Model):
       faq.section_title
       faq.section_subtitle
       cta.home.title          — «Готовы начать?»
-      cta.home.text           — «Запишитесь на консультацию...»
+      cta.home.text           — «Запишитесь на онлайн-разбор...»
       cta.home.button         — текст кнопки
       cta.about.title
       cta.about.text
@@ -303,7 +303,7 @@ class ConsultationFeature(models.Model):
     """
 
     consultation_type = models.CharField(
-        "Тип консультации",
+        "Тип услуги",
         max_length=10,
         choices=CONSULTATION_TYPE_CHOICES,
         db_index=True,

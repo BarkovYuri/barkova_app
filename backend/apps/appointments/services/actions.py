@@ -94,7 +94,7 @@ def handle_action(
             appointment.save(update_fields=["reminder_response", "reminder_response_at"])
             send_fn(
                 appointment,
-                "✅ Отлично, ждём вас на консультации.\n" + _slot_time_str(appointment),
+                "✅ Отлично, ждём вас на онлайн-разборе.\n" + _slot_time_str(appointment),
                 keyboard=build_vk_active_root_keyboard(appointment),
             )
         return {"status": "reminder_yes", "changed": changed}

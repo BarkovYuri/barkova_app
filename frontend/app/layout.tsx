@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     "Онлайн-разборы и очный приём врача-инфекциониста. Запись через сайт за 30 секунд, подтверждение в Telegram или VK.",
   keywords: [
     "врач инфекционист",
-    "онлайн консультация инфекциониста",
+    "онлайн-разбор у инфекциониста",
     "телемедицина",
     "запись к врачу онлайн",
     "Баркова",
@@ -69,9 +69,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: SITE_URL,
   },
-  icons: {
-    icon: "/favicon.ico",
-  },
+  // Иконки автоматически берутся из app/icon.svg, app/icon.tsx,
+  // app/apple-icon.tsx — Next.js строит метаданные сам.
   category: "health",
 };
 

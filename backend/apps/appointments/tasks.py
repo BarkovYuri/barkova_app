@@ -16,7 +16,7 @@ logger = logging.getLogger("apps.appointments.tasks")
 @shared_task
 def send_appointment_reminders():
     """
-    Отправляет напоминания пациентам за ~2 часа до консультации.
+    Отправляет напоминания пациентам за ~2 часа до онлайн-разбора.
 
     Оптимизация:
     - Фильтр slot__date по сегодня/завтра — не тянем всю историю.

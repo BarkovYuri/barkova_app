@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Очный приём · Кабинет врача-инфекциониста",
     description:
-      "Запись на очную консультацию через платформу ПроДокторов. Адрес и схема проезда.",
+      "Запись на очный приём через платформу ПроДокторов. Адрес и схема проезда.",
   },
   alternates: { canonical: "/office" },
 };
@@ -72,7 +72,7 @@ export default async function OfficePage() {
   const title = textOr(
     blocks,
     "office.section_title",
-    "Запись на очную консультацию"
+    "Запись на очный приём"
   );
   const subtitle = textOr(
     blocks,
@@ -83,7 +83,7 @@ export default async function OfficePage() {
   const locationSubtitle = textOr(
     blocks,
     "office.location.subtitle",
-    "На карте показана точка, где проходит очная консультация"
+    "На карте показана точка, где проходит очный приём"
   );
   const directionsTitle = textOr(
     blocks,

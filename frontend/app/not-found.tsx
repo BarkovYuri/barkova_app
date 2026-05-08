@@ -5,7 +5,7 @@ import { ArrowRight, Home, Stethoscope } from "lucide-react";
 export const metadata: Metadata = {
   title: "Страница не найдена",
   description:
-    "Запрашиваемая страница не существует или была перемещена. Вернитесь на главную или запишитесь на консультацию.",
+    "Запрашиваемая страница не существует или была перемещена. Вернитесь на главную или запишитесь на онлайн-разбор.",
   robots: { index: false, follow: false },
 };
 
@@ -27,7 +27,7 @@ export default function NotFound() {
         <p className="mt-5 text-base-large text-neutral-600">
           Возможно, вы перешли по устаревшей ссылке или страница была
           перемещена. Вы можете вернуться на главную или сразу записаться
-          на консультацию.
+          на онлайн-разбор.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">

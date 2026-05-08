@@ -21,7 +21,7 @@ type Props = {
 };
 
 export function WhatsIncluded({
-  title = "Что входит в консультацию",
+  title = "Что входит в онлайн-разбор",
   subtitle,
   intro,
   features = [],

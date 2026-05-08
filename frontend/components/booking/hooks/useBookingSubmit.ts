@@ -57,7 +57,7 @@ export function useBookingSubmit() {
     setError("");
 
     if (!selectedSlotId) {
-      setError("Выберите время консультации.");
+      setError("Выберите время онлайн-разбора.");
       return false;
     }
     if (!name.trim()) {

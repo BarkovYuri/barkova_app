@@ -104,7 +104,7 @@ export default async function Home() {
   const ctaText = textOr(
     blocks,
     "cta.home.text",
-    "Запишитесь на консультацию уже сегодня и получите профессиональную помощь"
+    "Запишитесь на онлайн-разбор уже сегодня и получите профессиональную помощь"
   );
   const ctaButton = textOr(blocks, "cta.home.button", "Записаться сейчас");
 
@@ -174,7 +174,7 @@ export default async function Home() {
               {/* CTA Buttons */}
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
                 <a href="/booking" className="btn-primary">
-                  Записаться на консультацию
+                  Записаться на онлайн-разбор
                   <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
                 </a>
 

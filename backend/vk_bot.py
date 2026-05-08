@@ -426,7 +426,7 @@ def build_booking_keyboard() -> Dict[str, Any]:
                 {
                     "action": {
                         "type": "open_link",
-                        "label": "Записаться на консультацию",
+                        "label": "Записаться на онлайн-разбор",
                         "link": BOOKING_LINK,
                         "payload": json.dumps({"cmd": "open_booking"}, ensure_ascii=False),
                     }
@@ -801,7 +801,7 @@ def handle_new_message_event(event: Dict[str, Any]) -> None:
         if can_send_menu(dialog_state, "booking", cooldown_seconds=600):
             send_message(
                 peer_id,
-                "Здравствуйте. Чтобы записаться на консультацию, нажмите кнопку ниже.",
+                "Здравствуйте. Чтобы записаться на онлайн-разбор, нажмите кнопку ниже.",
                 keyboard=build_booking_keyboard(),
             )
             mark_menu_sent(from_id, "booking")

@@ -305,7 +305,7 @@ export function PatientForm({
           ) : (
             <>
               <CheckCircle2 className="h-5 w-5" strokeWidth={2.5} />
-              <span>Записаться на консультацию</span>
+              <span>Записаться на онлайн-разбор</span>
             </>
           )}
         </button>
