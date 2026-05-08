@@ -167,10 +167,9 @@ export default async function ArticlePage({ params }: { params: Params }) {
           />
         </div>
 
-        {/* Похожие статьи — внутренние ссылки усиливают SEO */}
-        <RelatedArticles articles={allArticles} currentSlug={article.slug} />
-
-        {/* CTA в конце статьи — самое важное для конверсии */}
+        {/* CTA в конце статьи — главная цель блога. Идёт СРАЗУ после
+            тела, чтобы дочитавший пациент видел «Записаться» первым,
+            а не после соблазна уйти читать другую статью. */}
         <div className="mt-16 rounded-3xl border border-primary-200 bg-gradient-to-br from-primary-50 via-neutral-0 to-secondary-50 p-6 sm:p-10 text-center">
           <h2 className="text-h3-mobile sm:text-h3-desktop text-neutral-900">
             Остались вопросы?
@@ -187,6 +186,10 @@ export default async function ArticlePage({ params }: { params: Params }) {
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </a>
         </div>
+
+        {/* Похожие статьи — для тех, кто не готов записываться прямо
+            сейчас. Внутренние ссылки усиливают SEO. */}
+        <RelatedArticles articles={allArticles} currentSlug={article.slug} />
       </article>
     </main>
   );
