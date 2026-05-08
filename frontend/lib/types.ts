@@ -34,7 +34,8 @@ export type DoctorProfile = {
   header_avatar_url?: string | null; 
   // Поля, которые используются в коде AboutPage:
   full_name: string;        // было name
-  description?: string;     // было bio
+  short_intro?: string;     // короткое описание для hero на главной
+  description?: string;     // полное описание для /about
   photo_url?: string | null; // было photo
   experience_years: number;
   education?: string;        // добавьте это поле

@@ -15,6 +15,7 @@ class DoctorProfileSerializer(serializers.ModelSerializer):
             "photo_url",
             "header_avatar",
             "header_avatar_url",
+            "short_intro",
             "description",
             "education",
             "experience_years",

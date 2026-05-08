@@ -30,6 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const title = `${doctor.full_name} — врач-инфекционист`;
   const description =
+    doctor.short_intro?.trim() ||
     doctor.description?.slice(0, 200) ||
     `Онлайн-консультации и очный приём. Стаж ${doctor.experience_years ?? 0}+ лет. Запись через сайт.`;
   const photo = absoluteMediaUrl(doctor.photo_url) || undefined;
@@ -78,11 +79,15 @@ export default async function Home() {
 
   // Тексты с fallback'ами
   const heroChip = textOr(blocks, "hero.specialty_chip", "Врач-инфекционист");
-  // На главной hero — короткий, поэтому из description берём только первый
-  // абзац (до пустой строки). Полный текст идёт на /about. Если description
-  // пуст — fallback на SiteBlock «hero.subtitle».
+  // На главной hero — короткий. Приоритет:
+  //   1. short_intro из профиля (отдельное поле специально для главной)
+  //   2. первый абзац полного описания (для совместимости со старыми
+  //      профилями, где заполнено только description)
+  //   3. SiteBlock «hero.subtitle»
+  //   4. дефолтный текст
   const firstParagraph = doctor.description?.split(/\n\s*\n/)[0]?.trim();
   const heroSubtitle =
+    doctor.short_intro?.trim() ||
     firstParagraph ||
     textOr(
       blocks,

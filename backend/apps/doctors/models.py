@@ -11,7 +11,25 @@ class DoctorProfile(models.Model):
         null=True,
     )
 
-    description = models.TextField("Описание", blank=True)
+    short_intro = models.CharField(
+        "Короткое описание (для главной)",
+        max_length=500,
+        blank=True,
+        help_text=(
+            "Одно-два предложения для hero на главной странице. "
+            "Если оставить пустым — на главной будет показан первый "
+            "абзац из «Полного описания»."
+        ),
+    )
+    description = models.TextField(
+        "Полное описание (для страницы «О враче»)",
+        blank=True,
+        help_text=(
+            "Длинный текст с абзацами. Отображается на /about. "
+            "На главной целиком НЕ показывается — для главной используйте "
+            "поле «Короткое описание» выше."
+        ),
+    )
     education = models.TextField("Образование", blank=True)
 
     experience_years = models.PositiveIntegerField("Стаж", default=0)

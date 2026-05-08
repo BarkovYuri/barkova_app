@@ -16,6 +16,7 @@ class DoctorProfileAdmin(ModelAdmin):
                     "full_name",
                     "photo",
                     "header_avatar",
+                    "short_intro",
                     "description",
                     "education",
                     "experience_years",
