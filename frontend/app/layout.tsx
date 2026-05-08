@@ -91,7 +91,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru" className={`${manrope.variable} ${spectral.variable}`}>
+    <html lang="ru" className={`${manrope.variable} ${spectral.variable} scroll-pt-24`}>
       <body className="font-sans bg-neutral-0 text-neutral-900 antialiased">
         <a
           href="#main"

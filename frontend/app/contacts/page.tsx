@@ -167,7 +167,7 @@ export default async function ContactsPage() {
                   ) : (
                     <p className="mt-2 text-neutral-600">Не указан</p>
                   )}
-                  <p className="mt-1 text-sm text-neutral-500">Позвоните прямо сейчас</p>
+                  <p className="mt-1 text-sm text-neutral-500">Связь с администратором клиники</p>
                 </div>
               </div>
             </div>

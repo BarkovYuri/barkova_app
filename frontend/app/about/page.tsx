@@ -174,7 +174,7 @@ export default async function AboutPage() {
               <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 Образование
               </p>
-              <p className="mt-3 font-semibold text-neutral-900 leading-relaxed whitespace-pre-line line-clamp-4">
+              <p className="mt-3 font-semibold text-neutral-900 leading-relaxed whitespace-pre-line">
                 {doctor.education || "Информация пока не добавлена"}
               </p>
             </div>
