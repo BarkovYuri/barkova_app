@@ -3,6 +3,7 @@ from rest_framework import serializers
 from .models import (
     ApproachItem,
     Article,
+    BlogCategory,
     ConditionCategory,
     ConditionItem,
     ConsultationFeature,
@@ -138,6 +139,69 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
 
     def get_cover_url(self, obj):
         return obj.cover.url if obj.cover else None
+
+
+class BlogCategoryListSerializer(serializers.ModelSerializer):
+    """Лёгкий сериализатор для /api/blog-categories/ — без статей.
+
+    Используется для grid-плашек на /blog. Дополнительно отдаём
+    articles_count, чтобы можно было показать «N статей» на карточке.
+    """
+
+    cover_url = serializers.SerializerMethodField()
+    articles_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BlogCategory
+        fields = [
+            "id",
+            "slug",
+            "name",
+            "description",
+            "cover_url",
+            "cover_alt",
+            "articles_count",
+        ]
+
+    def get_cover_url(self, obj):
+        return obj.cover.url if obj.cover else None
+
+    def get_articles_count(self, obj):
+        return getattr(obj, "_articles_count", obj.articles.filter(is_published=True).count())
+
+
+class BlogCategoryDetailSerializer(serializers.ModelSerializer):
+    """Полный сериализатор для /api/blog-categories/<slug>/ — со
+    статьями кластера. Статьи рендерятся через ArticleListSerializer
+    (без body, для карточек)."""
+
+    cover_url = serializers.SerializerMethodField()
+    articles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BlogCategory
+        fields = [
+            "id",
+            "slug",
+            "name",
+            "description",
+            "cover_url",
+            "cover_alt",
+            "meta_title",
+            "meta_description",
+            "keywords",
+            "articles",
+        ]
+
+    def get_cover_url(self, obj):
+        return obj.cover.url if obj.cover else None
+
+    def get_articles(self, obj):
+        active = (
+            obj.articles.filter(is_published=True)
+            .order_by("-published_at", "-created_at")
+        )
+        return ArticleListSerializer(active, many=True).data
 
 
 class LegalDocumentSerializer(serializers.ModelSerializer):

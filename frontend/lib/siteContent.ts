@@ -14,6 +14,8 @@ import type {
   ApproachItem,
   ArticleDetail,
   ArticleListItem,
+  BlogCategoryDetail,
+  BlogCategoryListItem,
   ConditionCategory,
   ConsultationFeature,
   FaqItem,
@@ -124,4 +126,20 @@ export async function incrementArticleView(
     // Ошибка инкремента (429, сеть, …) — не критична для UX.
     return null;
   }
+}
+
+// ----- Кластеры (категории) блога -----
+
+export async function loadBlogCategories(): Promise<BlogCategoryListItem[]> {
+  const data = (await fetchAPI("/blog-categories")) as BlogCategoryListItem[] | null;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function loadBlogCategoryBySlug(
+  slug: string
+): Promise<BlogCategoryDetail | null> {
+  const data = (await fetchAPI(
+    `/blog-categories/${slug}`
+  )) as BlogCategoryDetail | null;
+  return data;
 }

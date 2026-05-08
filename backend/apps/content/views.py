@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from .models import (
     ApproachItem,
     Article,
+    BlogCategory,
     ConditionCategory,
     ConsultationFeature,
     FaqItem,
@@ -22,6 +23,8 @@ from .serializers import (
     ApproachItemSerializer,
     ArticleDetailSerializer,
     ArticleListSerializer,
+    BlogCategoryDetailSerializer,
+    BlogCategoryListSerializer,
     ConditionCategorySerializer,
     ConsultationFeatureSerializer,
     FaqItemSerializer,
@@ -144,6 +147,32 @@ class ArticleDetailView(RetrieveAPIView):
 
     def get_queryset(self):
         return Article.objects.filter(is_published=True)
+
+
+class BlogCategoryListView(ListAPIView):
+    """Список активных кластеров блога — для grid-плашек на /blog."""
+
+    serializer_class = BlogCategoryListSerializer
+
+    def get_queryset(self):
+        return (
+            BlogCategory.objects.filter(is_active=True)
+            .prefetch_related("articles")
+            .order_by("order", "id")
+        )
+
+
+class BlogCategoryDetailView(RetrieveAPIView):
+    """Один кластер по slug, с вложенным списком опубликованных статей."""
+
+    serializer_class = BlogCategoryDetailSerializer
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        return (
+            BlogCategory.objects.filter(is_active=True)
+            .prefetch_related("articles")
+        )
 
 
 class ArticleViewIncrementView(APIView):

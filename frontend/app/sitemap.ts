@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { loadArticles } from "../lib/siteContent";
+import { loadArticles, loadBlogCategories } from "../lib/siteContent";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://doctor-barkova.ru";
 
@@ -19,11 +19,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/legal/consent`, lastModified, changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  // Динамически добавляем все опубликованные статьи. Если API недоступно
-  // (билд при отключённом backend) — сбрасываемся на статические URL.
+  // Динамически добавляем опубликованные статьи и активные кластеры.
+  // Если API недоступно (билд при отключённом backend) — сбрасываемся на
+  // статические URL.
   let articleUrls: MetadataRoute.Sitemap = [];
+  let categoryUrls: MetadataRoute.Sitemap = [];
   try {
-    const articles = await loadArticles();
+    const [articles, categories] = await Promise.all([
+      loadArticles(),
+      loadBlogCategories(),
+    ]);
     articleUrls = articles.map((article) => ({
       url: `${SITE_URL}/blog/${article.slug}`,
       lastModified: article.published_at
@@ -32,9 +37,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.7,
     }));
+    categoryUrls = categories.map((category) => ({
+      url: `${SITE_URL}/blog/category/${category.slug}`,
+      lastModified,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
   } catch {
-    articleUrls = [];
+    // Failure — proceed with static URLs only
   }
 
-  return [...staticUrls, ...articleUrls];
+  return [...staticUrls, ...categoryUrls, ...articleUrls];
 }

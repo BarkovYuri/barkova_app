@@ -74,6 +74,29 @@ export type ArticleDetail = ArticleListItem & {
   keywords: string;
 };
 
+export type BlogCategoryListItem = {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  cover_url: string | null;
+  cover_alt: string;
+  articles_count: number;
+};
+
+export type BlogCategoryDetail = {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  cover_url: string | null;
+  cover_alt: string;
+  meta_title: string;
+  meta_description: string;
+  keywords: string;
+  articles: ArticleListItem[];
+};
+
 export type LegalDocument = {
   id: number;
   doc_type: "offer" | "privacy" | "consent";

@@ -535,6 +535,108 @@ class Article(models.Model):
 
 
 # ============================================================================
+# Категории / тематические кластеры блога
+# ============================================================================
+
+
+class BlogCategory(models.Model):
+    """Тематический кластер для группировки статей блога.
+
+    Примеры: «Вакцинация», «Анализы», «Укусы и клещи», «Гепатиты».
+    На сайте выводятся компактной плашкой над списком статей в /blog,
+    каждая ведёт на /blog/category/<slug> со списком всех статей внутри
+    кластера. Помогает пользователям быстро находить интересное и
+    Google-у понимать тематическую структуру блога.
+    """
+
+    name = models.CharField("Название", max_length=255)
+    slug = models.SlugField(
+        "URL (slug)",
+        max_length=255,
+        unique=True,
+        blank=True,
+        help_text=(
+            "Латиницей через дефисы. Можно оставить пустым — "
+            "сгенерируется автоматически из названия через транслит."
+        ),
+    )
+    description = models.TextField(
+        "Краткое описание",
+        blank=True,
+        help_text=(
+            "Показывается на странице кластера под заголовком и "
+            "используется как meta description в выдаче Google."
+        ),
+    )
+    cover = models.ImageField(
+        "Обложка",
+        upload_to="blog/categories/",
+        blank=True,
+        null=True,
+        help_text="Если оставить пустым — карточка покажется с градиентом.",
+    )
+    cover_alt = models.CharField(
+        "Alt-текст обложки",
+        max_length=255,
+        blank=True,
+    )
+
+    articles = models.ManyToManyField(
+        Article,
+        related_name="categories",
+        blank=True,
+        verbose_name="Статьи в кластере",
+    )
+
+    order = models.PositiveIntegerField(
+        "Порядок",
+        default=0,
+        help_text="Чем меньше — тем выше в списке кластеров.",
+    )
+    is_active = models.BooleanField(
+        "Показывать на сайте",
+        default=True,
+    )
+
+    meta_title = models.CharField(
+        "SEO Title (опц)",
+        max_length=255,
+        blank=True,
+    )
+    meta_description = models.CharField(
+        "SEO Description (опц)",
+        max_length=300,
+        blank=True,
+    )
+    keywords = models.CharField(
+        "Ключевые слова (через запятую)",
+        max_length=500,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField("Создано", auto_now_add=True)
+    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+
+    class Meta:
+        verbose_name = "Кластер блога"
+        verbose_name_plural = "Кластеры блога"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(transliterate_slug(self.name))[:240] or f"category-{self.pk or 'new'}"
+            self.slug = base
+            counter = 2
+            while BlogCategory.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+                self.slug = f"{base}-{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
+
+
+# ============================================================================
 # Юридические документы (как было)
 # ============================================================================
 

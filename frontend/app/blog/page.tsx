@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 import { ArticleCard } from "../../components/blog/ArticleCard";
+import { CategoriesGrid } from "../../components/blog/CategoriesGrid";
 import { JsonLd } from "../../components/common/JsonLd";
 import { buildBreadcrumbSchema } from "../../lib/seo";
-import { loadArticles } from "../../lib/siteContent";
+import { loadArticles, loadBlogCategories } from "../../lib/siteContent";
 
 export const revalidate = 60;
 
@@ -22,7 +23,10 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogIndexPage() {
-  const articles = await loadArticles();
+  const [articles, categories] = await Promise.all([
+    loadArticles(),
+    loadBlogCategories(),
+  ]);
 
   return (
     <main id="main" className="bg-neutral-0">
@@ -49,6 +53,10 @@ export default async function BlogIndexPage() {
             вместе.
           </p>
         </div>
+
+        {/* Кластеры (категории) — компактная сетка над списком статей.
+            5 в ряд на десктопе, 3 на планшете, 2 на мобильном. */}
+        <CategoriesGrid categories={categories} title="Тематические подборки" />
 
         {articles.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-neutral-300 bg-neutral-50 px-6 py-16 text-center">

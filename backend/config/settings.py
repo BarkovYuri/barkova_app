@@ -221,6 +221,11 @@ UNFOLD = {
                         "icon": "article",
                         "link": "/admin/content/article/",
                     },
+                    {
+                        "title": "Кластеры (категории)",
+                        "icon": "folder",
+                        "link": "/admin/content/blogcategory/",
+                    },
                 ],
             },
             {

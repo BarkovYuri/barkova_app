@@ -6,6 +6,8 @@ from .views import (
     ArticleDetailView,
     ArticleListView,
     ArticleViewIncrementView,
+    BlogCategoryDetailView,
+    BlogCategoryListView,
     ConditionCategoryListView,
     ConsultationFeatureListView,
     FaqItemListView,
@@ -46,5 +48,15 @@ urlpatterns = [
         "articles/<slug:slug>/view/",
         ArticleViewIncrementView.as_view(),
         name="article-view",
+    ),
+    path(
+        "blog-categories/",
+        BlogCategoryListView.as_view(),
+        name="blog-categories-list",
+    ),
+    path(
+        "blog-categories/<slug:slug>/",
+        BlogCategoryDetailView.as_view(),
+        name="blog-category-detail",
     ),
 ]

@@ -4,6 +4,7 @@ from unfold.admin import ModelAdmin, TabularInline
 from .models import (
     ApproachItem,
     Article,
+    BlogCategory,
     ConditionCategory,
     ConditionItem,
     ConsultationFeature,
@@ -250,6 +251,54 @@ class ArticleAdmin(ModelAdmin):
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
         ),
     )
+
+
+@admin.register(BlogCategory)
+class BlogCategoryAdmin(ModelAdmin):
+    list_display = ("name", "is_active", "order", "articles_count", "updated_at")
+    list_editable = ("is_active", "order")
+    list_filter = ("is_active",)
+    search_fields = ("name", "description")
+    ordering = ("order", "id")
+    filter_horizontal = ("articles",)
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": ("name", "slug", "description"),
+                "description": (
+                    "Slug можно оставить пустым — сгенерируется автоматически "
+                    "из названия. Описание показывается на странице кластера и "
+                    "идёт в meta description, если SEO Description пуст."
+                ),
+            },
+        ),
+        ("Обложка", {"fields": ("cover", "cover_alt")}),
+        (
+            "Статьи",
+            {
+                "fields": ("articles",),
+                "description": (
+                    "Удерживайте Ctrl/Cmd для выбора нескольких статей. "
+                    "Кнопками со стрелками можно переносить статьи между "
+                    "«Доступные» и «Выбрано»."
+                ),
+            },
+        ),
+        ("Отображение", {"fields": ("is_active", "order")}),
+        (
+            "SEO (опционально)",
+            {
+                "fields": ("meta_title", "meta_description", "keywords"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+    readonly_fields = ()
+
+    @admin.display(description="Статей")
+    def articles_count(self, obj):
+        return obj.articles.count()
 
 
 @admin.register(LegalDocument)
