@@ -6,6 +6,7 @@ import {
   MapPin,
 } from "lucide-react";
 
+import { LazyYandexMap } from "../../components/common/LazyYandexMap";
 import { WhatsIncluded } from "../../components/common/WhatsIncluded";
 import { fetchAPI } from "../../lib/api";
 import { resolveIcon } from "../../lib/iconMap";
@@ -140,7 +141,7 @@ export default async function OfficePage() {
         </div>
 
         {/* Info Cards Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 mb-12 max-w-4xl mx-auto">
+        <div className="grid gap-6 sm:grid-cols-2 mb-12 max-w-4xl mx-auto auto-rows-fr">
           {/* Address Card */}
           <div className="card-interactive">
             <div className="flex items-start gap-4">
@@ -209,15 +210,11 @@ export default async function OfficePage() {
                 {locationSubtitle}
               </p>
             </div>
-            <div className="h-[220px] sm:h-[320px] md:h-[440px]">
-              <iframe
+            <div className="p-3 sm:p-4">
+              <LazyYandexMap
                 src={doctor.yandex_maps_embed_url}
-                width="100%"
-                height="100%"
-                allowFullScreen
-                loading="lazy"
-                className="h-full w-full border-0"
                 title="Карта очного приёма"
+                address={doctor.address || undefined}
               />
             </div>
           </div>

@@ -12,6 +12,7 @@ import {
 } from "../../lib/telegramWebApp";
 import type { ContactMethod } from "../../lib/types";
 import { BookingSummary } from "./BookingSummary";
+import { BookingStepper } from "./BookingStepper";
 import { useDates, useSlots } from "./hooks/useSlots";
 import { useSlotReservation } from "./hooks/useSlotReservation";
 import { useTelegramPrelink } from "./hooks/useTelegramPrelink";
@@ -165,15 +166,6 @@ export default function BookingForm() {
         ? vkId.authorized
         : true);
 
-  const progressPercentage = Math.round(
-    ((hasSelectedDate ? 1 : 0) +
-      (hasSelectedSlot ? 1 : 0) +
-      (hasFilledForm ? 1 : 0) +
-      (hasContactMethod ? 1 : 0)) /
-      4 *
-      100
-  );
-
   // ── Success ─────────────────────────────────────────────────────
   if (success) {
     return (
@@ -196,66 +188,12 @@ export default function BookingForm() {
         />
       ) : null}
 
-      {/* Progress Bar */}
-      <div className="mb-8 animate-fade-in">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold font-heading text-neutral-0 shadow-md shadow-primary-500/30">
-              {Math.min(Math.floor(progressPercentage / 25) + 1, 4)}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">
-                Ваш прогресс
-              </p>
-              <p className="text-xs text-neutral-500">
-                {progressPercentage === 100
-                  ? "Готово к отправке!"
-                  : `Заполнено ${progressPercentage}%`}
-              </p>
-            </div>
-          </div>
-          <p className="text-sm font-bold text-primary-700 font-heading">
-            {progressPercentage}%
-          </p>
-        </div>
-        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
-          <div
-            className="h-full rounded-full transition-all duration-700 ease-out"
-            style={{
-              width: `${progressPercentage}%`,
-              background:
-                "linear-gradient(90deg, var(--color-primary-600), var(--color-primary-400) 60%, var(--color-secondary-500))",
-            }}
-          />
-        </div>
-        {/* Step indicators */}
-        <div className="mt-4 flex justify-between gap-2 px-1">
-          {[
-            { label: "Дата", complete: hasSelectedDate },
-            { label: "Время", complete: hasSelectedSlot },
-            { label: "Данные", complete: hasFilledForm },
-            { label: "Канал", complete: hasContactMethod },
-          ].map(({ label, complete }, step) => (
-            <div
-              key={step}
-              className="flex flex-1 flex-col items-center gap-1.5"
-            >
-              <div
-                className={`h-1.5 w-full rounded-full transition-all duration-500 ${
-                  complete ? "bg-secondary-500" : "bg-neutral-200"
-                }`}
-              />
-              <p
-                className={`text-xs font-medium transition-colors ${
-                  complete ? "text-secondary-700" : "text-neutral-500"
-                }`}
-              >
-                {label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <BookingStepper
+        hasSelectedDate={hasSelectedDate}
+        hasSelectedSlot={hasSelectedSlot}
+        hasFilledForm={hasFilledForm}
+        hasContactMethod={hasContactMethod}
+      />
 
       <div className="grid gap-4 lg:gap-6 xl:gap-8 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(280px,320px)]">
         {/* Calendar & Slots */}

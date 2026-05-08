@@ -160,7 +160,7 @@ export default async function AboutPage() {
       {/* ========== STATS SECTION ========== */}
       <section className="py-16 md:py-24">
         <div className="container">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
             {/* Experience */}
             <div className="flex flex-col rounded-2xl border border-neutral-200 bg-neutral-0 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:shadow-card-hover">
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-100 text-primary-700">
@@ -223,7 +223,7 @@ export default async function AboutPage() {
                 <h2 className="mt-5 text-neutral-900">{approachTitle}</h2>
               </div>
 
-              <div className="mt-12 md:mt-16 grid gap-6 grid-cols-1 sm:grid-cols-3">
+              <div className="mt-12 md:mt-16 grid gap-6 grid-cols-1 sm:grid-cols-3 auto-rows-fr">
                 {approach.map((item) => {
                   const Icon = resolveIcon(item.icon);
                   return (

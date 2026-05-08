@@ -331,7 +331,8 @@
 
   .btn-primary:hover:not(:disabled) {
     background: var(--color-primary-700);
-    box-shadow: 0 14px 28px -10px rgba(14, 116, 144, 0.55);
+    box-shadow: 0 14px 28px -10px rgba(14, 116, 144, 0.55),
+      0 0 50px -10px rgba(14, 116, 144, 0.45);
     transform: translateY(-2px);
   }
 
@@ -494,5 +495,60 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+ * DARK MODE
+ *
+ * Реализовано через переопределение CSS-переменных в prefers-color-scheme:
+ * dark. Tailwind 4 ссылается на эти переменные через var(), поэтому ВСЕ
+ * утилиты вида bg-neutral-*, text-neutral-*, border-neutral-* автоматически
+ * переключаются — без правок в компонентах. Primary/secondary/accent
+ * оставлены как есть (они и так контрастны), корректируются только
+ * neutral'ы и тени.
+ * ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Инверсия нейтралов: 0 = тёмный фон, 900 = светлый текст */
+    --color-neutral-0: #0a0a0a;
+    --color-neutral-50: #131311;
+    --color-neutral-100: #1c1917;
+    --color-neutral-200: #292524;
+    --color-neutral-300: #44403c;
+    --color-neutral-400: #57534e;
+    --color-neutral-500: #a8a29e;
+    --color-neutral-600: #d6d3d1;
+    --color-neutral-700: #e7e5e4;
+    --color-neutral-800: #f5f5f4;
+    --color-neutral-900: #fafaf9;
+
+    /* В тёмной теме плоские тени почти не видны — даём лёгкий glow */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 8px 20px -8px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 20px 40px -16px rgba(14, 116, 144, 0.3);
+    --shadow-xl: 0 28px 60px -20px rgba(14, 116, 144, 0.32);
+    --shadow-2xl: 0 40px 80px -24px rgba(14, 116, 144, 0.35);
+    --shadow-card: 0 4px 16px -6px rgba(0, 0, 0, 0.5);
+    --shadow-card-hover: 0 24px 48px -16px rgba(14, 116, 144, 0.35);
+  }
+
+  ::selection {
+    background: var(--color-primary-700);
+    color: var(--color-primary-100);
+  }
+
+  /* Картинки чуть мягче на тёмном фоне */
+  img {
+    opacity: 0.92;
+  }
+
+  /* В тёмной теме нет смысла в glassmorphism через bg-white/95 — он
+     становится почти непрозрачным белым; явно делаем header тёмно-стеклом. */
+  header.sticky {
+    background: rgba(10, 10, 10, 0.85) !important;
+    border-color: var(--color-neutral-200) !important;
   }
 }

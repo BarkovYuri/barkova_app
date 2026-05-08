@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowRight, MapPin, Phone } from "lucide-react";
+
+import { LazyYandexMap } from "../../components/common/LazyYandexMap";
 import { fetchAPI } from "../../lib/api";
 import { loadSiteBlocks, textOr } from "../../lib/siteContent";
 import type { DoctorProfile } from "../../lib/types";
@@ -278,15 +280,11 @@ export default async function ContactsPage() {
               <div className="px-6 py-4 border-b border-neutral-200">
                 <h2 className="font-semibold text-neutral-900">{mapTitle}</h2>
               </div>
-              <div className="h-[200px] sm:h-[300px] md:h-[420px] flex-1 overflow-hidden">
-                <iframe
+              <div className="p-3 sm:p-4 flex-1">
+                <LazyYandexMap
                   src={doctor.yandex_maps_embed_url}
-                  width="100%"
-                  height="100%"
-                  allowFullScreen
-                  loading="lazy"
-                  className="h-full w-full border-0"
-                  title="Карта места приема"
+                  title="Карта места приёма"
+                  address={doctor?.address || undefined}
                 />
               </div>
             </div>

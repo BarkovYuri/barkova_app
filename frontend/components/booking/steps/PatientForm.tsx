@@ -58,6 +58,27 @@ export function PatientForm({
     setPhone(formatted);
   }
 
+  function handlePhoneFocus(e: React.FocusEvent<HTMLInputElement>) {
+    // При фокусе на пустое поле сразу подставляем «+7 (» и ставим
+    // курсор после — пользователь не путается с тем, надо ли писать
+    // +7 / 8 самостоятельно.
+    if (!phone) {
+      setPhone("+7 (");
+      requestAnimationFrame(() => {
+        e.target.setSelectionRange(4, 4);
+      });
+    }
+  }
+
+  function handlePhoneBlur() {
+    // Если пользователь ничего не дописал кроме автопрефикса —
+    // очищаем поле, чтобы не показывать «+7 (» как введённое значение
+    // и чтобы placeholder снова стал виден.
+    if (phone === "+7 (" || phone === "+7" || phone === "+7 ") {
+      setPhone("");
+    }
+  }
+
   const phoneValid = isPhoneValid(phone);
   const phoneInvalid = phone.length > 0 && !phoneValid;
   const inputCls =
@@ -123,6 +144,8 @@ export function PatientForm({
             autoComplete="tel"
             value={phone}
             onChange={handlePhoneChange}
+            onFocus={handlePhoneFocus}
+            onBlur={handlePhoneBlur}
             placeholder="+7 (___) ___-__-__"
             required
             className={`${inputCls} ${
@@ -143,7 +166,11 @@ export function PatientForm({
               <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.5} />
               Введите 10 цифр номера
             </p>
-          ) : null}
+          ) : (
+            <p className="mt-1.5 text-xs text-neutral-500">
+              Например, +7 (900) 123-45-67. Префикс +7 подставится автоматически.
+            </p>
+          )}
         </div>
 
         {/* Reason Input */}

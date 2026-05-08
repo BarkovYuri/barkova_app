@@ -77,7 +77,7 @@ export async function HowItWorks() {
             }}
           />
 
-          <div className="grid gap-8 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+          <div className="grid gap-8 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 auto-rows-fr">
             {items.map((step, idx) => {
               const Icon = resolveIcon(step.icon);
               return (
