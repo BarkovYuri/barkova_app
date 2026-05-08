@@ -3,6 +3,10 @@ import Image from "next/image";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 import { JsonLd } from "../components/common/JsonLd";
+import {
+  buildMedicalBusinessSchema,
+  buildPhysicianSchema,
+} from "../lib/seo";
 import { SectionDivider } from "../components/common/SectionDivider";
 import { Faq } from "../components/home/Faq";
 import { HowItWorks } from "../components/home/HowItWorks";
@@ -108,42 +112,18 @@ export default async function Home() {
   );
   const ctaButton = textOr(blocks, "cta.home.button", "Записаться сейчас");
 
-  // Structured data — Physician schema для Google rich-cards
+  // Structured data — Physician + MedicalBusiness для Google rich-cards
+  // и local-pack по запросам «врач инфекционист Томск».
   const photoAbsolute = absoluteMediaUrl(doctor.photo_url) || undefined;
   const heroPhoto = absoluteMediaUrl(doctor.photo_url);
 
-  const physicianLd: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "Physician",
-    name: doctor.full_name,
-    medicalSpecialty: "InfectiousDiseases",
-    description: doctor.description || undefined,
-    image: photoAbsolute,
-    url: SITE_URL,
-    email: doctor.email || undefined,
-    address: doctor.address
-      ? {
-          "@type": "PostalAddress",
-          streetAddress: doctor.address,
-          addressCountry: "RU",
-        }
-      : undefined,
-    sameAs: [
-      doctor.instagram_url,
-      doctor.vk_url,
-      doctor.dzen_url,
-      doctor.prodoktorov_url,
-    ].filter(Boolean),
-  };
-
-  // Удаляем undefined-поля
-  Object.keys(physicianLd).forEach(
-    (k) => physicianLd[k] === undefined && delete physicianLd[k]
-  );
+  const physicianLd = buildPhysicianSchema(doctor, photoAbsolute);
+  const medicalBusinessLd = buildMedicalBusinessSchema(doctor, photoAbsolute);
 
   return (
     <main id="main" className="bg-neutral-0">
       <JsonLd data={physicianLd} />
+      <JsonLd data={medicalBusinessLd} />
 
       {/* ========== HERO SECTION ========== */}
       <section className="relative overflow-hidden">

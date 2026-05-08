@@ -6,9 +6,11 @@ import {
   MapPin,
 } from "lucide-react";
 
+import { JsonLd } from "../../components/common/JsonLd";
 import { LazyYandexMap } from "../../components/common/LazyYandexMap";
 import { WhatsIncluded } from "../../components/common/WhatsIncluded";
 import { fetchAPI } from "../../lib/api";
+import { buildBreadcrumbSchema } from "../../lib/seo";
 import { resolveIcon } from "../../lib/iconMap";
 import {
   loadConsultationFeatures,
@@ -120,6 +122,12 @@ export default async function OfficePage() {
 
   return (
     <main id="main" className="bg-neutral-0">
+      <JsonLd
+        data={buildBreadcrumbSchema([
+          { name: "Главная", href: "/" },
+          { name: "Очный приём", href: "/office" },
+        ])}
+      />
       <div className="container section-vertical-spacing">
         {/* Header */}
         <div className="max-w-4xl mx-auto mb-12 animate-fade-in-up">

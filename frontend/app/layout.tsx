@@ -30,12 +30,20 @@ export const metadata: Metadata = {
   description:
     "Онлайн-разборы и очный приём врача-инфекциониста. Запись через сайт за 30 секунд, подтверждение в Telegram или VK.",
   keywords: [
-    "врач инфекционист",
+    "врач инфекционист Томск",
+    "инфекционист онлайн",
     "онлайн-разбор у инфекциониста",
-    "телемедицина",
-    "запись к врачу онлайн",
-    "Баркова",
-    "Томск",
+    "телемедицина инфекционист",
+    "запись к инфекционисту",
+    "Баркова Елена Игоревна",
+    "вирусный гепатит Томск",
+    "TORCH-инфекции",
+    "лямблиоз лечение",
+    "длительная температура причины",
+    "увеличенные лимфоузлы врач",
+    "паразитология Томск",
+    "вакцинация взрослых Томск",
+    "СибГМУ инфекционист",
   ],
   authors: [{ name: "Баркова Елена Игоревна" }],
   applicationName: SITE_NAME,
@@ -72,6 +80,13 @@ export const metadata: Metadata = {
   // Иконки автоматически берутся из app/icon.svg, app/icon.tsx,
   // app/apple-icon.tsx — Next.js строит метаданные сам.
   category: "health",
+  // Verification — заполняются после регистрации в Search Console
+  // и Яндекс.Вебмастере. Коды кладутся в .env прода как
+  // NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION / NEXT_PUBLIC_YANDEX_VERIFICATION.
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    yandex: process.env.NEXT_PUBLIC_YANDEX_VERIFICATION || undefined,
+  },
 };
 
 export const viewport: Viewport = {

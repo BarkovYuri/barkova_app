@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { ArrowRight, MapPin, Phone } from "lucide-react";
 
+import { JsonLd } from "../../components/common/JsonLd";
 import { LazyYandexMap } from "../../components/common/LazyYandexMap";
 import { fetchAPI } from "../../lib/api";
+import { buildBreadcrumbSchema } from "../../lib/seo";
 import { loadSiteBlocks, textOr } from "../../lib/siteContent";
 import type { DoctorProfile } from "../../lib/types";
 
@@ -134,6 +136,12 @@ export default async function ContactsPage() {
 
   return (
     <main id="main" className="bg-neutral-0">
+      <JsonLd
+        data={buildBreadcrumbSchema([
+          { name: "Главная", href: "/" },
+          { name: "Контакты", href: "/contacts" },
+        ])}
+      />
       <div className="container section-vertical-spacing">
         {/* Header */}
         <div className="max-w-4xl mx-auto mb-12 animate-fade-in-up">

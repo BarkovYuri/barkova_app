@@ -3,7 +3,9 @@ import { Sparkles } from "lucide-react";
 import Script from "next/script";
 
 import BookingForm from "../../components/booking/BookingForm";
+import { JsonLd } from "../../components/common/JsonLd";
 import { WhatsIncluded } from "../../components/common/WhatsIncluded";
+import { buildBreadcrumbSchema } from "../../lib/seo";
 import {
   loadConsultationFeatures,
   loadSiteBlocks,
@@ -65,6 +67,13 @@ export default async function BookingPage() {
       <Script
         src="https://telegram.org/js/telegram-web-app.js"
         strategy="beforeInteractive"
+      />
+
+      <JsonLd
+        data={buildBreadcrumbSchema([
+          { name: "Главная", href: "/" },
+          { name: "Онлайн-разбор", href: "/booking" },
+        ])}
       />
 
       <main id="main" className="relative min-h-screen overflow-hidden bg-gradient-to-br from-primary-50 via-neutral-0 to-neutral-0">

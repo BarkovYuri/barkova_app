@@ -1,6 +1,8 @@
 import { HelpCircle } from "lucide-react";
 
+import { buildFaqPageSchema } from "../../lib/seo";
 import { loadFaqItems, loadSiteBlocks, textOr } from "../../lib/siteContent";
+import { JsonLd } from "../common/JsonLd";
 import { FaqAccordion } from "./FaqAccordion";
 
 const FALLBACK_FAQ = [
@@ -32,8 +34,13 @@ export async function Faq() {
     "Если ваш вопрос не нашёлся ниже — напишите в Telegram или VK, отвечу лично."
   );
 
+  // Structured data: FAQPage schema даёт rich-snippet с раскрывающимися
+  // вопросами прямо в Google-выдаче — выше CTR.
+  const faqLd = buildFaqPageSchema(faqList);
+
   return (
     <section className="py-16 md:py-24">
+      {faqLd ? <JsonLd data={faqLd} /> : null}
       <div className="container">
         <div className="grid gap-10 md:gap-16 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
           {/* Left: heading */}

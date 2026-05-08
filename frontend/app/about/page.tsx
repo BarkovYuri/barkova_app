@@ -10,8 +10,10 @@ import {
 } from "lucide-react";
 
 import { ConditionsBlock } from "../../components/about/ConditionsBlock";
+import { JsonLd } from "../../components/common/JsonLd";
 import { SectionDivider } from "../../components/common/SectionDivider";
 import { fetchAPI } from "../../lib/api";
+import { buildBreadcrumbSchema } from "../../lib/seo";
 import { resolveIcon } from "../../lib/iconMap";
 import {
   loadApproachItems,
@@ -89,6 +91,12 @@ export default async function AboutPage() {
 
   return (
     <main id="main" className="bg-neutral-0">
+      <JsonLd
+        data={buildBreadcrumbSchema([
+          { name: "Главная", href: "/" },
+          { name: "О враче", href: "/about" },
+        ])}
+      />
       {/* ========== HERO SECTION ========== */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-primary-200/40 blur-3xl" />
