@@ -63,7 +63,7 @@ export default async function Home() {
 
   if (!doctor) {
     return (
-      <main className="min-h-screen bg-neutral-0">
+      <main id="main" className="min-h-screen bg-neutral-0">
         <div className="container section flex items-center justify-center">
           <div className="card max-w-2xl">
             <h1>Профиль врача не найден</h1>
@@ -133,7 +133,7 @@ export default async function Home() {
   );
 
   return (
-    <main className="bg-neutral-0">
+    <main id="main" className="bg-neutral-0">
       <JsonLd data={physicianLd} />
 
       {/* ========== HERO SECTION ========== */}

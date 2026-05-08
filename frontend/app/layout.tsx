@@ -24,7 +24,7 @@ const SITE_NAME = "Кабинет врача-инфекциониста";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} · Барькова Елена Игоревна`,
+    default: `${SITE_NAME} · Баркова Елена Игоревна`,
     template: `%s · ${SITE_NAME}`,
   },
   description:
@@ -93,6 +93,12 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`${manrope.variable} ${spectral.variable}`}>
       <body className="font-sans bg-neutral-0 text-neutral-900 antialiased">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-primary-700 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg"
+        >
+          Перейти к содержанию
+        </a>
         <Header />
         {children}
         <Footer />

@@ -41,7 +41,7 @@ export default async function BookingPage() {
         strategy="beforeInteractive"
       />
 
-      <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-primary-50 via-neutral-0 to-neutral-0">
+      <main id="main" className="relative min-h-screen overflow-hidden bg-gradient-to-br from-primary-50 via-neutral-0 to-neutral-0">
         {/* Decorative blurs */}
         <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-primary-200 opacity-30 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-40 -right-32 h-80 w-80 rounded-full bg-secondary-100 opacity-40 blur-3xl" />

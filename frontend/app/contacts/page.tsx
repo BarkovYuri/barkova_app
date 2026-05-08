@@ -131,7 +131,7 @@ export default async function ContactsPage() {
   );
 
   return (
-    <main className="bg-neutral-0">
+    <main id="main" className="bg-neutral-0">
       <div className="container section-vertical-spacing">
         {/* Header */}
         <div className="max-w-4xl mx-auto mb-12 animate-fade-in-up">

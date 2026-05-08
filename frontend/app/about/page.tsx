@@ -45,7 +45,7 @@ export default async function AboutPage() {
 
   if (!doctor) {
     return (
-      <main className="min-h-screen bg-neutral-0">
+      <main id="main" className="min-h-screen bg-neutral-0">
         <div className="container section">
           <div className="card max-w-2xl">
             <h1>О враче</h1>
@@ -79,7 +79,7 @@ export default async function AboutPage() {
   );
 
   return (
-    <main className="bg-neutral-0">
+    <main id="main" className="bg-neutral-0">
       {/* ========== HERO SECTION ========== */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-primary-200/40 blur-3xl" />

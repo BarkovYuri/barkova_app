@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { addMonths, startOfMonth } from "../hooks/useSlots";
 import type { CalendarDay, Slot } from "../../../lib/types";
 
@@ -105,6 +105,26 @@ export function CalendarSection({
           ))}
         </div>
 
+        {/* Empty-state: в этом месяце нет ни одного доступного дня */}
+        {!loadingDates &&
+          calendarDays.length > 0 &&
+          calendarDays.every((d) => !d.isAvailable) ? (
+          <div className="mb-3 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-6 text-center">
+            <CalendarOff className="h-6 w-6 text-neutral-400" strokeWidth={1.75} />
+            <p className="text-sm text-neutral-600">
+              В&nbsp;{formatMonthTitle(currentMonth).toLowerCase()} нет
+              свободных дат для&nbsp;онлайн-консультации.
+            </p>
+            <button
+              type="button"
+              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+              className="text-sm font-semibold text-primary-700 underline-offset-4 hover:underline"
+            >
+              Посмотреть следующий месяц →
+            </button>
+          </div>
+        ) : null}
+
         {/* Calendar Days */}
         <div className="grid grid-cols-7 gap-2 text-center sm:gap-2.5">
           {loadingDates
@@ -192,8 +212,14 @@ export function CalendarSection({
             ))}
           </div>
         ) : slots.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-6 text-center text-sm text-neutral-500">
-            На выбранную дату свободного времени нет.
+          <div className="mt-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-6 text-center">
+            <CalendarOff className="h-5 w-5 text-neutral-400" strokeWidth={1.75} />
+            <p className="text-sm text-neutral-600">
+              На выбранную дату свободного времени нет.
+            </p>
+            <p className="text-xs text-neutral-500">
+              Попробуйте другую дату — доступные дни выделены в календаре.
+            </p>
           </div>
         ) : (
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">

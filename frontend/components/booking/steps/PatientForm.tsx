@@ -94,6 +94,9 @@ export function PatientForm({
           </label>
           <input
             type="text"
+            name="name"
+            autoComplete="name"
+            autoCapitalize="words"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Например, Елена Сергеевна"
@@ -115,7 +118,8 @@ export function PatientForm({
           </label>
           <input
             type="tel"
-            inputMode="numeric"
+            name="phone"
+            inputMode="tel"
             autoComplete="tel"
             value={phone}
             onChange={handlePhoneChange}
