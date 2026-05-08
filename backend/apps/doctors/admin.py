@@ -36,6 +36,7 @@ class DoctorProfileAdmin(ModelAdmin):
             "Контакты и соцсети",
             {
                 "fields": (
+                    "phone",
                     "email",
                     "instagram_url",
                     "vk_url",

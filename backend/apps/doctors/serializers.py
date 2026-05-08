@@ -20,6 +20,7 @@ class DoctorProfileSerializer(serializers.ModelSerializer):
             "experience_years",
             "prodoktorov_url",
             "address",
+            "phone",
             "email",
             "instagram_url",
             "dzen_url",

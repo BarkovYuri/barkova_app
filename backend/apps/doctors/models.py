@@ -18,6 +18,13 @@ class DoctorProfile(models.Model):
 
     prodoktorov_url = models.URLField("Ссылка на ПроДокторов", blank=True)
     address = models.CharField("Адрес приема", max_length=255, blank=True)
+    phone = models.CharField(
+        "Телефон",
+        max_length=50,
+        blank=True,
+        help_text="В международном формате, например +7 (3822) 123-45-67. "
+        "На странице «Контакты» отобразится как кликабельная ссылка tel:.",
+    )
     email = models.EmailField("Email", blank=True)
 
     instagram_url = models.URLField("Ссылка на Instagram", blank=True)
