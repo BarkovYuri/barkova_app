@@ -1,7 +1,8 @@
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 
 from .models import (
     ApproachItem,
+    Article,
     ConditionCategory,
     ConsultationFeature,
     FaqItem,
@@ -14,6 +15,8 @@ from .models import (
 )
 from .serializers import (
     ApproachItemSerializer,
+    ArticleDetailSerializer,
+    ArticleListSerializer,
     ConditionCategorySerializer,
     ConsultationFeatureSerializer,
     FaqItemSerializer,
@@ -115,6 +118,27 @@ class ConsultationFeatureListView(ListAPIView):
         if consultation_type in {"online", "office"}:
             qs = qs.filter(consultation_type=consultation_type)
         return qs
+
+
+class ArticleListView(ListAPIView):
+    """Список опубликованных статей блога."""
+
+    serializer_class = ArticleListSerializer
+
+    def get_queryset(self):
+        return Article.objects.filter(is_published=True).order_by(
+            "-published_at", "-created_at"
+        )
+
+
+class ArticleDetailView(RetrieveAPIView):
+    """Одна статья по slug. Используется на /blog/[slug]."""
+
+    serializer_class = ArticleDetailSerializer
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        return Article.objects.filter(is_published=True)
 
 
 class ConditionCategoryListView(ListAPIView):

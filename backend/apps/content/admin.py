@@ -3,6 +3,7 @@ from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
     ApproachItem,
+    Article,
     ConditionCategory,
     ConditionItem,
     ConsultationFeature,
@@ -196,6 +197,59 @@ class ConditionCategoryAdmin(ModelAdmin):
     @admin.display(description="Пунктов")
     def items_count(self, obj):
         return obj.items.count()
+
+
+@admin.register(Article)
+class ArticleAdmin(ModelAdmin):
+    list_display = ("title", "is_published", "published_at", "updated_at")
+    list_filter = ("is_published",)
+    list_editable = ("is_published",)
+    search_fields = ("title", "excerpt", "body", "keywords")
+    ordering = ("-published_at", "-created_at")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "title",
+                    "slug",
+                    "excerpt",
+                    "body",
+                ),
+                "description": (
+                    "Текст пишется в Markdown. Подсказка: ## заголовок, "
+                    "**жирный**, *курсив*, [текст ссылки](https://...), "
+                    "- пункт списка, > цитата."
+                ),
+            },
+        ),
+        (
+            "Обложка",
+            {"fields": ("cover", "cover_alt")},
+        ),
+        (
+            "Публикация",
+            {
+                "fields": ("is_published", "published_at"),
+                "description": (
+                    "Поставьте «Опубликована», чтобы статья появилась "
+                    "в /blog. Если дата пустая — поставится автоматически."
+                ),
+            },
+        ),
+        (
+            "SEO (опционально)",
+            {
+                "fields": ("meta_title", "meta_description", "keywords"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Системное",
+            {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
+        ),
+    )
 
 
 @admin.register(LegalDocument)

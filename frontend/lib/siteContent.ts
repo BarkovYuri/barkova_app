@@ -12,6 +12,8 @@
 import { fetchAPI } from "./api";
 import type {
   ApproachItem,
+  ArticleDetail,
+  ArticleListItem,
   ConditionCategory,
   ConsultationFeature,
   FaqItem,
@@ -94,4 +96,18 @@ export async function loadConsultationFeatures(
 export async function loadConditions(): Promise<ConditionCategory[]> {
   const data = (await fetchAPI("/conditions")) as ConditionCategory[] | null;
   return Array.isArray(data) ? data : [];
+}
+
+// ----- Блог -----
+
+export async function loadArticles(): Promise<ArticleListItem[]> {
+  const data = (await fetchAPI("/articles")) as ArticleListItem[] | null;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function loadArticleBySlug(
+  slug: string
+): Promise<ArticleDetail | null> {
+  const data = (await fetchAPI(`/articles/${slug}`)) as ArticleDetail | null;
+  return data;
 }

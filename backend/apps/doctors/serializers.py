@@ -20,6 +20,8 @@ class DoctorProfileSerializer(serializers.ModelSerializer):
             "education",
             "experience_years",
             "prodoktorov_url",
+            "prodoktorov_rating",
+            "prodoktorov_reviews_count",
             "address",
             "phone",
             "email",

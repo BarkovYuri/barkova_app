@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from .models import (
     ApproachItem,
+    Article,
     ConditionCategory,
     ConditionItem,
     ConsultationFeature,
@@ -88,6 +89,53 @@ class ConditionCategorySerializer(serializers.ModelSerializer):
         active_items = [item for item in obj.items.all() if item.is_active]
         active_items.sort(key=lambda i: (i.order, i.id))
         return ConditionItemSerializer(active_items, many=True).data
+
+
+class ArticleListSerializer(serializers.ModelSerializer):
+    """Лёгкий сериализатор для /api/articles/ — без body."""
+
+    cover_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Article
+        fields = [
+            "id",
+            "slug",
+            "title",
+            "excerpt",
+            "cover_url",
+            "cover_alt",
+            "published_at",
+        ]
+
+    def get_cover_url(self, obj):
+        return obj.cover.url if obj.cover else None
+
+
+class ArticleDetailSerializer(serializers.ModelSerializer):
+    """Полный сериализатор для /api/articles/<slug>/ — с body."""
+
+    cover_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Article
+        fields = [
+            "id",
+            "slug",
+            "title",
+            "excerpt",
+            "body",
+            "cover_url",
+            "cover_alt",
+            "published_at",
+            "updated_at",
+            "meta_title",
+            "meta_description",
+            "keywords",
+        ]
+
+    def get_cover_url(self, obj):
+        return obj.cover.url if obj.cover else None
 
 
 class LegalDocumentSerializer(serializers.ModelSerializer):

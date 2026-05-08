@@ -35,6 +35,20 @@ class DoctorProfile(models.Model):
     experience_years = models.PositiveIntegerField("Стаж", default=0)
 
     prodoktorov_url = models.URLField("Ссылка на ПроДокторов", blank=True)
+    prodoktorov_rating = models.DecimalField(
+        "Рейтинг на ПроДокторов",
+        max_digits=3,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        help_text="Например, 4.9. Показывается на главной и идёт в structured data (звёздочки в Google).",
+    )
+    prodoktorov_reviews_count = models.PositiveIntegerField(
+        "Количество отзывов на ПроДокторов",
+        null=True,
+        blank=True,
+        help_text="Число отзывов с ПроДокторов. Используется вместе с рейтингом.",
+    )
     address = models.CharField("Адрес приема", max_length=255, blank=True)
     phone = models.CharField(
         "Телефон",

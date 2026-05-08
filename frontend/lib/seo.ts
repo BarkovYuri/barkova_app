@@ -49,6 +49,21 @@ function buildGeo() {
   };
 }
 
+function buildAggregateRating(doctor: DoctorProfile): Record<string, unknown> | undefined {
+  const rating = doctor.prodoktorov_rating;
+  const count = doctor.prodoktorov_reviews_count;
+  if (rating == null || count == null || Number(count) <= 0) {
+    return undefined;
+  }
+  return {
+    "@type": "AggregateRating",
+    ratingValue: String(rating),
+    reviewCount: count,
+    bestRating: 5,
+    worstRating: 1,
+  };
+}
+
 export function buildPhysicianSchema(
   doctor: DoctorProfile,
   photoAbsolute: string | undefined,
@@ -66,6 +81,7 @@ export function buildPhysicianSchema(
     address: buildPostalAddress(doctor),
     geo: buildGeo(),
     areaServed: { "@type": "City", name: DEFAULT_LOCALITY },
+    aggregateRating: buildAggregateRating(doctor),
     availableService: [
       {
         "@type": "MedicalTherapy",
@@ -104,6 +120,7 @@ export function buildMedicalBusinessSchema(
     geo: buildGeo(),
     priceRange: "₽₽",
     areaServed: { "@type": "City", name: DEFAULT_LOCALITY },
+    aggregateRating: buildAggregateRating(doctor),
     sameAs: [
       doctor.instagram_url,
       doctor.vk_url,

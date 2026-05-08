@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, ExternalLink, Sparkles, Star } from "lucide-react";
 
 import { JsonLd } from "../components/common/JsonLd";
 import {
@@ -20,6 +20,14 @@ import {
 } from "../lib/siteContent";
 import type { DoctorProfile } from "../lib/types";
 import { absoluteMediaUrl } from "../lib/url";
+
+function pluralizeReviews(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return "отзыв";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "отзыва";
+  return "отзывов";
+}
 
 // ISR: страница пересобирается не чаще раза в минуту. Без этого Next 16
 // может статически отрендерить её при build и игнорировать изменения в
@@ -150,6 +158,38 @@ export default async function Home() {
               <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-neutral-600 whitespace-pre-line">
                 {heroSubtitle}
               </p>
+
+              {/* Рейтинг ПроДокторов — рендерим только если в админке
+                  заполнены поля. Видимый блок нужен для AggregateRating
+                  schema (Google требует чтобы оценка отображалась). */}
+              {doctor.prodoktorov_rating && doctor.prodoktorov_reviews_count ? (
+                <a
+                  href={doctor.prodoktorov_url || "#"}
+                  target={doctor.prodoktorov_url ? "_blank" : undefined}
+                  rel={doctor.prodoktorov_url ? "noreferrer" : undefined}
+                  className="mt-6 inline-flex items-center gap-3 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm hover:border-amber-300 transition-colors group"
+                >
+                  <span className="flex items-center gap-1 text-amber-500">
+                    <Star className="h-4 w-4 fill-amber-500" strokeWidth={0} />
+                    <span className="font-bold text-neutral-900">
+                      {doctor.prodoktorov_rating}
+                    </span>
+                  </span>
+                  <span className="text-neutral-700">
+                    <span className="font-semibold">
+                      {doctor.prodoktorov_reviews_count}
+                    </span>{" "}
+                    {pluralizeReviews(Number(doctor.prodoktorov_reviews_count))}{" "}
+                    на ПроДокторов
+                  </span>
+                  {doctor.prodoktorov_url ? (
+                    <ExternalLink
+                      className="h-3.5 w-3.5 text-neutral-400 group-hover:text-neutral-600"
+                      strokeWidth={2}
+                    />
+                  ) : null}
+                </a>
+              ) : null}
 
               {/* CTA Buttons */}
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">

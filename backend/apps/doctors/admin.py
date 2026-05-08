@@ -28,9 +28,23 @@ class DoctorProfileAdmin(ModelAdmin):
             {
                 "fields": (
                     "address",
-                    "prodoktorov_url",
                     "yandex_maps_embed_url",
                 )
+            },
+        ),
+        (
+            "ПроДокторов",
+            {
+                "fields": (
+                    "prodoktorov_url",
+                    "prodoktorov_rating",
+                    "prodoktorov_reviews_count",
+                ),
+                "description": (
+                    "Если отзывы есть на ПроДокторов — заполните рейтинг и "
+                    "количество. Это покажет звёздочки на главной и в "
+                    "результатах поиска Google."
+                ),
             },
         ),
         (

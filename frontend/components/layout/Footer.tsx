@@ -51,6 +51,14 @@ export default function Footer() {
               </li>
               <li>
                 <a
+                  href="/blog"
+                  className="text-neutral-700 hover:text-primary-700 transition-colors"
+                >
+                  Блог
+                </a>
+              </li>
+              <li>
+                <a
                   href="/contacts"
                   className="text-neutral-700 hover:text-primary-700 transition-colors"
                 >

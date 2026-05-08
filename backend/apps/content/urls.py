@@ -3,6 +3,8 @@ from django.urls import path
 from .views import (
     ActiveLegalDocumentListView,
     ApproachItemListView,
+    ArticleDetailView,
+    ArticleListView,
     ConditionCategoryListView,
     ConsultationFeatureListView,
     FaqItemListView,
@@ -33,4 +35,10 @@ urlpatterns = [
         name="consultation-features",
     ),
     path("conditions/", ConditionCategoryListView.as_view(), name="conditions"),
+    path("articles/", ArticleListView.as_view(), name="articles-list"),
+    path(
+        "articles/<slug:slug>/",
+        ArticleDetailView.as_view(),
+        name="article-detail",
+    ),
 ]

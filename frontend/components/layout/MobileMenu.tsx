@@ -15,6 +15,7 @@ export default function MobileMenu({ fullName }: MobileMenuProps) {
     { href: "/about", label: "О враче" },
     { href: "/booking", label: "Онлайн-разбор" },
     { href: "/office", label: "Очный приём" },
+    { href: "/blog", label: "Блог" },
     { href: "/contacts", label: "Контакты" },
   ];
 

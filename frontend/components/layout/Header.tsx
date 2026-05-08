@@ -14,6 +14,7 @@ export default async function Header() {
     { href: "/about", label: "О враче" },
     { href: "/booking", label: "Онлайн-запись" },
     { href: "/office", label: "Очный приём" },
+    { href: "/blog", label: "Блог" },
     { href: "/contacts", label: "Контакты" },
   ];
 

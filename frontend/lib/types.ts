@@ -51,6 +51,26 @@ export type DoctorProfile = {
   phone?: string;
   email?: string;
   specialties?: string[];
+  prodoktorov_rating?: string | number | null;
+  prodoktorov_reviews_count?: number | null;
+};
+
+export type ArticleListItem = {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover_url: string | null;
+  cover_alt: string;
+  published_at: string | null;
+};
+
+export type ArticleDetail = ArticleListItem & {
+  body: string;
+  updated_at: string;
+  meta_title: string;
+  meta_description: string;
+  keywords: string;
 };
 
 export type LegalDocument = {

@@ -212,6 +212,18 @@ UNFOLD = {
                 ],
             },
             {
+                "title": "Блог",
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "Статьи",
+                        "icon": "article",
+                        "link": "/admin/content/article/",
+                    },
+                ],
+            },
+            {
                 "title": "Страница «Очный приём»",
                 "separator": True,
                 "collapsible": False,
