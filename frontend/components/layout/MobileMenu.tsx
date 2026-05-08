@@ -13,7 +13,7 @@ export default function MobileMenu({ fullName }: MobileMenuProps) {
   const links = [
     { href: "/", label: "Главная" },
     { href: "/about", label: "О враче" },
-    { href: "/booking", label: "Онлайн-консультация" },
+    { href: "/booking", label: "Онлайн-разбор" },
     { href: "/office", label: "Очный приём" },
     { href: "/contacts", label: "Контакты" },
   ];
@@ -60,7 +60,7 @@ export default function MobileMenu({ fullName }: MobileMenuProps) {
             onClick={() => setOpen(false)}
             className="btn-primary mt-5 w-full"
           >
-            Записаться на онлайн-консультацию
+            Записаться на онлайн-разбор
           </a>
         </div>
       ) : null}

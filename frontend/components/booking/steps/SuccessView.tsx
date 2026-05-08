@@ -70,7 +70,7 @@ export function SuccessView({
         <div className="text-center">
           <h2 className="text-neutral-900">Отлично! Заявка отправлена</h2>
           <p className="mt-4 text-neutral-600 text-base-large leading-relaxed">
-            Мы получили вашу заявку на онлайн-консультацию. Врач или
+            Мы получили вашу заявку на онлайн-разбор. Врач или
             администратор свяжется с вами в ближайшее время для подтверждения
             через{" "}
             <span className="font-semibold text-primary-700">

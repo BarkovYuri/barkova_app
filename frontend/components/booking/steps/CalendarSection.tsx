@@ -113,7 +113,7 @@ export function CalendarSection({
             <CalendarOff className="h-6 w-6 text-neutral-400" strokeWidth={1.75} />
             <p className="text-sm text-neutral-600">
               В&nbsp;{formatMonthTitle(currentMonth).toLowerCase()} нет
-              свободных дат для&nbsp;онлайн-консультации.
+              свободных дат для&nbsp;онлайн-разбора.
             </p>
             <button
               type="button"

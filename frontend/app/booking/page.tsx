@@ -11,42 +11,50 @@ import {
 } from "../../lib/siteContent";
 
 export const metadata: Metadata = {
-  title: "Онлайн-запись на консультацию",
+  title: "Онлайн-запись на разбор",
   description:
-    "Запись на онлайн-консультацию к врачу-инфекционисту. Выберите дату и время — подтверждение в Telegram или VK.",
+    "Запись на онлайн-разбор у врача-инфекциониста. Выберите дату и время — подтверждение в Telegram или VK.",
   openGraph: {
     title: "Онлайн-запись · Кабинет врача-инфекциониста",
     description:
-      "Выберите дату и время онлайн-консультации. Подтверждение в Telegram или VK.",
+      "Выберите дату и время онлайн-разбора. Подтверждение в Telegram или VK.",
   },
   alternates: { canonical: "/booking" },
 };
+
+const DEFAULT_BOOKING_INTRO =
+  "Во время онлайн-разбора мы подробно рассматриваем тему заболевания: что это такое, какие особенности могут встречаться и на что важно обращать внимание.\n\n" +
+  "Я объясняю информацию простым и понятным языком, чтобы у вас сформировалось спокойное и понятное понимание медицинской информации без сложных терминов.\n\n" +
+  "Также рассказываю, какие обследования обычно используются при подобных состояниях и почему они могут быть информативны. После разбора вы получаете структурированную памятку со всей важной информацией.\n\n" +
+  "Вы можете заранее подготовить любые вопросы — я подробно разбираю каждый и стараюсь помочь вам лучше ориентироваться в теме здоровья и обследований.\n\n" +
+  "Онлайн-разборы носят информационно-просветительский характер и не заменяют очный приём врача.";
 
 export default async function BookingPage() {
   const [blocks, features] = await Promise.all([
     loadSiteBlocks(),
     loadConsultationFeatures("online"),
   ]);
-  const chip = textOr(blocks, "booking.section_chip", "Онлайн-консультация");
+  const chip = textOr(blocks, "booking.section_chip", "Онлайн-разбор");
   const title = textOr(
     blocks,
     "booking.section_title",
-    "Запись на онлайн-консультацию"
+    "Запись на онлайн-разбор"
   );
   const subtitle = textOr(
     blocks,
     "booking.section_subtitle",
-    "Выберите удобную дату и время, затем оставьте свои данные для онлайн-консультации."
+    "Выберите удобную дату и время, затем оставьте свои данные для онлайн-разбора."
   );
   const featuresTitle = textOr(
     blocks,
     "booking.features_title",
-    "Что входит в онлайн-консультацию"
+    "Что входит в онлайн-разбор"
   );
-  const featuresSubtitle = textOr(
+  const featuresSubtitle = textOr(blocks, "booking.features_subtitle", "");
+  const featuresIntro = textOr(
     blocks,
-    "booking.features_subtitle",
-    ""
+    "booking.features_intro",
+    DEFAULT_BOOKING_INTRO
   );
 
   return (
@@ -81,13 +89,15 @@ export default async function BookingPage() {
             </p>
           </div>
 
-          <BookingForm />
-
+          {/* Что входит — ВЫШЕ формы, чтобы пациент знал, на что записывается */}
           <WhatsIncluded
             title={featuresTitle}
             subtitle={featuresSubtitle || undefined}
+            intro={featuresIntro}
             features={features}
           />
+
+          <BookingForm />
         </div>
       </main>
     </>

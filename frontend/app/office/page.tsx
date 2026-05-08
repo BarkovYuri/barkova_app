@@ -103,7 +103,7 @@ export default async function OfficePage() {
   const ctaButtonOnline = textOr(
     blocks,
     "office.cta.button_online",
-    "Записаться на онлайн-консультацию"
+    "Записаться на онлайн-разбор"
   );
   const featuresTitle = textOr(
     blocks,
@@ -111,6 +111,11 @@ export default async function OfficePage() {
     "Что входит в очный приём"
   );
   const featuresSubtitle = textOr(blocks, "office.features_subtitle", "");
+  const featuresIntro = textOr(
+    blocks,
+    "office.features_intro",
+    "На очный приём вы приходите лично со своими жалобами или результатами анализов, которые вызывают вопросы. Вместе мы:"
+  );
 
   return (
     <main id="main" className="bg-neutral-0">
@@ -122,6 +127,16 @@ export default async function OfficePage() {
           <p className="mt-6 text-base-large text-neutral-600 max-w-2xl whitespace-pre-line">
             {subtitle}
           </p>
+        </div>
+
+        {/* Что входит — ВЫШЕ адреса и CTA, чтобы пациент знал, на что записывается */}
+        <div className="max-w-4xl mx-auto">
+          <WhatsIncluded
+            title={featuresTitle}
+            subtitle={featuresSubtitle || undefined}
+            intro={featuresIntro}
+            features={features}
+          />
         </div>
 
         {/* Info Cards Grid */}
@@ -207,15 +222,6 @@ export default async function OfficePage() {
             </div>
           </div>
         ) : null}
-
-        {/* What's included */}
-        <div className="max-w-4xl mx-auto">
-          <WhatsIncluded
-            title={featuresTitle}
-            subtitle={featuresSubtitle || undefined}
-            features={features}
-          />
-        </div>
 
         {/* How to get there section */}
         <div className="max-w-4xl mx-auto mt-12 md:mt-16">

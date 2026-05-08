@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description =
     doctor.short_intro?.trim() ||
     doctor.description?.slice(0, 200) ||
-    `Онлайн-консультации и очный приём. Стаж ${doctor.experience_years ?? 0}+ лет. Запись через сайт.`;
+    `Онлайн-разборы и очный приём. Стаж ${doctor.experience_years ?? 0}+ лет. Запись через сайт.`;
   const photo = absoluteMediaUrl(doctor.photo_url) || undefined;
 
   return {

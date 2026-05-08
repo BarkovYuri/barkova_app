@@ -289,7 +289,7 @@ class TransportItem(models.Model):
 
 
 CONSULTATION_TYPE_CHOICES = [
-    ("online", "Онлайн-консультация (/booking)"),
+    ("online", "Онлайн-разбор (/booking)"),
     ("office", "Очный приём (/office)"),
 ]
 
