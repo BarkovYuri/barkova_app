@@ -39,13 +39,16 @@ def confirm_telegram_prelink(token: str, chat_id: str) -> tuple[bool, str]:
     if not token or not chat_id:
         return False, "token и chat_id обязательны"
 
-    prelink = TelegramPrelink.objects.filter(token=token, is_used=False).first()
-    if not prelink:
-        return False, "Токен не найден"
-
-    prelink.chat_id = chat_id
-    prelink.linked_at = timezone.now()
-    prelink.save(update_fields=["chat_id", "linked_at"])
+    # Атомарный UPDATE WHERE is_used=False. Если два сообщения от
+    # разных user_id придут с одним токеном — только первое получит
+    # rows_affected=1, второе вернёт «уже занят».
+    rows_affected = TelegramPrelink.objects.filter(
+        token=token, is_used=False
+    ).update(chat_id=chat_id, linked_at=timezone.now())
+    if rows_affected == 0:
+        # Либо токен не найден, либо уже привязан другим пользователем.
+        exists = TelegramPrelink.objects.filter(token=token).exists()
+        return False, "Этот токен уже использован" if exists else "Токен не найден"
     return True, ""
 
 
@@ -76,14 +79,12 @@ def confirm_vk_prelink(token: str, user_id: str, peer_id: str) -> tuple[bool, st
     if not token or not user_id or not peer_id:
         return False, "token, user_id и peer_id обязательны"
 
-    prelink = VKPrelink.objects.filter(token=token, is_used=False).first()
-    if not prelink:
-        return False, "Токен не найден"
-
-    prelink.user_id = user_id
-    prelink.peer_id = peer_id
-    prelink.linked_at = timezone.now()
-    prelink.save(update_fields=["user_id", "peer_id", "linked_at"])
+    rows_affected = VKPrelink.objects.filter(
+        token=token, is_used=False
+    ).update(user_id=user_id, peer_id=peer_id, linked_at=timezone.now())
+    if rows_affected == 0:
+        exists = VKPrelink.objects.filter(token=token).exists()
+        return False, "Этот токен уже использован" if exists else "Токен не найден"
     return True, ""
 
 

@@ -41,6 +41,12 @@ def send_message(
     if not token or not chat_id:
         return False, "", "Telegram is not configured"
 
+    # Telegram отбрасывает sendMessage с text > 4096 chars. Чтобы
+    # уведомление не терялось на длинных именах / комментариях,
+    # обрезаем с маркером (#12 из аудита).
+    if len(text) > 4000:
+        text = text[:3990] + "\n\n…"
+
     params: dict = {
         "chat_id": chat_id,
         "text": text,

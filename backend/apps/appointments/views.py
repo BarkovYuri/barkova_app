@@ -398,10 +398,15 @@ class VKCallbackView(APIView):
             return HttpResponse(settings.VK_CALLBACK_CONFIRMATION_CODE)
 
         callback_secret = getattr(settings, "VK_CALLBACK_SECRET", "")
-        incoming_secret = data.get("secret", "")
+        incoming_secret = data.get("secret", "") or ""
         # Если секрет не задан в настройках — отклоняем все запросы,
-        # чтобы не открывать эндпоинт без защиты.
-        if not callback_secret or incoming_secret != callback_secret:
+        # чтобы не открывать эндпоинт без защиты. Сравниваем через
+        # hmac.compare_digest (constant-time) — простой `!=` уязвим
+        # к timing-attack.
+        import hmac as _hmac
+        if not callback_secret or not _hmac.compare_digest(
+            str(incoming_secret), str(callback_secret)
+        ):
             return HttpResponse("forbidden", status=403)
 
         if event_type not in {VK_EVENT_MESSAGE_NEW, VK_EVENT_MESSAGE_EVENT}:
@@ -409,10 +414,12 @@ class VKCallbackView(APIView):
 
         event_id = data.get("event_id")
         if event_id:
+            # cache.add — атомарный SETNX. Возвращает True, если ключа
+            # не было (мы первые). Если cache.add вернёт False —
+            # значит другой воркер уже обрабатывает этот event_id.
             cache_key = f"vk_callback_event:{event_id}"
-            if cache.get(cache_key):
+            if not cache.add(cache_key, "1", timeout=60 * 10):
                 return HttpResponse("ok")
-            cache.set(cache_key, "1", timeout=60 * 10)
 
         process_vk_callback_event.delay(data)
 

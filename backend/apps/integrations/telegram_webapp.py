@@ -45,18 +45,21 @@ def verify_init_data(init_data: str, max_age_seconds: int = 86400) -> dict | Non
     if not received_hash:
         return None
 
-    # Проверка возраста
+    # auth_date обязателен по спецификации Telegram. Если его нет —
+    # отвергаем, без него нельзя проверить, что initData свежая.
     auth_date = parsed.get("auth_date")
-    if auth_date:
-        try:
-            import time
+    if not auth_date:
+        logger.warning("initData без auth_date — отклоняем")
+        return None
+    try:
+        import time
 
-            age = int(time.time()) - int(auth_date)
-            if age > max_age_seconds:
-                logger.warning(f"initData expired: {age}s old")
-                return None
-        except (ValueError, TypeError):
+        age = int(time.time()) - int(auth_date)
+        if age > max_age_seconds:
+            logger.warning(f"initData expired: {age}s old")
             return None
+    except (ValueError, TypeError):
+        return None
 
     # data-check-string — отсортированные пары key=value, разделённые \n
     data_check_string = "\n".join(
@@ -76,14 +79,17 @@ def verify_init_data(init_data: str, max_age_seconds: int = 86400) -> dict | Non
     if not hmac.compare_digest(computed_hash, received_hash):
         return None
 
-    # Распарсим вложенный user JSON если есть
+    # Распарсим вложенный user JSON. Если он невалиден — отклоняем
+    # всю initData: down-stream-код ожидает dict, а строка вместо
+    # него приведёт к падению при `tg_user["chat_id"]` (#9 из аудита).
     if "user" in parsed:
         import json
 
         try:
             parsed["user"] = json.loads(parsed["user"])
         except (json.JSONDecodeError, TypeError):
-            pass
+            logger.warning("initData содержит невалидный user JSON — отклоняем")
+            return None
 
     return parsed
 

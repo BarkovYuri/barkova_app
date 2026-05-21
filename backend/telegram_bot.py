@@ -427,6 +427,13 @@ def handle_callback(callback_query: Dict[str, Any]) -> None:
         logger.warning("Invalid callback_query structure")
         return
 
+    # Сразу отвечаем Telegram'у на callback — без этого у пользователя
+    # крутятся «часики» до тех пор, пока бэкенд не отработает. Если
+    # backend_post будет долгим (>60 c) — Telegram отдаст «query is too
+    # old». Пустой ответ просто гасит индикатор; контекстные сообщения
+    # о результате отправляются отдельно через send_message/edit ниже.
+    answer_callback_query(callback_query_id, "")
+
     # Parse callback data
     try:
         callback_data = parse_callback_data(data, separator=":")
@@ -435,19 +442,18 @@ def handle_callback(callback_query: Dict[str, Any]) -> None:
         token = callback_data.get("token")
     except CallbackDataError as exc:
         logger.warning(f"Failed to parse callback data: {exc}")
-        answer_callback_query(callback_query_id, "Некорректная команда.")
+        send_message(chat_id, "Некорректная команда. Пожалуйста, обновите чат и попробуйте ещё раз.")
         return
 
     # Validate action
     allowed_actions = {"confirm", "cancel", "keep", "yes", "no", "doctor"}
     if action not in allowed_actions:
         logger.warning(f"Unknown action in callback: {action}")
-        answer_callback_query(callback_query_id, "Неизвестное действие.")
+        send_message(chat_id, "Эта команда больше не активна.")
         return
 
     # Handle "keep" action locally
     if action == "keep":
-        answer_callback_query(callback_query_id, "Запись оставлена без изменений.")
         edit_message_text(chat_id, message_id, "✅ Запись оставлена без изменений")
         return
 
@@ -465,21 +471,25 @@ def handle_callback(callback_query: Dict[str, Any]) -> None:
 
         # Provide user feedback
         feedback_messages = {
-            "confirm": ("Запись подтверждена.", "✅ Запись подтверждена"),
-            "cancel": ("Запись отменена.", "❌ Запись отменена"),
-            "yes": ("Отлично, ждём вас.", "✅ Вы подтвердили, что сможете прийти"),
-            "no": ("Запись отменена.", "❌ Вы сообщили, что не сможете прийти"),
-            "doctor": ("Передали врачу.", "💬 Запрос на связь с врачом передан"),
+            "confirm": "✅ Запись подтверждена",
+            "cancel": "❌ Запись отменена",
+            "yes": "✅ Вы подтвердили, что сможете прийти",
+            "no": "❌ Вы сообщили, что не сможете прийти",
+            "doctor": "💬 Запрос на связь с врачом передан",
         }
 
-        notification, edit_text = feedback_messages.get(action, ("Готово", "✅ Готово"))
-
-        answer_callback_query(callback_query_id, notification)
+        edit_text = feedback_messages.get(action, "✅ Готово")
         edit_message_text(chat_id, message_id, edit_text)
 
-    except Exception as exc:
+    except Exception:
+        # Не показываем str(exc) пользователю — там могут быть IP/пути/
+        # детали БД (#14 из аудита). Логируем подробности отдельно.
         logger.exception(f"Error processing callback action {action} for appointment {appointment_id}")
-        answer_callback_query(callback_query_id, f"Ошибка: {str(exc)[:100]}")
+        send_message(
+            chat_id,
+            "Не удалось обработать запрос. Попробуйте ещё раз через минуту "
+            "или напишите нам — мы поможем вручную.",
+        )
 
 
 def find_active_appointment_for_chat(chat_id: int | str) -> Optional[Any]:
@@ -561,11 +571,20 @@ def main() -> None:
     # Initialize Django once
     BaseBot.setup_django()
 
-    offset: Optional[int] = None
+    # Persistent offset через Redis-кэш. Без него при перезапуске бота
+    # Telegram возвращает все необработанные апдейты за последние 24 ч,
+    # что приводит к повторной отправке уведомлений (баг #2 из аудита).
+    from django.core.cache import cache as _django_cache
+    OFFSET_KEY = "tg:bot:offset"
+
+    stored = _django_cache.get(OFFSET_KEY)
+    offset: Optional[int] = int(stored) if stored else None
     retry_count = 0
     max_retries = 5
+    # Счётчик последовательных «полных» retry-циклов для алёртов в Sentry.
+    full_failure_cycles = 0
 
-    logger.info("Telegram bot started")
+    logger.info("Telegram bot started, offset=%s", offset)
 
     while True:
         try:
@@ -578,6 +597,10 @@ def main() -> None:
             for item in data.get("result", []):
                 try:
                     offset = item.get("update_id", 0) + 1
+                    # Сохраняем offset в Redis сразу при получении —
+                    # даже если обработка упадёт, при следующем старте
+                    # бот начнёт со следующего апдейта, а не повторит.
+                    _django_cache.set(OFFSET_KEY, offset, timeout=None)
 
                     # Handle callback from button press
                     if "callback_query" in item:
@@ -628,6 +651,7 @@ def main() -> None:
 
             # Reset retry counter on success
             retry_count = 0
+            full_failure_cycles = 0
 
         except error.HTTPError as exc:
             retry_count += 1
@@ -642,6 +666,20 @@ def main() -> None:
             time.sleep(wait_time)
 
             if retry_count >= max_retries:
+                full_failure_cycles += 1
+                # После двух полных циклов retry (≈ 5–10 минут полного
+                # downtime) шлём алёрт в Sentry. Само себя не лечит — но
+                # инженер узнает раньше, чем пациенты.
+                if full_failure_cycles == 2:
+                    try:
+                        import sentry_sdk
+                        sentry_sdk.capture_message(
+                            f"Telegram bot polling: {full_failure_cycles * max_retries}+ "
+                            "consecutive failures, possible API downtime",
+                            level="error",
+                        )
+                    except Exception:
+                        pass
                 logger.critical(f"Max retries ({max_retries}) exceeded, restarting bot")
                 retry_count = 0
 

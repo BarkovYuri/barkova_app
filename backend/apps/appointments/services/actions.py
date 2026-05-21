@@ -40,6 +40,26 @@ def _slot_time_str(appointment) -> str:
     )
 
 
+# Whitelist валидных переходов статуса. Без этой проверки старый callback
+# по уже завершённой записи мог откатить статус на cancelled (баг #6
+# из аудита). Ключи — действия, значения — статусы, из которых это
+# действие допустимо.
+_ALLOWED_TRANSITIONS = {
+    "confirm": {"new"},
+    "cancel": {"new", "confirmed"},
+    "yes": {"new", "confirmed"},
+    "no": {"new", "confirmed"},
+    "doctor": {"new", "confirmed"},
+}
+
+
+def _is_action_allowed(action: str, current_status: str) -> bool:
+    allowed_from = _ALLOWED_TRANSITIONS.get(action)
+    if allowed_from is None:
+        return False
+    return current_status in allowed_from
+
+
 def handle_action(
     appointment,
     action: str,
@@ -54,6 +74,20 @@ def handle_action(
     Возвращает dict с полями status и (опционально) changed,
     либо {"error": "unknown_action"} для неизвестного действия.
     """
+    # Отсекаем недопустимые переходы (например, попытка отменить
+    # уже completed/cancelled запись через старый callback).
+    if not _is_action_allowed(action, appointment.status):
+        logger.info(
+            "Action '%s' not allowed for appointment %s in status '%s'",
+            action, appointment.id, appointment.status,
+        )
+        send_fn(
+            appointment,
+            "Эта запись уже завершена или отменена — изменить её нельзя. "
+            "Если нужна новая запись, оформите её на сайте.",
+        )
+        return {"status": "not_allowed", "changed": False}
+
     if action == "confirm":
         changed = appointment.status != "confirmed"
         if changed:

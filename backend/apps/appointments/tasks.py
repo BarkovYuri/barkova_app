@@ -51,6 +51,16 @@ def send_appointment_reminders():
         if not (window_start <= slot_dt <= window_end):
             continue
 
+        # Atomic claim напоминания: WHERE reminder_sent_at IS NULL.
+        # Если два celery-worker'а одновременно подхватят одну запись,
+        # только у одного rows_affected==1, второй пропустит. Без этого
+        # пациент получал двойное напоминание (#5 из аудита).
+        claimed = Appointment.objects.filter(
+            pk=appointment.pk, reminder_sent_at__isnull=True
+        ).update(reminder_sent_at=now)
+        if not claimed:
+            continue
+
         sent = False
 
         if appointment.preferred_contact_method == "telegram" and appointment.telegram_chat_id:
@@ -72,9 +82,11 @@ def send_appointment_reminders():
                 )
 
         if sent:
-            appointment.reminder_sent_at = now
-            appointment.save(update_fields=["reminder_sent_at"])
             sent_ids.append(appointment.id)
             logger.info("Reminder sent for appointment %s", appointment.id)
+        else:
+            # Откатываем atomic-claim, чтобы напоминание попыталось
+            # снова при следующем запуске задачи.
+            Appointment.objects.filter(pk=appointment.pk).update(reminder_sent_at=None)
 
     return {"sent_ids": sent_ids, "count": len(sent_ids)}

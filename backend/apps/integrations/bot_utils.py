@@ -142,7 +142,10 @@ def validate_appointment_token(appointment: Any, token: str, platform: str) -> b
 
     stored_token = getattr(appointment, field_name)
 
-    if str(token) != str(stored_token):
+    # Сравнение через hmac.compare_digest — constant-time, чтобы не
+    # давать timing-канал для подбора токена (#15 из аудита).
+    import hmac as _hmac
+    if not _hmac.compare_digest(str(token or ""), str(stored_token or "")):
         logger.warning(f"Token mismatch for appointment {appointment.id}")
         raise ValidationError("Token validation failed")
 

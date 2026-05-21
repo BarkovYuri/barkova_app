@@ -315,22 +315,37 @@ def set_dialog_state(
 
 def reset_dialog_state(user_id: int | str, peer_id: int | str) -> Any:
     """
-    Reset dialog state to idle.
+    Reset dialog state to idle WITHOUT touching last_menu_kind / last_menu_sent_at.
 
-    Args:
-        user_id: VK user ID
-        peer_id: VK peer ID
-
-    Returns:
-        Reset VKDialogState object
+    Это критично для rate-limit'а menu-сообщений: если затирать
+    last_menu_kind="none" при каждом сообщении пользователя, то
+    can_send_menu() будет каждый раз разрешать отправку, и бот
+    отвечает шаблонной фразой на каждое «ору», «лол», «ещё». Поэтому
+    обнуляем только state и appointment — но историю показов меню
+    сохраняем.
     """
-    return set_dialog_state(
-        user_id,
-        peer_id,
-        "idle",
-        appointment=None,
-        last_menu_kind="none",
-    )
+    from django.utils import timezone
+
+    state = get_dialog_state(user_id)
+    state.peer_id = str(peer_id)
+    state.state = "idle"
+    state.appointment = None
+    state.updated_at = timezone.now()
+    state.save(update_fields=["peer_id", "state", "appointment", "updated_at"])
+    return state
+
+
+def is_meaningful_text(text: str) -> bool:
+    """Стоит ли вообще отвечать на это сообщение.
+
+    Пропускаем короткие реплики/эмодзи/реакции, чтобы бот не
+    отвечал шаблонной фразой на «ору» / «лол» / «😂». Считаем
+    осмысленным только текст, в котором есть хотя бы 4 буквы.
+    """
+    if not text:
+        return False
+    letters = sum(1 for ch in text if ch.isalpha())
+    return letters >= 4
 
 
 def can_send_menu(dialog_state: Any, menu_kind: str, cooldown_seconds: int = 600) -> bool:
@@ -794,11 +809,25 @@ def handle_new_message_event(event: Dict[str, Any]) -> None:
     dialog_state = get_dialog_state(from_id)
     appointment = get_effective_appointment(from_id)
 
-    if not appointment:
-        reset_dialog_state(from_id, peer_id)
-        dialog_state = get_dialog_state(from_id)
+    # Всегда подтягиваем peer_id в state — пользователь мог открыть бота
+    # из другого диалога (личка ↔ группа), и нам нужен актуальный, чтобы
+    # уведомления уходили туда же, где он сейчас.
+    if dialog_state.peer_id != str(peer_id):
+        dialog_state.peer_id = str(peer_id)
+        dialog_state.save(update_fields=["peer_id", "updated_at"])
 
-        if can_send_menu(dialog_state, "booking", cooldown_seconds=600):
+    if not appointment:
+        # Игнорируем коротенькие сообщения-реакции — даже первое.
+        # Иначе пользователь напишет «Привет», получит booking-меню,
+        # а потом любую короткую реплику бот будет повторять
+        # каждые 24 ч. (cooldown ниже).
+        if not is_meaningful_text(text):
+            return
+
+        # Cooldown 24 часа: бот ответит booking-меню один раз в сутки
+        # на пользователя. Если человек ведёт активную переписку — не
+        # спамим. Если приходит через сутки — повторяем приглашение.
+        if can_send_menu(dialog_state, "booking", cooldown_seconds=24 * 3600):
             send_message(
                 peer_id,
                 "Здравствуйте. Чтобы записаться на онлайн-разбор, нажмите кнопку ниже.",
@@ -813,7 +842,9 @@ def handle_new_message_event(event: Dict[str, Any]) -> None:
     )
 
     if same_appointment:
-        if can_send_menu(dialog_state, "active_root", cooldown_seconds=600):
+        # Тот же кулдаун для active-root меню: иначе бот будет
+        # повторять «У вас есть активная запись» на каждый «спасибо».
+        if can_send_menu(dialog_state, "active_root", cooldown_seconds=24 * 3600):
             slot = appointment.slot
             send_message(
                 peer_id,
