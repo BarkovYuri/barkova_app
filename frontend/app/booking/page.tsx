@@ -61,12 +61,16 @@ export default async function BookingPage() {
 
   return (
     <>
-      {/* Telegram WebApp SDK — нужен когда страница открыта как Mini App.
-       * Скрипт ничего не делает в обычном браузере, но даёт глобал
-       * window.Telegram.WebApp когда мы внутри Telegram-клиента. */}
+      {/* Telegram WebApp SDK — нужен только когда страница открыта
+          как Mini App. В обычном браузере скрипт ничего не делает,
+          но `beforeInteractive` блокировал hydration до его загрузки
+          с telegram.org (особенно медленно на мобильных в РФ).
+          `afterInteractive` — Next грузит скрипт сразу после
+          hydration, форма интерактивна с первой секунды,
+          useTelegramWebApp подхватит window.Telegram чуть позже. */}
       <Script
         src="https://telegram.org/js/telegram-web-app.js"
-        strategy="beforeInteractive"
+        strategy="afterInteractive"
       />
 
       <JsonLd

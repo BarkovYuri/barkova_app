@@ -180,11 +180,16 @@ export default function BookingForm() {
   // ── Main form ───────────────────────────────────────────────────
   return (
     <>
-      {/* В mock-режиме VK SDK не нужен — он только дёргает unpkg и валит unhandledRejection */}
-      {!IS_MOCK_MODE ? (
+      {/* VK SDK — тяжёлый внешний скрипт с unpkg, в РФ может грузиться
+          5–10 секунд или таймаутить. На `afterInteractive` он блокировал
+          парсинг и хydration на медленных мобильных → «кнопки не
+          нажимаются». Переводим на `lazyOnload` (грузится после полной
+          отрисовки страницы), и только когда пользователь реально
+          выбрал VK-канал — useVkId всё равно нужен только в этот момент. */}
+      {!IS_MOCK_MODE && contactMethod === "vk" ? (
         <Script
           src="https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
       ) : null}
 
