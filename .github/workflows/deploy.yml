@@ -59,6 +59,28 @@ jobs:
     needs: build-and-push
 
     steps:
+      # ──────────────────────────────────────────────────────────────
+      # Раньше сервер сам делал `git fetch origin main`, чтобы подтянуть
+      # docker-compose.prod.yml и nginx-конфиг. Это переставало работать,
+      # когда drone-ssh не мог из своей non-interactive shell-сессии
+      # резолвить github.com (resolv.conf пуст или systemd-resolved тупит).
+      # Теперь конфиги едут через scp с GH runner'а, а сервер только
+      # тянет docker-образы из ghcr.io. Никакого git на сервере.
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Checkout repository (для compose и nginx)
+        uses: actions/checkout@v4
+
+      - name: Copy compose and nginx configs to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "docker-compose.prod.yml,deploy/nginx/doctor.conf,deploy/nginx/limits.conf,backend/entrypoint.sh"
+          target: "/var/www/barkova_app"
+          overwrite: true
+
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -69,9 +91,6 @@ jobs:
           script: |
             set -e
             cd /var/www/barkova_app
-
-            git fetch origin main
-            git reset --hard origin/main
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u barkovyuri --password-stdin
 
