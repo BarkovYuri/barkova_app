@@ -36,9 +36,12 @@ export function useBookingSubmit() {
     useState<CreatedAppointment | null>(null);
 
   async function submit(params: SubmitParams): Promise<boolean> {
+    // selectedDate и selectedSlot есть в SubmitParams для совместимости
+    // с вызывающими компонентами, но внутри submit не используются — в
+    // запрос на бэкенд уходит только selectedSlotId. Не destructure их
+    // (иначе ESLint справедливо ругается на unused).
     const {
       selectedSlotId,
-      selectedDate,
       name,
       phone,
       reason,

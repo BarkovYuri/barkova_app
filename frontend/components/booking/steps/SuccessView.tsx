@@ -10,6 +10,8 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import Link from "next/link";
+
 import type { Slot, ContactMethod } from "../../../lib/types";
 
 function formatDateLong(dateString: string) {
@@ -172,10 +174,10 @@ export function SuccessView({
 
         {/* Action Button */}
         <div className="mt-8 flex justify-center">
-          <a href="/" className="btn-primary">
+          <Link href="/" className="btn-primary">
             <ArrowLeft className="h-4 w-4" strokeWidth={2.5} />
             Вернуться на главную
-          </a>
+          </Link>
         </div>
       </div>
     </div>

@@ -19,10 +19,15 @@ export function useVkId(active: boolean) {
   useEffect(() => {
     if (!active) {
       if (containerRef.current) containerRef.current.innerHTML = "";
+      // Это cleanup-сброс VK-state при переключении канала с VK на
+      // Telegram, а не каскадирующий render. setState в effect здесь
+      // безопасен и осознанный.
+      /* eslint-disable react-hooks/set-state-in-effect */
       setReady(false);
       setAuthorized(false);
       setPayload(null);
       setLoadError("");
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
 

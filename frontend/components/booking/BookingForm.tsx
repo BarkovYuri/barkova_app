@@ -77,10 +77,13 @@ export default function BookingForm() {
   const { webApp, isInTelegram } = useTelegramWebApp();
   const tgInitData = webApp?.initData ?? "";
 
-  // Применяем тему Telegram при первой возможности и фиксируем способ связи
+  // Применяем тему Telegram при первой возможности и фиксируем способ связи.
+  // setContactMethod в effect-е здесь — синхронизация с внешним сигналом
+  // «открыты как Mini App», не cascading render.
   useEffect(() => {
     if (webApp) {
       applyTelegramTheme(webApp);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setContactMethod("telegram");
     }
   }, [webApp]);
@@ -100,7 +103,6 @@ export default function BookingForm() {
     success,
     error,
     setError,
-    createdAppointment,
     submit,
   } = useBookingSubmit();
 

@@ -1,5 +1,6 @@
 import { Stethoscope, ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 import { fetchAPI } from "../../lib/api";
 import type { DoctorProfile } from "../../lib/types";
@@ -26,7 +27,7 @@ export default async function Header() {
     <header className="sticky top-0 z-30 border-b border-neutral-100 bg-neutral-0/95 backdrop-blur-sm transition-all duration-300 shadow-sm">
       <div className="container flex items-center justify-between py-4">
         {/* Logo/Brand */}
-        <a href="/" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
+        <Link href="/" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
           {avatarSrc ? (
             <Image
               src={avatarSrc}
@@ -47,7 +48,7 @@ export default async function Header() {
             </div>
             <div className="text-xs text-neutral-500">врач-инфекционист</div>
           </div>
-        </a>
+        </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-5 lg:gap-7">

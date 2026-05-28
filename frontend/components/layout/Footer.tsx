@@ -1,4 +1,5 @@
 import { Stethoscope, Heart } from "lucide-react";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -26,44 +27,44 @@ export default function Footer() {
             <h4 className="text-ui-label text-neutral-500 uppercase">Меню</h4>
             <ul className="mt-5 space-y-3 text-sm">
               <li>
-                <a
+                <Link
                   href="/"
                   className="text-neutral-700 hover:text-primary-700 transition-colors"
                 >
                   Главная
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/about"
                   className="text-neutral-700 hover:text-primary-700 transition-colors"
                 >
                   О враче
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/booking"
                   className="text-neutral-700 hover:text-primary-700 transition-colors"
                 >
                   Запись
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/blog"
                   className="text-neutral-700 hover:text-primary-700 transition-colors"
                 >
                   Блог
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/contacts"
                   className="text-neutral-700 hover:text-primary-700 transition-colors"
                 >
                   Контакты
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

@@ -115,8 +115,10 @@ export function useTelegramWebApp(): {
     // SDK уже подключён?
     if (typeof window !== "undefined" && window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
-      // initData есть только при открытии из Telegram
+      // initData есть только при открытии из Telegram. setState
+      // здесь — синхронизация с внешним глобалом, не cascading render.
       if (tg.initData) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setWebApp(tg);
         try {
           tg.ready();
