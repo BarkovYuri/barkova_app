@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 export type VkIdPayload = {
   user_id?: string | number;
-  code?: string;
-  device_id?: string;
+  access_token?: string;
   [key: string]: unknown;
 };
 
@@ -72,28 +71,49 @@ export function useVkId(active: boolean) {
           .on(VKID.WidgetEvents.ERROR, (err: unknown) => {
             console.error("VK ID widget error", err);
           })
-          .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, (p: VkIdPayload) => {
-            const code = p?.code;
-            const deviceId = p?.device_id;
-            if (!code || !deviceId) {
-              setLoadError("VK ID не вернул code или device_id.");
-              return;
+          .on(
+            VKID.OneTapInternalEvents.LOGIN_SUCCESS,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (p: any) => {
+              const code = p?.code;
+              const deviceId = p?.device_id;
+              if (!code || !deviceId) {
+                setLoadError("VK ID не вернул code или device_id.");
+                return;
+              }
+              // VK ID 2.x использует PKCE. code_verifier живёт внутри
+              // VKID SDK, наружу не отдаётся — поэтому обменивать code
+              // на access_token может ТОЛЬКО сам SDK (через exchangeCode).
+              // Backend получает уже выданный access_token и проверяет
+              // его через api.vk.com/method/users.get.
+              VKID.Auth.exchangeCode(code, deviceId)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .then((data: any) => {
+                  const userId =
+                    data?.user_id ?? data?.user?.id ?? p?.user_id;
+                  const accessToken = data?.access_token;
+                  if (!userId || !accessToken) {
+                    setAuthorized(false);
+                    setPayload(null);
+                    setLoadError(
+                      "VK ID не вернул токен авторизации. Попробуйте ещё раз."
+                    );
+                    return;
+                  }
+                  setAuthorized(true);
+                  setPayload({
+                    user_id: userId,
+                    access_token: accessToken,
+                  });
+                  setLoadError("");
+                })
+                .catch(() => {
+                  setAuthorized(false);
+                  setPayload(null);
+                  setLoadError("Не удалось завершить вход через VK ID.");
+                });
             }
-            // OAuth2 code одноразовый. Exchange делает ТОЛЬКО backend
-            // в момент submit. Если вызвать VKID.Auth.exchangeCode здесь
-            // тоже, backend получит уже использованный code и вернёт
-            // «Не удалось подтвердить авторизацию VK ID».
-            const userMaybe = p?.user as { id?: string | number } | undefined;
-            const userId = p?.user_id ?? userMaybe?.id ?? undefined;
-
-            setAuthorized(true);
-            setPayload({
-              code,
-              device_id: deviceId,
-              user_id: userId,
-            });
-            setLoadError("");
-          });
+          );
 
         setReady(true);
       } catch {

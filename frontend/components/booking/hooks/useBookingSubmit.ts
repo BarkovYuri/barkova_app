@@ -82,7 +82,7 @@ export function useBookingSubmit() {
     }
     if (
       contactMethod === "vk" &&
-      (!vkIdPayload?.code || !vkIdPayload?.device_id)
+      (!vkIdPayload?.access_token || !vkIdPayload?.user_id)
     ) {
       setError("Сначала войдите через VK ID.");
       return false;
@@ -114,9 +114,10 @@ export function useBookingSubmit() {
       }
 
       if (contactMethod === "vk" && vkIdPayload) {
-        if (vkIdPayload.user_id)  formData.append("vk_user_id",     String(vkIdPayload.user_id));
-        if (vkIdPayload.code)     formData.append("vk_id_code",     String(vkIdPayload.code));
-        if (vkIdPayload.device_id) formData.append("vk_id_device_id", String(vkIdPayload.device_id));
+        if (vkIdPayload.user_id)
+          formData.append("vk_user_id", String(vkIdPayload.user_id));
+        if (vkIdPayload.access_token)
+          formData.append("vk_id_access_token", String(vkIdPayload.access_token));
       }
 
       if (reservationToken) {

@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.notifications.models import TelegramPrelink, VKPrelink
 from apps.notifications.services import send_appointment_status_notification
-from apps.notifications.services_vk_id import exchange_vk_id_code
+from apps.notifications.services_vk_id import verify_vk_id_token
 from apps.appointments.services.booking import (
     get_available_slot_or_error as _get_available_slot_or_error,
     create_appointment_with_slot_lock as _create_appointment_with_slot_lock,
@@ -92,6 +92,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     telegram_prelink_token = serializers.CharField(required=False, allow_blank=True)
     vk_prelink_token = serializers.CharField(required=False, allow_blank=True)
     vk_user_id = serializers.CharField(required=False, allow_blank=True)
+    vk_id_access_token = serializers.CharField(required=False, allow_blank=True)
+    # Legacy поля — на случай старой версии фронта во время раскатки.
     vk_id_code = serializers.CharField(required=False, allow_blank=True)
     vk_id_device_id = serializers.CharField(required=False, allow_blank=True)
     # Telegram WebApp Mini App: подписанная Telegram'ом строка с user data.
@@ -114,6 +116,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "telegram_prelink_token",
             "vk_prelink_token",
             "vk_user_id",
+            "vk_id_access_token",
             "vk_id_code",
             "vk_id_device_id",
             "tg_init_data",
@@ -205,26 +208,24 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
                 )
 
         if preferred_contact_method == "vk":
-            vk_id_code = attrs.get("vk_id_code", "").strip()
-            vk_id_device_id = attrs.get("vk_id_device_id", "").strip()
+            vk_id_access_token = attrs.get("vk_id_access_token", "").strip()
 
-            if vk_id_code and vk_id_device_id:
-                # Верифицируем VK ID через OAuth2 code exchange
-                result = exchange_vk_id_code(code=vk_id_code, device_id=vk_id_device_id)
-
-                if "error" in result or "access_token" not in result:
+            if vk_id_access_token and vk_user_id:
+                # VK ID 2.x использует PKCE: code обмениваем мы НЕ можем
+                # (code_verifier живёт в браузерном VKID SDK). Фронт делает
+                # exchange сам, мы получаем уже выданный access_token и
+                # верифицируем его через users.get.
+                result = verify_vk_id_token(
+                    access_token=vk_id_access_token,
+                    claimed_user_id=vk_user_id,
+                )
+                if not result.get("verified"):
                     raise serializers.ValidationError(
                         {"vk_user_id": "Не удалось подтвердить авторизацию VK ID. Войдите заново."}
                     )
 
-                verified_user_id = str(result.get("user_id", "")).strip()
-                if not verified_user_id:
-                    raise serializers.ValidationError(
-                        {"vk_user_id": "VK ID не вернул идентификатор пользователя."}
-                    )
-
                 attrs["vk_id_authorized"] = True
-                attrs["vk_id_user_id"] = verified_user_id
+                attrs["vk_id_user_id"] = result["user_id"]
 
             elif vk_prelink_token:
                 prelink = VKPrelink.objects.filter(
@@ -261,6 +262,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         validated_data.pop("telegram_prelink_token", None)
         validated_data.pop("vk_prelink_token", None)
         validated_data.pop("vk_user_id", None)
+        validated_data.pop("vk_id_access_token", None)
         validated_data.pop("vk_id_code", None)
         validated_data.pop("vk_id_device_id", None)
         validated_data.pop("tg_init_data", None)

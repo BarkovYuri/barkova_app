@@ -1,28 +1,50 @@
+import logging
+
 import requests
-from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
-def exchange_vk_id_code(code: str, device_id: str) -> dict:
+def verify_vk_id_token(access_token: str, claimed_user_id: str) -> dict:
     """
-    Обменивает VK ID code на данные пользователя
+    Верифицирует VK ID access_token обращением к users.get и сравнением
+    user_id с заявленным фронтом. Это правильный способ при VK ID
+    OAuth 2.1 + PKCE: code обменивает только сам VKID SDK в браузере
+    (только он знает code_verifier), а backend проверяет уже выданный
+    токен server-to-server.
     """
-
-    url = "https://id.vk.ru/oauth2/auth"
-
-    data = {
-        "grant_type": "authorization_code",
-        "code": code,
-        "client_id": settings.VK_APP_ID,
-        "client_secret": settings.VK_APP_SECRET,
-        "device_id": device_id,
-        "redirect_uri": settings.VK_ID_REDIRECT_URL,
-    }
-
-    response = requests.post(url, data=data, timeout=10)
-
     try:
-        result = response.json()
+        response = requests.get(
+            "https://api.vk.com/method/users.get",
+            params={
+                "access_token": access_token,
+                "v": "5.131",
+            },
+            timeout=10,
+        )
+        data = response.json()
     except Exception:
-        return {"error": "invalid_json"}
+        logger.exception("VK users.get request failed")
+        return {"verified": False}
 
-    return result
+    if "error" in data:
+        logger.warning("VK users.get returned error: %s", data["error"])
+        return {"verified": False}
+
+    users = data.get("response") or []
+    if not users:
+        logger.warning("VK users.get returned empty response: %s", data)
+        return {"verified": False}
+
+    actual_user_id = str(users[0].get("id") or "")
+    if not actual_user_id:
+        return {"verified": False}
+    if actual_user_id != str(claimed_user_id):
+        logger.warning(
+            "VK user_id mismatch: claimed=%s actual=%s",
+            claimed_user_id,
+            actual_user_id,
+        )
+        return {"verified": False}
+
+    return {"verified": True, "user_id": actual_user_id}
