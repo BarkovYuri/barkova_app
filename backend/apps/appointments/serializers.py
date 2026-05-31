@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.notifications.models import TelegramPrelink, VKPrelink
 from apps.notifications.services import send_appointment_status_notification
+from apps.notifications.services_vk_id import exchange_vk_id_code
 from apps.appointments.services.booking import (
     get_available_slot_or_error as _get_available_slot_or_error,
     create_appointment_with_slot_lock as _create_appointment_with_slot_lock,
