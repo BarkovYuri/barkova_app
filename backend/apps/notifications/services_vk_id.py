@@ -1,47 +1,46 @@
 import logging
 
 import requests
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
 def verify_vk_id_token(access_token: str, claimed_user_id: str) -> dict:
     """
-    Верифицирует VK ID access_token обращением к users.get и сравнением
-    user_id с заявленным фронтом. Это правильный способ при VK ID
-    OAuth 2.1 + PKCE: code обменивает только сам VKID SDK в браузере
-    (только он знает code_verifier), а backend проверяет уже выданный
-    токен server-to-server.
+    Верифицирует VK ID access_token обращением к OIDC user_info endpoint'у
+    и сравнением user_id с заявленным фронтом.
+
+    Важно: VK ID 2.x выдаёт OAuth 2.1 / OIDC токены, которые НЕ работают
+    с классическим api.vk.com/method/users.get. Для них есть специальный
+    user_info endpoint id.vk.com/oauth2/user_info.
     """
     try:
-        response = requests.get(
-            "https://api.vk.com/method/users.get",
-            params={
+        response = requests.post(
+            "https://id.vk.com/oauth2/user_info",
+            data={
+                "client_id": settings.VK_APP_ID,
                 "access_token": access_token,
-                "v": "5.131",
             },
             timeout=10,
         )
         data = response.json()
     except Exception:
-        logger.exception("VK users.get request failed")
+        logger.exception("VK ID user_info request failed")
         return {"verified": False}
 
     if "error" in data:
-        logger.warning("VK users.get returned error: %s", data["error"])
+        logger.warning("VK ID user_info returned error: %s", data)
         return {"verified": False}
 
-    users = data.get("response") or []
-    if not users:
-        logger.warning("VK users.get returned empty response: %s", data)
-        return {"verified": False}
-
-    actual_user_id = str(users[0].get("id") or "")
+    user = data.get("user") or {}
+    actual_user_id = str(user.get("user_id") or user.get("id") or "")
     if not actual_user_id:
+        logger.warning("VK ID user_info response missing user_id: %s", data)
         return {"verified": False}
     if actual_user_id != str(claimed_user_id):
         logger.warning(
-            "VK user_id mismatch: claimed=%s actual=%s",
+            "VK ID user_id mismatch: claimed=%s actual=%s",
             claimed_user_id,
             actual_user_id,
         )
