@@ -80,7 +80,10 @@ export function useBookingSubmit() {
       setError("Сначала подключите Telegram.");
       return false;
     }
-    if (contactMethod === "vk" && !vkIdPayload?.user_id) {
+    if (
+      contactMethod === "vk" &&
+      (!vkIdPayload?.code || !vkIdPayload?.device_id)
+    ) {
       setError("Сначала войдите через VK ID.");
       return false;
     }

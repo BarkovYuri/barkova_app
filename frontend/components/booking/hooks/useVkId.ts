@@ -79,49 +79,20 @@ export function useVkId(active: boolean) {
               setLoadError("VK ID не вернул code или device_id.");
               return;
             }
-            // user_id может прийти в LOGIN_SUCCESS payload как `p.user_id`
-            // или вложенным `p.user.id` (зависит от версии VK SDK).
-            // Запоминаем его, чтобы потом точно положить в payload —
-            // useBookingSubmit проверяет именно `payload.user_id`,
-            // и если его не было, submit падал с «Сначала войдите через
-            // VK ID», хотя в форме показывалось «VK подключён».
+            // OAuth2 code одноразовый. Exchange делает ТОЛЬКО backend
+            // в момент submit. Если вызвать VKID.Auth.exchangeCode здесь
+            // тоже, backend получит уже использованный code и вернёт
+            // «Не удалось подтвердить авторизацию VK ID».
             const userMaybe = p?.user as { id?: string | number } | undefined;
-            const initialUserId =
-              p?.user_id ?? userMaybe?.id ?? undefined;
+            const userId = p?.user_id ?? userMaybe?.id ?? undefined;
 
-            VKID.Auth.exchangeCode(code, deviceId)
-              .then((data: VkIdPayload) => {
-                const dataUser = data?.user as
-                  | { id?: string | number }
-                  | undefined;
-                const merged: VkIdPayload = {
-                  ...data,
-                  // Достаём user_id из любого доступного источника —
-                  // exchangeCode → callback → user object.
-                  user_id:
-                    data?.user_id ??
-                    dataUser?.id ??
-                    initialUserId,
-                  code,
-                  device_id: deviceId,
-                };
-                if (!merged.user_id) {
-                  setAuthorized(false);
-                  setPayload(null);
-                  setLoadError(
-                    "VK ID авторизация не вернула идентификатор пользователя. Попробуйте ещё раз."
-                  );
-                  return;
-                }
-                setAuthorized(true);
-                setPayload(merged);
-                setLoadError("");
-              })
-              .catch(() => {
-                setAuthorized(false);
-                setPayload(null);
-                setLoadError("Не удалось завершить вход через VK ID.");
-              });
+            setAuthorized(true);
+            setPayload({
+              code,
+              device_id: deviceId,
+              user_id: userId,
+            });
+            setLoadError("");
           });
 
         setReady(true);
