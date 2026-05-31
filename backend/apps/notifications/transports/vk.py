@@ -6,12 +6,23 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from urllib import error, parse, request
 
 from django.conf import settings
 
 logger = logging.getLogger("apps.notifications.transports.vk")
+
+# VK API не поддерживает HTML в теле сообщения — теги попадают в чат
+# как есть. Шаблоны уведомлений общие для Telegram и VK, поэтому здесь
+# вырезаем HTML перед отправкой. Сущности (&nbsp; и т.п.) у нас не
+# используются — просто вырезаем теги.
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_html(text: str) -> str:
+    return _HTML_TAG_RE.sub("", text)
 
 
 def is_configured() -> bool:
@@ -70,7 +81,7 @@ def send_message(
 
     payload: dict = {
         "peer_id": str(peer_id),
-        "message": text,
+        "message": _strip_html(text),
         "random_id": int(time.time() * 1000),
     }
     if keyboard is not None:
