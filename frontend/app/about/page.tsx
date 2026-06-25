@@ -33,10 +33,27 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = doctor ? `О враче · ${doctor.full_name}` : "О враче";
   const description = doctor?.description?.slice(0, 200) ||
     "Образование, опыт и подход к работе врача-инфекциониста.";
+  const photo = absoluteMediaUrl(doctor?.photo_url) || undefined;
   return {
     title,
     description,
-    openGraph: { title, description },
+    alternates: { canonical: "/about" },
+    openGraph: {
+      title,
+      description,
+      url: "/about",
+      type: "profile",
+      locale: "ru_RU",
+      images: photo
+        ? [{ url: photo, width: 800, height: 1000, alt: doctor?.full_name }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: photo ? [photo] : undefined,
+    },
   };
 }
 

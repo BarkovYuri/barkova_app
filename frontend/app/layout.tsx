@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Manrope, Spectral } from "next/font/google";
+import Script from "next/script";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 
@@ -20,6 +21,7 @@ const spectral = Spectral({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://doctor-barkova.ru";
 const SITE_NAME = "Кабинет врача-инфекциониста";
+const YANDEX_METRIKA_ID = process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -116,6 +118,32 @@ export default function RootLayout({
         <Header />
         {children}
         <Footer />
+
+        {/* Yandex Metrika — счётчик грузится только если задан ID в env.
+            afterInteractive — оптимальный strategy для аналитики: не
+            блокирует hydration, но успевает зафиксировать первый pageview. */}
+        {YANDEX_METRIKA_ID ? (
+          <>
+            <Script id="yandex-metrika" strategy="afterInteractive">
+              {`(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+m[i].l=1*new Date();
+for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+(window, document,'script','https://mc.yandex.ru/metrika/tag.js','ym');
+ym(${YANDEX_METRIKA_ID}, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:'dataLayer', accurateTrackBounce:true, trackLinks:true});`}
+            </Script>
+            <noscript>
+              <div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://mc.yandex.ru/watch/${YANDEX_METRIKA_ID}`}
+                  style={{ position: "absolute", left: "-9999px" }}
+                  alt=""
+                />
+              </div>
+            </noscript>
+          </>
+        ) : null}
       </body>
     </html>
   );

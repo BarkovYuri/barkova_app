@@ -148,6 +148,54 @@ export function buildFaqPageSchema(
   };
 }
 
+type ArticleSchemaInput = {
+  title: string;
+  description?: string;
+  slug: string;
+  body?: string;
+  coverUrl?: string;
+  publishedAt?: string;
+  updatedAt?: string;
+  categoryName?: string;
+};
+
+export function buildArticleSchema(
+  article: ArticleSchemaInput,
+): Record<string, unknown> {
+  // wordCount — приблизительная оценка по словам в Markdown-теле.
+  // Точность не критична, Google использует это как сигнал «лонгрид vs
+  // короткая заметка».
+  const wordCount = article.body
+    ? article.body.trim().split(/\s+/).filter(Boolean).length
+    : undefined;
+
+  return clean({
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title,
+    description: article.description,
+    image: article.coverUrl,
+    datePublished: article.publishedAt,
+    dateModified: article.updatedAt,
+    wordCount,
+    articleSection: article.categoryName,
+    author: {
+      "@type": "Person",
+      name: "Баркова Елена Игоревна",
+      url: `${SITE_URL}/about`,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Кабинет врача-инфекциониста",
+      url: SITE_URL,
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SITE_URL}/blog/${article.slug}`,
+    },
+  });
+}
+
 export function buildBreadcrumbSchema(
   items: { name: string; href: string }[],
 ): Record<string, unknown> {

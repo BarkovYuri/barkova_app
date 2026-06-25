@@ -8,13 +8,11 @@ import { ArticleBody } from "../../../components/blog/ArticleBody";
 import { ArticleViewCounter } from "../../../components/blog/ArticleViewCounter";
 import { RelatedArticles } from "../../../components/blog/RelatedArticles";
 import { JsonLd } from "../../../components/common/JsonLd";
-import { buildBreadcrumbSchema } from "../../../lib/seo";
+import { buildArticleSchema, buildBreadcrumbSchema } from "../../../lib/seo";
 import { loadArticleBySlug, loadArticles } from "../../../lib/siteContent";
 import { absoluteMediaUrl } from "../../../lib/url";
 
 export const revalidate = 60;
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://doctor-barkova.ru";
 
 const FORMATTER = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
@@ -79,26 +77,14 @@ export default async function ArticlePage({ params }: { params: Params }) {
     : null;
 
   // Article schema для rich-card в Google.
-  const articleLd = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: article.title,
+  const articleLd = buildArticleSchema({
+    title: article.title,
     description: article.meta_description || article.excerpt || undefined,
-    image: cover || undefined,
-    datePublished: article.published_at || undefined,
-    dateModified: article.updated_at,
-    author: { "@type": "Person", name: "Баркова Елена Игоревна" },
-    publisher: {
-      "@type": "Organization",
-      name: "Кабинет врача-инфекциониста",
-      url: SITE_URL,
-    },
-    mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/blog/${article.slug}` },
-  };
-  Object.keys(articleLd).forEach((k) => {
-    if ((articleLd as Record<string, unknown>)[k] === undefined) {
-      delete (articleLd as Record<string, unknown>)[k];
-    }
+    slug: article.slug,
+    body: article.body,
+    coverUrl: cover || undefined,
+    publishedAt: article.published_at || undefined,
+    updatedAt: article.updated_at,
   });
 
   return (

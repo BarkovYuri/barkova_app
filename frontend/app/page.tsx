@@ -50,11 +50,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
+    alternates: { canonical: "/" },
     openGraph: {
       title,
       description,
       url: SITE_URL,
       type: "profile",
+      locale: "ru_RU",
       images: photo ? [{ url: photo, width: 800, height: 1000, alt: doctor.full_name }] : [],
     },
     twitter: {
