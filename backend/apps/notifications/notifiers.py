@@ -1,10 +1,12 @@
 """
 Notifiers — высокоуровневый слой отправки уведомлений.
 
+Telegram используется только как служебный канал оповещения врача
+(см. "Doctor notifications" ниже) — пациентские каналы работают через VK.
+
 Использует:
-  transports/telegram.py  — низкоуровневые HTTP-вызовы Telegram
+  transports/telegram.py  — низкоуровневые HTTP-вызовы Telegram (только врач)
   transports/vk.py        — низкоуровневые HTTP-вызовы VK
-  keyboards/telegram.py   — Telegram inline-клавиатуры
   keyboards/vk.py         — VK callback-клавиатуры
   messages/doctor.py      — форматтеры сообщений врача
   messages/patient.py     — форматтеры сообщений пациента
@@ -18,7 +20,6 @@ from django.utils import timezone
 from .models import NotificationLog
 from .transports import telegram as tg
 from .transports import vk as vk_transport
-from .keyboards import telegram as tg_kb
 from .keyboards import vk as vk_kb
 from .messages import doctor as doctor_msg
 from .messages import patient as patient_msg
@@ -41,17 +42,6 @@ def _save_log(log: NotificationLog, success: bool, message_id: str, error_text: 
 
 
 # ─── Patient helpers ───────────────────────────────────────────────────────────
-
-def send_to_patient(appointment, text: str, keyboard: dict | None = None) -> tuple[bool, str, str]:
-    """Отправляет произвольный текст пациенту в Telegram."""
-    if not appointment.telegram_chat_id:
-        return False, "", "Telegram chat_id отсутствует"
-    return tg.send_message(
-        chat_id=appointment.telegram_chat_id,
-        text=text,
-        reply_markup=keyboard,
-    )
-
 
 def send_to_patient_vk(appointment, text: str, keyboard: dict | None = None) -> tuple[bool, str, str]:
     """Отправляет произвольный текст пациенту в VK."""
@@ -137,34 +127,12 @@ def send_doctor_contact_request_notification(appointment) -> None:
 
 # ─── Patient notifications ─────────────────────────────────────────────────────
 
-def send_created_message_to_patient_with_actions(appointment) -> None:
-    """Сообщение пациенту о новой записи (Telegram) с кнопками."""
-    if not appointment.telegram_chat_id:
-        return
-    send_to_patient(
-        appointment,
-        patient_msg.booking_created(appointment),
-        keyboard=tg_kb.new_appointment(appointment),
-    )
-
-
 def send_created_message_to_patient_with_actions_vk(appointment) -> tuple:
     """Сообщение пациенту о новой записи (VK) с кнопками."""
     return send_to_patient_vk(
         appointment,
         patient_msg.booking_created_vk(appointment),
         keyboard=vk_kb.new_appointment(appointment),
-    )
-
-
-def send_reminder_with_actions_telegram(appointment) -> tuple:
-    """Напоминание пациенту в Telegram с кнопками."""
-    if not appointment.telegram_chat_id:
-        return False, "", "Нет chat_id"
-    return send_to_patient(
-        appointment,
-        patient_msg.reminder(appointment),
-        keyboard=tg_kb.reminder(appointment),
     )
 
 

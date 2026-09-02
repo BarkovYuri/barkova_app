@@ -5,10 +5,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from apps.appointments.models import Appointment
-from apps.notifications.services import (
-    send_reminder_with_actions_telegram,
-    send_reminder_with_actions_vk,
-)
+from apps.notifications.services import send_reminder_with_actions_vk
 
 logger = logging.getLogger("apps.appointments.tasks")
 
@@ -63,16 +60,7 @@ def send_appointment_reminders():
 
         sent = False
 
-        if appointment.preferred_contact_method == "telegram" and appointment.telegram_chat_id:
-            ok, _, error_text = send_reminder_with_actions_telegram(appointment)
-            sent = bool(ok)
-            if not ok:
-                logger.error(
-                    "Telegram reminder error for appointment %s: %s",
-                    appointment.id, error_text,
-                )
-
-        elif appointment.preferred_contact_method == "vk" and appointment.vk_user_id:
+        if appointment.preferred_contact_method == "vk" and appointment.vk_user_id:
             ok, _, error_text = send_reminder_with_actions_vk(appointment)
             sent = bool(ok)
             if not ok:

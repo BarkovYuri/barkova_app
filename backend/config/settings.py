@@ -419,11 +419,6 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
-        "telegram_bot": {
-            "handlers": ["console"],
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
         "vk_bot": {
             "handlers": ["console"],
             "level": LOG_LEVEL,
@@ -472,10 +467,9 @@ if SENTRY_DSN:
 # BOT CONFIGURATION
 # ============================================================================
 
-# Telegram Bot Settings
+# Telegram — служебный канал оповещения врача о записях (не выведен на сайт).
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")
 
 # VK (VKontakte) Bot Settings
 VK_GROUP_TOKEN = os.getenv("VK_GROUP_TOKEN", "")
@@ -522,11 +516,11 @@ def validate_bot_configuration() -> None:
     from django.core.exceptions import ImproperlyConfigured
     
     # Validate Telegram settings (optional but warn if partially configured)
-    if TELEGRAM_BOT_TOKEN and not TELEGRAM_BOT_USERNAME:
+    if TELEGRAM_BOT_TOKEN and not TELEGRAM_CHAT_ID:
         import warnings
         warnings.warn(
-            "TELEGRAM_BOT_TOKEN is set but TELEGRAM_BOT_USERNAME is not. "
-            "Telegram notifications will not work properly.",
+            "TELEGRAM_BOT_TOKEN is set but TELEGRAM_CHAT_ID is not. "
+            "Doctor notifications will not work properly.",
             RuntimeWarning
         )
     

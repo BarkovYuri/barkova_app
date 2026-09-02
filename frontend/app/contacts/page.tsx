@@ -15,11 +15,11 @@ export const revalidate = 60;
 export const metadata: Metadata = {
   title: "Контакты",
   description:
-    "Связаться с врачом-инфекционистом: телефон, email, мессенджеры (Telegram, VK, Дзен, Instagram), адрес очного приёма.",
+    "Связаться с врачом-инфекционистом: телефон, email, мессенджеры (VK, Дзен, Instagram), адрес очного приёма.",
   openGraph: {
     title: "Контакты · Кабинет врача-инфекциониста",
     description:
-      "Связаться с врачом-инфекционистом удобным способом: Telegram, VK, телефон, email.",
+      "Связаться с врачом-инфекционистом удобным способом: VK, телефон, email.",
   },
   alternates: { canonical: "/contacts" },
 };

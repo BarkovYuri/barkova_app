@@ -1,7 +1,7 @@
 """
 Custom exceptions for bot integrations.
 
-This module defines specific exceptions used across Telegram and VK bot implementations.
+This module defines specific exceptions used across bot implementations.
 Proper exception handling allows for better error logging and user feedback.
 """
 
@@ -14,12 +14,6 @@ class BotException(Exception):
 
 class APIException(BotException):
     """Exception for API communication errors."""
-
-    pass
-
-
-class TelegramAPIError(APIException):
-    """Exception raised when Telegram API returns an error."""
 
     pass
 

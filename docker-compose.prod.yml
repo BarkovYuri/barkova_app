@@ -54,7 +54,7 @@ services:
       # пустой — прокси не используется.
       HTTPS_PROXY: ${TELEGRAM_PROXY_URL:-}
       HTTP_PROXY: ${TELEGRAM_PROXY_URL:-}
-      NO_PROXY: localhost,127.0.0.1,backend,db,redis,frontend,nginx,celery_worker,celery_beat,telegram_bot,api.vk.com,id.vk.ru
+      NO_PROXY: localhost,127.0.0.1,backend,db,redis,frontend,nginx,celery_worker,celery_beat,api.vk.com,id.vk.ru
     depends_on:
       - db
       - redis
@@ -80,7 +80,7 @@ services:
     environment:
       HTTPS_PROXY: ${TELEGRAM_PROXY_URL:-}
       HTTP_PROXY: ${TELEGRAM_PROXY_URL:-}
-      NO_PROXY: localhost,127.0.0.1,backend,db,redis,frontend,nginx,celery_worker,celery_beat,telegram_bot,api.vk.com,id.vk.ru
+      NO_PROXY: localhost,127.0.0.1,backend,db,redis,frontend,nginx,celery_worker,celery_beat,api.vk.com,id.vk.ru
     depends_on:
       - db
       - redis
@@ -101,27 +101,12 @@ services:
     environment:
       HTTPS_PROXY: ${TELEGRAM_PROXY_URL:-}
       HTTP_PROXY: ${TELEGRAM_PROXY_URL:-}
-      NO_PROXY: localhost,127.0.0.1,backend,db,redis,frontend,nginx,celery_worker,celery_beat,telegram_bot,api.vk.com,id.vk.ru
+      NO_PROXY: localhost,127.0.0.1,backend,db,redis,frontend,nginx,celery_worker,celery_beat,api.vk.com,id.vk.ru
     depends_on:
       - db
       - redis
       - backend
     command: celery -A config beat -l info
-
-  telegram_bot:
-    image: ghcr.io/barkovyuri/barkova_app-backend:latest
-    restart: always
-    env_file:
-      - .env
-    environment:
-      HTTPS_PROXY: ${TELEGRAM_PROXY_URL:-}
-      HTTP_PROXY: ${TELEGRAM_PROXY_URL:-}
-      NO_PROXY: localhost,127.0.0.1,backend,db,redis,frontend,nginx,celery_worker,celery_beat,telegram_bot,api.vk.com,id.vk.ru
-    depends_on:
-      - db
-      - redis
-      - backend
-    command: python telegram_bot.py
 
   frontend:
     image: ghcr.io/barkovyuri/barkova_app-frontend:latest

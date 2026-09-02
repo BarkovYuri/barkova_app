@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Sparkles } from "lucide-react";
-import Script from "next/script";
 
 import BookingForm from "../../components/booking/BookingForm";
 import { JsonLd } from "../../components/common/JsonLd";
@@ -15,11 +14,11 @@ import {
 export const metadata: Metadata = {
   title: "Онлайн-запись на разбор",
   description:
-    "Запись на онлайн-разбор у врача-инфекциониста. Выберите дату и время — подтверждение в Telegram или VK.",
+    "Запись на онлайн-разбор у врача-инфекциониста. Выберите дату и время — подтверждение в VK.",
   openGraph: {
     title: "Онлайн-запись · Кабинет врача-инфекциониста",
     description:
-      "Выберите дату и время онлайн-разбора. Подтверждение в Telegram или VK.",
+      "Выберите дату и время онлайн-разбора. Подтверждение в VK.",
   },
   alternates: { canonical: "/booking" },
 };
@@ -61,18 +60,6 @@ export default async function BookingPage() {
 
   return (
     <>
-      {/* Telegram WebApp SDK — нужен только когда страница открыта
-          как Mini App. В обычном браузере скрипт ничего не делает,
-          но `beforeInteractive` блокировал hydration до его загрузки
-          с telegram.org (особенно медленно на мобильных в РФ).
-          `afterInteractive` — Next грузит скрипт сразу после
-          hydration, форма интерактивна с первой секунды,
-          useTelegramWebApp подхватит window.Telegram чуть позже. */}
-      <Script
-        src="https://telegram.org/js/telegram-web-app.js"
-        strategy="afterInteractive"
-      />
-
       <JsonLd
         data={buildBreadcrumbSchema([
           { name: "Главная", href: "/" },

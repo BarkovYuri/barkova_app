@@ -2,20 +2,15 @@
 
 import { UserRound } from "lucide-react";
 import Script from "next/script";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { IS_MOCK_MODE } from "../../lib/api";
 import { isPhoneValid } from "../../lib/phone";
-import {
-  applyTelegramTheme,
-  useTelegramWebApp,
-} from "../../lib/telegramWebApp";
 import type { ContactMethod } from "../../lib/types";
 import { BookingSummary } from "./BookingSummary";
 import { BookingStepper } from "./BookingStepper";
 import { useDates, useSlots } from "./hooks/useSlots";
 import { useSlotReservation } from "./hooks/useSlotReservation";
-import { useTelegramPrelink } from "./hooks/useTelegramPrelink";
 import { useVkId } from "./hooks/useVkId";
 import { useBookingSubmit } from "./hooks/useBookingSubmit";
 
@@ -71,31 +66,8 @@ export default function BookingForm() {
   const [offerAccepted, setOfferAccepted] = useState(false);
 
   // ── Способ связи ────────────────────────────────────────────────
-  const [contactMethod, setContactMethod] = useState<ContactMethod>("telegram");
-
-  // ── Telegram Mini App ───────────────────────────────────────────
-  const { webApp, isInTelegram } = useTelegramWebApp();
-  const tgInitData = webApp?.initData ?? "";
-
-  // Применяем тему Telegram при первой возможности и фиксируем способ связи.
-  // setContactMethod в effect-е здесь — синхронизация с внешним сигналом
-  // «открыты как Mini App», не cascading render.
-  useEffect(() => {
-    if (webApp) {
-      applyTelegramTheme(webApp);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setContactMethod("telegram");
-    }
-  }, [webApp]);
-
-  const telegram = useTelegramPrelink();
-  const vkId = useVkId(contactMethod === "vk" && !isInTelegram);
-
-  function handleSetContactMethod(method: ContactMethod) {
-    if (isInTelegram) return; // в Mini App канал зафиксирован
-    setContactMethod(method);
-    if (method === "telegram") telegram.reset();
-  }
+  const contactMethod: ContactMethod = "vk";
+  const vkId = useVkId(true);
 
   // ── Отправка ────────────────────────────────────────────────────
   const {
@@ -106,13 +78,13 @@ export default function BookingForm() {
     submit,
   } = useBookingSubmit();
 
-  // Объединяем ошибки: от хука submit + от Telegram/VK
-  const errorText = error || telegram.error || vkId.loadError;
+  // Объединяем ошибки: от хука submit + от VK
+  const errorText = error || vkId.loadError;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const ok = await submit({
+    await submit({
       selectedSlotId,
       selectedDate,
       selectedSlot,
@@ -120,33 +92,14 @@ export default function BookingForm() {
       phone,
       reason,
       contactMethod,
-      telegramPrelinkToken: telegram.token,
       vkIdPayload: vkId.payload as Record<string, unknown> | null,
       files,
       consentGiven,
       privacyAccepted,
       offerAccepted,
       onSlotsRefresh: refreshSlots,
-      tgInitData,
       reservationToken: getReservationToken(selectedSlotId),
     });
-
-    // Если открыто как Mini App — даём пользователю увидеть SuccessView,
-    // потом закрываем Mini App и возвращаемся в чат с ботом.
-    if (ok && webApp) {
-      try {
-        webApp.HapticFeedback?.notificationOccurred?.("success");
-      } catch {
-        // ignore
-      }
-      setTimeout(() => {
-        try {
-          webApp.close();
-        } catch {
-          // ignore
-        }
-      }, 2500);
-    }
   }
 
   // ── Progress calculation ─────────────────────────────────────────
@@ -159,14 +112,7 @@ export default function BookingForm() {
     privacyAccepted &&
     offerAccepted
   );
-  // В Mini App канал уже подтверждён автоматически через initData
-  const hasContactMethod =
-    isInTelegram ||
-    (contactMethod === "telegram"
-      ? telegram.connected
-      : contactMethod === "vk"
-        ? vkId.authorized
-        : true);
+  const hasContactMethod = vkId.authorized;
 
   // ── Success ─────────────────────────────────────────────────────
   if (success) {
@@ -186,9 +132,8 @@ export default function BookingForm() {
           5–10 секунд или таймаутить. На `afterInteractive` он блокировал
           парсинг и хydration на медленных мобильных → «кнопки не
           нажимаются». Переводим на `lazyOnload` (грузится после полной
-          отрисовки страницы), и только когда пользователь реально
-          выбрал VK-канал — useVkId всё равно нужен только в этот момент. */}
-      {!IS_MOCK_MODE && contactMethod === "vk" ? (
+          отрисовки страницы). */}
+      {!IS_MOCK_MODE ? (
         <Script
           src="https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js"
           strategy="lazyOnload"
@@ -261,31 +206,12 @@ export default function BookingForm() {
               errorText={errorText}
               submitting={submitting}
             >
-              {isInTelegram ? (
-                <div className="rounded-2xl border border-secondary-200 bg-secondary-50 px-4 py-3 text-sm text-secondary-800 flex items-start gap-2">
-                  <span aria-hidden>✅</span>
-                  <span>
-                    <b>Telegram подключён автоматически.</b>
-                    <span className="block text-secondary-700 mt-0.5">
-                      Подтверждение и напоминания придут в этот же чат.
-                    </span>
-                  </span>
-                </div>
-              ) : (
-                <ContactMethodSection
-                  contactMethod={contactMethod}
-                  setContactMethod={handleSetContactMethod}
-                  onTelegramConnect={telegram.connect}
-                  onCheckTelegram={telegram.checkStatus}
-                  loadingTelegramLink={telegram.loading}
-                  telegramConnected={telegram.connected}
-                  telegramPrelinkToken={telegram.token}
-                  vkIdReady={vkId.ready}
-                  vkIdLoadError={vkId.loadError}
-                  vkIdAuthorized={vkId.authorized}
-                  vkIdContainerRef={vkId.containerRef}
-                />
-              )}
+              <ContactMethodSection
+                vkIdReady={vkId.ready}
+                vkIdLoadError={vkId.loadError}
+                vkIdAuthorized={vkId.authorized}
+                vkIdContainerRef={vkId.containerRef}
+              />
             </PatientForm>
           </form>
         </section>

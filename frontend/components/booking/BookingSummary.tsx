@@ -6,7 +6,6 @@ import {
   Circle,
   Clock,
   MessageSquare,
-  Send,
   Users,
 } from "lucide-react";
 
@@ -31,7 +30,6 @@ function formatDateLong(dateString: string) {
 }
 
 const ContactIcon = {
-  telegram: Send,
   vk: Users,
 } as const;
 
@@ -46,11 +44,7 @@ export function BookingSummary({
   const ContactIconCmp =
     ContactIcon[contactMethod as keyof typeof ContactIcon] ?? MessageSquare;
   const contactLabel =
-    contactMethod === "telegram"
-      ? "Telegram"
-      : contactMethod === "vk"
-      ? "VK"
-      : "Способ связи";
+    contactMethod === "vk" ? "VK" : "Способ связи";
 
   const checklist = [
     { label: "Дата выбрана", done: !!selectedDate },

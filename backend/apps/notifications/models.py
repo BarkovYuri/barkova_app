@@ -59,21 +59,6 @@ class NotificationLog(models.Model):
         return f"{self.get_notification_type_display()} / {self.get_channel_display()}"
 
 
-class TelegramPrelink(models.Model):
-    token = models.CharField("Токен привязки Telegram", max_length=64, unique=True)
-    chat_id = models.CharField("Telegram chat id", max_length=50, blank=True)
-    linked_at = models.DateTimeField("Привязан", null=True, blank=True)
-    created_at = models.DateTimeField("Создан", auto_now_add=True)
-    is_used = models.BooleanField("Использован", default=False)
-
-    class Meta:
-        verbose_name = "Временная привязка Telegram"
-        verbose_name_plural = "Временные привязки Telegram"
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return self.token
-
 class VKPrelink(models.Model):
     token = models.CharField("Токен привязки VK", max_length=64, unique=True)
     user_id = models.CharField("VK user id", max_length=50, blank=True)

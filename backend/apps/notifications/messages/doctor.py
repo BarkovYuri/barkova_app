@@ -1,9 +1,9 @@
 """Форматтеры уведомлений врача.
 
 ВАЖНО: Telegram-сообщения отправляются с parse_mode=HTML, поэтому
-любые юзерские поля (name/phone/reason/telegram_username) экранируем
-через html.escape() — иначе пациент с именем «<a href=evil>Иван</a>»
-оформит фишинговую ссылку в сообщении врачу (баг #13 из аудита).
+любые юзерские поля (name/phone/reason) экранируем через html.escape() —
+иначе пациент с именем «<a href=evil>Иван</a>» оформит фишинговую ссылку
+в сообщении врачу (баг #13 из аудита).
 """
 from __future__ import annotations
 
@@ -28,7 +28,6 @@ def appointment_created(appointment) -> str:
         f"Время: {slot.start_time.strftime('%H:%M')}–{slot.end_time.strftime('%H:%M')}\n"
         f"Причина: {_safe(reason)}\n"
         f"Способ связи: {_safe(contact)}\n"
-        f"Telegram: {_safe(appointment.telegram_username) or '—'}\n"
         f"Статус: {_safe(appointment.get_status_display())}"
     )
 

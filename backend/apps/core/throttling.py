@@ -12,7 +12,6 @@ class AppointmentCreateThrottle(AnonRateThrottle):
 class PrelinkThrottle(AnonRateThrottle):
     """
     Ограничение на создание prelink-токенов: не более 30 в час с одного IP.
-    Защищает /api/appointments/telegram/prelink/, /api/appointments/vk/prelink/,
-    /api/appointments/vk/pending-link/.
+    Защищает /api/appointments/vk/prelink/, /api/appointments/vk/pending-link/.
     """
     scope = "prelink"

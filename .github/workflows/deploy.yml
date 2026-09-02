@@ -101,7 +101,6 @@ jobs:
               backend \
               celery_worker \
               celery_beat \
-              telegram_bot \
               frontend \
               nginx
 

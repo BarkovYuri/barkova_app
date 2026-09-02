@@ -6,27 +6,21 @@ from django.test import TestCase
 from apps.appointments.models import Appointment
 from apps.notifications.models import (
     NotificationLog,
-    TelegramPrelink,
     VKPrelink,
 )
 from apps.scheduling.models import TimeSlot
 
 
 class PrelinkTokenUniquenessTests(TestCase):
-    def test_telegram_prelink_token_unique(self):
-        TelegramPrelink.objects.create(token="abc")
-        with transaction.atomic(), self.assertRaises(IntegrityError):
-            TelegramPrelink.objects.create(token="abc")
-
     def test_vk_prelink_token_unique(self):
         VKPrelink.objects.create(token="xyz")
         with transaction.atomic(), self.assertRaises(IntegrityError):
             VKPrelink.objects.create(token="xyz")
 
     def test_prelink_defaults(self):
-        link = TelegramPrelink.objects.create(token="t1")
+        link = VKPrelink.objects.create(token="t1")
         self.assertFalse(link.is_used)
-        self.assertEqual(link.chat_id, "")
+        self.assertEqual(link.user_id, "")
         self.assertIsNone(link.linked_at)
 
 

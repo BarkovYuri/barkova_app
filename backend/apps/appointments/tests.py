@@ -7,7 +7,6 @@ from rest_framework.exceptions import ValidationError
 from apps.appointments.models import Appointment
 from apps.appointments.serializers import (
     AppointmentCreateSerializer,
-    _normalize_telegram_username,
     _validate_legal_flags,
 )
 from apps.scheduling.models import TimeSlot
@@ -30,17 +29,6 @@ class LegalFlagsValidatorTests(TestCase):
         _validate_legal_flags(
             {"consent_given": True, "privacy_accepted": True, "offer_accepted": True}
         )
-
-
-class TelegramUsernameNormalizationTests(TestCase):
-    def test_strips_at_prefix(self):
-        self.assertEqual(_normalize_telegram_username("@alice"), "alice")
-
-    def test_trims_whitespace(self):
-        self.assertEqual(_normalize_telegram_username("  bob  "), "bob")
-
-    def test_no_op_for_clean_username(self):
-        self.assertEqual(_normalize_telegram_username("carol"), "carol")
 
 
 class AppointmentCreateSerializerValidationTests(TestCase):

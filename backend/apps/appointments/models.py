@@ -19,21 +19,14 @@ class Appointment(models.Model):
     name = models.CharField("Имя пациента", max_length=255)
     phone = models.CharField("Телефон", max_length=50)
 
-    telegram_username = models.CharField("Telegram username", max_length=100, blank=True)
-
     preferred_contact_method = models.CharField(
         "Предпочтительный способ связи",
         max_length=20,
         choices=[
-            ("telegram", "Telegram"),
             ("vk", "VK"),
         ],
         blank=True,
     )
-
-    telegram_chat_id = models.CharField("Telegram chat id", max_length=50, blank=True, db_index=True)
-    telegram_link_token = models.CharField("Telegram link token", max_length=64, blank=True, db_index=True)
-    telegram_linked_at = models.DateTimeField("Telegram привязан", null=True, blank=True)
 
     vk_user_id = models.CharField("VK user id", max_length=50, blank=True, db_index=True)
     vk_peer_id = models.CharField("VK peer id", max_length=50, blank=True)

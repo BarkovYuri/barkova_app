@@ -42,7 +42,6 @@ export type DoctorProfile = {
   address?: string;          // было office_address
   prodoktorov_url?: string | null; // ссылка на ПроДокторов
   instagram_url?: string | null; // <-- Ошибка здесь
-  telegram_url?: string | null;
   vk_url?: string | null;
   dzen_url?: string | null;
   yandex_maps_embed_url?: string | null; 
@@ -115,13 +114,12 @@ export type CreatedAppointment = {
   slot_end_time: string;
   name: string;
   phone: string;
-  telegram_link_token: string;
   vk_link_token: string;
   status: string;
   created_at: string;
 };
 
-export type ContactMethod = "telegram" | "vk";
+export type ContactMethod = "vk";
 
 // ============================================================================
 // Контент сайта — редактируется врачом через Django-админку

@@ -112,14 +112,6 @@ export function tryMockResponse(
       // редко попадаем сюда, ниже общий matcher
     }
 
-    // Telegram prelink: создаёт токен и bot_url
-    if (endpoint.startsWith("/appointments/telegram/prelink")) {
-      return {
-        token: "mock-telegram-token-" + Math.random().toString(36).slice(2),
-        bot_url: "#",
-      };
-    }
-
     // VK prelink-ы / actions
     if (endpoint.startsWith("/appointments/vk/")) {
       return { ok: true };
@@ -159,7 +151,7 @@ export function tryMockResponse(
       { id: 7, key: "how_it_works.section_subtitle", title: "", content: "От первой записи до получения рекомендаций — всё прозрачно и предсказуемо", updated_at: "" },
       { id: 8, key: "faq.section_chip", title: "", content: "Частые вопросы", updated_at: "" },
       { id: 9, key: "faq.section_title", title: "", content: "Что обычно спрашивают", updated_at: "" },
-      { id: 10, key: "faq.section_subtitle", title: "", content: "Если ваш вопрос не нашёлся ниже — напишите в Telegram или VK, отвечу лично.", updated_at: "" },
+      { id: 10, key: "faq.section_subtitle", title: "", content: "Если ваш вопрос не нашёлся ниже — напишите в VK, отвечу лично.", updated_at: "" },
       { id: 11, key: "cta.home.title", title: "", content: "Готовы начать?", updated_at: "" },
       { id: 12, key: "cta.home.text", title: "", content: "Запишитесь на консультацию уже сегодня и получите профессиональную помощь", updated_at: "" },
       { id: 13, key: "cta.home.button", title: "", content: "Записаться сейчас", updated_at: "" },
@@ -183,7 +175,7 @@ export function tryMockResponse(
   if (endpoint.startsWith("/how-it-works")) {
     return [
       { id: 1, icon: "calendar_days", title: "Выбор даты", description: "Откройте календарь и выберите удобный день и время. Все свободные слоты подсвечены.", order: 0 },
-      { id: 2, icon: "message_square", title: "Контактные данные", description: "Оставьте имя и телефон, опишите вопрос. Подключите Telegram или VK для уведомлений.", order: 1 },
+      { id: 2, icon: "message_square", title: "Контактные данные", description: "Оставьте имя и телефон, опишите вопрос. Подключите VK для уведомлений.", order: 1 },
       { id: 3, icon: "check_check", title: "Подтверждение", description: "В мессенджер придёт сообщение с подтверждением и ссылкой на видеоконсультацию.", order: 2 },
       { id: 4, icon: "stethoscope", title: "Приём", description: "В назначенное время — выходите на связь. Получаете план обследований и рекомендации.", order: 3 },
     ];
@@ -193,7 +185,7 @@ export function tryMockResponse(
   if (endpoint.startsWith("/faq")) {
     return [
       { id: 1, question: "Сколько длится онлайн-консультация?", answer: "Базовый приём — 30 минут.", order: 0 },
-      { id: 2, question: "Как проходит видеоконсультация?", answer: "За 10–15 минут до приёма в Telegram или VK придёт ссылка на видеовстречу.", order: 1 },
+      { id: 2, question: "Как проходит видеоконсультация?", answer: "За 10–15 минут до приёма в VK придёт ссылка на видеовстречу.", order: 1 },
       { id: 3, question: "Что подготовить к приёму?", answer: "Свежие анализы, список текущих лекарств, краткую хронологию симптомов.", order: 2 },
       { id: 4, question: "Можно ли получить рецепт после онлайн-приёма?", answer: "После онлайн-консультации врач может оформить рекомендации и направления.", order: 3 },
       { id: 5, question: "Сохраняются ли мои данные в тайне?", answer: "Да. Все ваши данные обрабатываются в соответствии с 152-ФЗ.", order: 4 },
@@ -215,7 +207,7 @@ export function tryMockResponse(
     return [
       { id: 1, icon: "shield_check", label: "Безопасность данных", order: 0 },
       { id: 2, icon: "award", label: "Подтверждённый стаж", order: 1 },
-      { id: 3, icon: "message_circle_heart", label: "Поддержка в Telegram / VK", order: 2 },
+      { id: 3, icon: "message_circle_heart", label: "Поддержка в VK", order: 2 },
       { id: 4, icon: "calendar_check", label: "Запись 24/7", order: 3 },
     ];
   }
@@ -260,10 +252,7 @@ export function tryMockResponse(
     };
   }
 
-  // Telegram/VK prelink GET-status'ы
-  if (endpoint.startsWith("/appointments/telegram/prelink/status")) {
-    return { linked: false };
-  }
+  // VK prelink GET-status
   if (endpoint.startsWith("/appointments/vk/prelink/status")) {
     return { linked: false };
   }

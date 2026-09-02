@@ -13,19 +13,15 @@ from rest_framework.decorators import authentication_classes
 
 from apps.core.permissions import IsAdminUser
 from apps.core.throttling import AppointmentCreateThrottle, PrelinkThrottle
-from apps.notifications.models import TelegramPrelink, VKPrelink
+from apps.notifications.models import VKPrelink
 from apps.notifications.services import (
     send_appointment_status_notification,
     send_doctor_contact_request_notification,
-    send_to_patient,
     send_to_patient_vk,
     build_vk_booking_keyboard,
     build_vk_active_root_keyboard,
 )
 from apps.appointments.services.linking import (
-    create_telegram_prelink,
-    confirm_telegram_prelink,
-    get_telegram_prelink_status,
     create_vk_prelink,
     confirm_vk_prelink,
     get_vk_prelink_status,
@@ -105,80 +101,6 @@ class AdminAppointmentUpdateView(UpdateAPIView):
     permission_classes = [IsAdminUser]
     queryset = Appointment.objects.all()
     serializer_class = AppointmentStatusUpdateSerializer
-
-
-# =========================
-# Telegram prelink
-# =========================
-
-@authentication_classes([])
-class TelegramPrelinkCreateView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [PrelinkThrottle]
-
-    def post(self, request):
-        data = create_telegram_prelink(bot_username=settings.TELEGRAM_BOT_USERNAME)
-        return Response(data, status=status.HTTP_201_CREATED)
-
-
-@authentication_classes([])
-class TelegramPrelinkLinkView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        token = request.data.get("token", "").strip()
-        chat_id = str(request.data.get("chat_id", "")).strip()
-
-        ok, error_msg = confirm_telegram_prelink(token, chat_id)
-        if not ok:
-            http_status = status.HTTP_400_BAD_REQUEST if "обязательны" in error_msg else status.HTTP_404_NOT_FOUND
-            return Response({"detail": error_msg}, status=http_status)
-        return Response({"status": "ok"})
-
-
-@authentication_classes([])
-class TelegramPrelinkStatusView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        token = request.query_params.get("token", "").strip()
-        if not token:
-            return Response({"detail": "token обязателен."}, status=status.HTTP_400_BAD_REQUEST)
-
-        result = get_telegram_prelink_status(token)
-        if result is None:
-            return Response({"detail": "Токен не найден."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(result)
-
-
-@authentication_classes([])
-class TelegramAppointmentActionView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        appointment_id = request.data.get("appointment_id")
-        token = request.data.get("token", "").strip()
-        action = request.data.get("action", "").strip()
-        chat_id = str(request.data.get("chat_id", "")).strip()
-
-        if not appointment_id or not token or not action or not chat_id:
-            return Response(
-                {"detail": "appointment_id, token, action и chat_id обязательны."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
-        if not appointment:
-            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
-        if appointment.telegram_link_token != token:
-            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
-        if str(appointment.telegram_chat_id) != chat_id:
-            return Response({"detail": "Неверный chat_id."}, status=status.HTTP_403_FORBIDDEN)
-
-        result = AppointmentActionService.handle(appointment, action, channel="telegram")
-        if "error" in result:
-            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(result)
 
 
 # =========================
@@ -299,7 +221,7 @@ class VKAppointmentActionView(APIView):
         if str(appointment.vk_user_id) != user_id:
             return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
 
-        result = AppointmentActionService.handle(appointment, action, channel="vk")
+        result = AppointmentActionService.handle(appointment, action)
         if "error" in result:
             return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(result)
@@ -325,7 +247,7 @@ class VKAppointmentActionView(APIView):
         if str(appointment.vk_user_id) != user_id:
             return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
 
-        result = AppointmentActionService.handle(appointment, action, channel="vk")
+        result = AppointmentActionService.handle(appointment, action)
         if "error" in result:
             return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(result)
@@ -351,7 +273,7 @@ class VKAppointmentActionView(APIView):
         if str(appointment.vk_user_id) != user_id:
             return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
 
-        result = AppointmentActionService.handle(appointment, action, channel="vk")
+        result = AppointmentActionService.handle(appointment, action)
         if "error" in result:
             return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(result)
@@ -377,7 +299,7 @@ class VKAppointmentActionView(APIView):
         if str(appointment.vk_user_id) != user_id:
             return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
 
-        result = AppointmentActionService.handle(appointment, action, channel="vk")
+        result = AppointmentActionService.handle(appointment, action)
         if "error" in result:
             return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(result)

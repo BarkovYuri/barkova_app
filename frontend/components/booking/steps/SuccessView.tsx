@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Clock,
   MessageCircle,
-  Send,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -30,7 +29,6 @@ type Props = {
 };
 
 const ContactIcon = {
-  telegram: Send,
   vk: Users,
 } as const;
 
@@ -42,11 +40,7 @@ export function SuccessView({
   const ContactIconCmp =
     ContactIcon[contactMethod as keyof typeof ContactIcon] ?? MessageCircle;
   const contactLabel =
-    contactMethod === "telegram"
-      ? "Telegram"
-      : contactMethod === "vk"
-      ? "VK"
-      : "Способ связи";
+    contactMethod === "vk" ? "VK" : "Способ связи";
 
   return (
     <div className="mx-auto max-w-2xl animate-fade-in">
@@ -145,11 +139,7 @@ export function SuccessView({
                 className="h-4 w-4 flex-shrink-0 text-primary-600 mt-0.5"
                 strokeWidth={2.5}
               />
-              <span>
-                Вы получите сообщение в{" "}
-                {contactMethod === "telegram" ? "Telegram" : "VK"} для
-                подтверждения записи
-              </span>
+              <span>Вы получите сообщение в VK для подтверждения записи</span>
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle2

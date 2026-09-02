@@ -65,10 +65,7 @@ class AppointmentAdmin(ModelAdmin):
             "fields": ("name", "phone", "reason")
         }),
         ("Контакты", {
-            "fields": (
-                "preferred_contact_method",
-                "telegram_username",
-            )
+            "fields": ("preferred_contact_method",)
         }),
         ("Слот", {
             "fields": ("slot",)

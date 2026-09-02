@@ -13,16 +13,12 @@ type SubmitParams = {
   phone: string;
   reason: string;
   contactMethod: ContactMethod;
-  telegramPrelinkToken: string;
   vkIdPayload: Record<string, unknown> | null;
   files: FileList | null;
   consentGiven: boolean;
   privacyAccepted: boolean;
   offerAccepted: boolean;
   onSlotsRefresh: () => Promise<void>;
-  /** Если открыто как Telegram Mini App — initData передаём на бэкенд
-   *  для авто-привязки без prelink-flow. */
-  tgInitData?: string;
   /** Soft-reservation токен. Если есть — backend освободит лок после
    *  успешного create. Если нет — старый flow, защита через DB-constraint. */
   reservationToken?: string;
@@ -46,14 +42,12 @@ export function useBookingSubmit() {
       phone,
       reason,
       contactMethod,
-      telegramPrelinkToken,
       vkIdPayload,
       files,
       consentGiven,
       privacyAccepted,
       offerAccepted,
       onSlotsRefresh,
-      tgInitData,
       reservationToken,
     } = params;
 
@@ -69,15 +63,6 @@ export function useBookingSubmit() {
     }
     if (!phone.trim()) {
       setError("Введите номер телефона.");
-      return false;
-    }
-    // В Mini App Telegram уже подтверждён через initData — prelink не требуется.
-    if (
-      contactMethod === "telegram" &&
-      !telegramPrelinkToken &&
-      !tgInitData
-    ) {
-      setError("Сначала подключите Telegram.");
       return false;
     }
     if (
@@ -104,14 +89,6 @@ export function useBookingSubmit() {
       formData.append("consent_given", String(consentGiven));
       formData.append("privacy_accepted", String(privacyAccepted));
       formData.append("offer_accepted", String(offerAccepted));
-
-      if (contactMethod === "telegram") {
-        if (tgInitData) {
-          formData.append("tg_init_data", tgInitData);
-        } else if (telegramPrelinkToken) {
-          formData.append("telegram_prelink_token", telegramPrelinkToken);
-        }
-      }
 
       if (contactMethod === "vk" && vkIdPayload) {
         if (vkIdPayload.user_id)

@@ -1,11 +1,10 @@
 """
 LinkingService — единый сервис связывания пациента с мессенджером.
 
-Заменяет четыре разрозненных потока:
-  1. TelegramPrelink  (telegram/prelink/ + telegram/link/)
-  2. VKPrelink        (vk/prelink/ + vk/link/)
-  3. VKAutoLink       (vk/auto-link/)
-  4. VKPendingLink    (vk/pending-link/)
+Заменяет три разрозненных потока:
+  1. VKPrelink        (vk/prelink/ + vk/link/)
+  2. VKAutoLink       (vk/auto-link/)
+  3. VKPendingLink    (vk/pending-link/)
 """
 from __future__ import annotations
 
@@ -14,50 +13,10 @@ import logging
 from django.core.cache import cache
 from django.utils import timezone
 
-from apps.notifications.models import TelegramPrelink, VKPrelink
+from apps.notifications.models import VKPrelink
 from apps.appointments.models import Appointment
 
 logger = logging.getLogger("apps.appointments.services.linking")
-
-
-# ─── Telegram ────────────────────────────────────────────────────────────────
-
-def create_telegram_prelink(bot_username: str) -> dict:
-    """Создаёт prelink-токен и возвращает ссылку на бота."""
-    import secrets
-    token = secrets.token_urlsafe(16)
-    prelink = TelegramPrelink.objects.create(token=token)
-    bot_url = f"https://t.me/{bot_username}?start=connect_{token}"
-    return {"token": prelink.token, "bot_url": bot_url}
-
-
-def confirm_telegram_prelink(token: str, chat_id: str) -> tuple[bool, str]:
-    """
-    Вызывается ботом: привязывает chat_id к prelink-токену.
-    Возвращает (success, error_message).
-    """
-    if not token or not chat_id:
-        return False, "token и chat_id обязательны"
-
-    # Атомарный UPDATE WHERE is_used=False. Если два сообщения от
-    # разных user_id придут с одним токеном — только первое получит
-    # rows_affected=1, второе вернёт «уже занят».
-    rows_affected = TelegramPrelink.objects.filter(
-        token=token, is_used=False
-    ).update(chat_id=chat_id, linked_at=timezone.now())
-    if rows_affected == 0:
-        # Либо токен не найден, либо уже привязан другим пользователем.
-        exists = TelegramPrelink.objects.filter(token=token).exists()
-        return False, "Этот токен уже использован" if exists else "Токен не найден"
-    return True, ""
-
-
-def get_telegram_prelink_status(token: str) -> dict | None:
-    """Возвращает статус prelink или None если не найден."""
-    prelink = TelegramPrelink.objects.filter(token=token).first()
-    if not prelink:
-        return None
-    return {"linked": bool(prelink.chat_id), "chat_id": prelink.chat_id}
 
 
 # ─── VK Prelink ───────────────────────────────────────────────────────────────

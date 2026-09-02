@@ -96,7 +96,6 @@ def create_appointment_with_slot_lock(
     try:
         appointment = Appointment.objects.create(
             slot=locked_slot,
-            telegram_link_token=secrets.token_urlsafe(16),
             vk_link_token=secrets.token_urlsafe(16),
             **appointment_data,
             **legal_versions,
@@ -115,7 +114,6 @@ def create_appointment_with_slot_lock(
     def _notify() -> None:
         from apps.notifications.services import (
             send_appointment_created_notification,
-            send_created_message_to_patient_with_actions,
             send_created_message_to_patient_with_actions_vk,
         )
         appt = (
@@ -125,9 +123,6 @@ def create_appointment_with_slot_lock(
             .get(pk=appointment.pk)
         )
         send_appointment_created_notification(appt)
-
-        if appt.preferred_contact_method == "telegram" and appt.telegram_chat_id:
-            send_created_message_to_patient_with_actions(appt)
 
         if appt.preferred_contact_method == "vk" and appt.vk_user_id:
             send_created_message_to_patient_with_actions_vk(appt)

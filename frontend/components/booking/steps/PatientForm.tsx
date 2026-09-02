@@ -289,7 +289,7 @@ export function PatientForm({
           </div>
         </div>
 
-        {/* Способ подтверждения (Telegram / VK) — рендерится из родителя */}
+        {/* Способ подтверждения (VK) — рендерится из родителя */}
         <div className="animate-fade-in" style={{ animationDelay: "0.35s" }}>
           {children}
         </div>

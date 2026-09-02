@@ -1,5 +1,5 @@
 """
-Base bot class for Telegram and VK bots.
+Base bot class for chat bot implementations (currently: VK).
 
 This module provides a common interface and shared functionality for all bot implementations.
 It handles Django initialization, API communication, error handling, and logging.
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class BaseBot(ABC):
     """
-    Abstract base class for bot implementations (Telegram, VK, etc).
+    Abstract base class for bot implementations (currently: VK).
 
     This class provides common functionality for:
     - API communication with bot providers

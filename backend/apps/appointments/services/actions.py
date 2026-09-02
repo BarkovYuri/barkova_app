@@ -1,9 +1,7 @@
 """
 AppointmentActionService — единый обработчик действий пациента над записью.
 
-Заменяет дублирующиеся switch-блоки в TelegramAppointmentActionView
-и VKAppointmentActionView. Транспорт передаётся через callable:
-  send_fn(appointment, text, keyboard=None)
+Транспорт передаётся через callable: send_fn(appointment, text, keyboard=None)
 """
 from __future__ import annotations
 
@@ -26,10 +24,9 @@ class AppointmentActionService:
     """Фасад для удобного использования из views."""
 
     @staticmethod
-    def handle(appointment, action: str, channel: str) -> dict:
-        from apps.notifications.services import send_to_patient, send_to_patient_vk
-        send_fn = send_to_patient if channel == "telegram" else send_to_patient_vk
-        return handle_action(appointment, action, send_fn=send_fn)
+    def handle(appointment, action: str) -> dict:
+        from apps.notifications.services import send_to_patient_vk
+        return handle_action(appointment, action, send_fn=send_to_patient_vk)
 
 
 def _slot_time_str(appointment) -> str:
@@ -69,7 +66,7 @@ def handle_action(
     Выполняет действие над записью и отправляет ответ пациенту через send_fn.
 
     send_fn(appointment, text, keyboard=None) — транспортная функция
-      (send_to_patient для Telegram, send_to_patient_vk для VK).
+      (сейчас всегда send_to_patient_vk).
 
     Возвращает dict с полями status и (опционально) changed,
     либо {"error": "unknown_action"} для неизвестного действия.
