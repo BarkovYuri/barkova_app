@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarOff, ChevronLeft, ChevronRight, Globe2 } from "lucide-react";
+import Link from "next/link";
 import { reachGoal } from "../../../lib/metrika";
 import { localTimeHint } from "../hooks/useScheduleInfo";
 import { addMonths, startOfMonth } from "../hooks/useSlots";
@@ -25,6 +26,16 @@ function formatDateLong(dateString: string) {
   }).format(date);
 }
 
+// «в ноябре 2026 г.»: Intl отдаёт месяц только в именительном падеже.
+const MONTHS_PREPOSITIONAL = [
+  "январе", "феврале", "марте", "апреле", "мае", "июне",
+  "июле", "августе", "сентябре", "октябре", "ноябре", "декабре",
+];
+
+function formatMonthPrepositional(date: Date) {
+  return `${MONTHS_PREPOSITIONAL[date.getMonth()]} ${date.getFullYear()} г.`;
+}
+
 function formatMonthTitle(date: Date) {
   return new Intl.DateTimeFormat("ru-RU", {
     month: "long",
@@ -46,6 +57,8 @@ type Props = {
   formSectionRef: React.RefObject<HTMLDivElement | null>;
   slotsSectionRef: React.RefObject<HTMLDivElement | null>;
   scheduleInfo: ScheduleInfo | null;
+  /** Есть ли свободные даты хотя бы в каком-то месяце. */
+  hasAnyDates: boolean;
 };
 
 export function CalendarSection({
@@ -62,6 +75,7 @@ export function CalendarSection({
   formSectionRef,
   slotsSectionRef,
   scheduleInfo,
+  hasAnyDates,
 }: Props) {
   return (
     <section className="animate-fade-in rounded-3xl border border-neutral-200 bg-neutral-0 p-4 shadow-card sm:p-6">
@@ -124,16 +138,34 @@ export function CalendarSection({
           <div className="mb-3 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-6 text-center">
             <CalendarOff className="h-6 w-6 text-neutral-400" strokeWidth={1.75} />
             <p className="text-sm text-neutral-600">
-              В&nbsp;{formatMonthTitle(currentMonth).toLowerCase()} нет
-              свободных дат для&nbsp;онлайн-разбора.
+              {hasAnyDates ? (
+                <>
+                  В&nbsp;{formatMonthPrepositional(currentMonth)} нет свободных дат
+                  для&nbsp;онлайн-разбора.
+                </>
+              ) : (
+                <>
+                  Сейчас свободного времени для онлайн-разбора нет. Напишите
+                  или позвоните, врач подберёт время.
+                </>
+              )}
             </p>
-            <button
-              type="button"
-              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-              className="text-sm font-semibold text-primary-700 underline-offset-4 hover:underline"
-            >
-              Посмотреть следующий месяц →
-            </button>
+            {hasAnyDates ? (
+              <button
+                type="button"
+                onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                className="text-sm font-semibold text-primary-700 underline-offset-4 hover:underline"
+              >
+                Посмотреть следующий месяц →
+              </button>
+            ) : (
+              <Link
+                href="/contacts"
+                className="text-sm font-semibold text-primary-700 underline-offset-4 hover:underline"
+              >
+                Контакты врача →
+              </Link>
+            )}
           </div>
         ) : null}
 

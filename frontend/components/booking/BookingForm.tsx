@@ -27,6 +27,7 @@ export default function BookingForm() {
 
   // ── Дата / календарь / слоты ────────────────────────────────────
   const {
+    dates,
     loading: loadingDates,
     selectedDate,
     setSelectedDate,
@@ -179,6 +180,7 @@ export default function BookingForm() {
           formSectionRef={formSectionRef}
           slotsSectionRef={slotsSectionRef}
           scheduleInfo={scheduleInfo}
+          hasAnyDates={dates.length > 0}
         />
 
         {/* Form */}
