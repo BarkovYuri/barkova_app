@@ -11,6 +11,10 @@ import {
   textOr,
 } from "../../lib/siteContent";
 
+// Страница рендерится на каждый запрос, а данные из API кэшируются на
+// минуту в lib/api.ts. Так сборка в CI не требует работающего бэкенда.
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Онлайн-запись на разбор",
   description:

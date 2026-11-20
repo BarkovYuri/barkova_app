@@ -1,5 +1,21 @@
+import os
+import uuid
+
 from django.db import models
+from django.utils import timezone
+
 from apps.scheduling.models import TimeSlot
+
+ACTIVE_STATUSES = ("new", "confirmed")
+
+
+def attachment_upload_to(instance, filename: str) -> str:
+    """Файлы пациентов — медицинские данные. Кладём в приватную папку,
+    которую nginx наружу не отдаёт, и под случайным именем, чтобы путь
+    нельзя было угадать по исходному имени файла."""
+    ext = os.path.splitext(filename)[1].lower()[:10]
+    now = timezone.now()
+    return f"private/appointments/{now:%Y/%m}/{uuid.uuid4().hex}{ext}"
 
 
 class Appointment(models.Model):
@@ -24,6 +40,7 @@ class Appointment(models.Model):
         max_length=20,
         choices=[
             ("vk", "VK"),
+            ("phone", "Телефон"),
         ],
         blank=True,
     )
@@ -33,6 +50,13 @@ class Appointment(models.Model):
     vk_link_token = models.CharField("VK link token", max_length=64, blank=True, db_index=True)
     vk_linked_at = models.DateTimeField("VK привязан", null=True, blank=True)
 
+    patient_notified_at = models.DateTimeField(
+        "Пациент получил сообщение о записи",
+        null=True,
+        blank=True,
+        help_text="Пусто — сообщество пока не может написать пациенту в VK. "
+        "Сообщение уйдёт автоматически, когда пациент напишет в сообщество.",
+    )
     reminder_sent_at = models.DateTimeField("Напоминание отправлено", null=True, blank=True)
 
     reminder_response = models.CharField(
@@ -73,7 +97,7 @@ class Appointment(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["slot"],
-                condition=models.Q(status__in=["new", "confirmed"]),
+                condition=models.Q(status__in=ACTIVE_STATUSES),
                 name="unique_active_appointment_per_slot",
             )
         ]
@@ -83,6 +107,10 @@ class Appointment(models.Model):
     def __str__(self):
         return f"{self.name} - {self.slot}"
 
+    @property
+    def is_active(self) -> bool:
+        return self.status in ACTIVE_STATUSES
+
 
 class AppointmentAttachment(models.Model):
     appointment = models.ForeignKey(
@@ -91,9 +119,12 @@ class AppointmentAttachment(models.Model):
         related_name="attachments",
         verbose_name="Запись",
     )
-    file = models.FileField("Файл", upload_to="appointments/")
+    file = models.FileField("Файл", upload_to=attachment_upload_to)
     uploaded_at = models.DateTimeField("Загружен", auto_now_add=True)
 
     class Meta:
         verbose_name = "Файл пациента"
         verbose_name_plural = "Файлы пациента"
+
+    def __str__(self):
+        return os.path.basename(self.file.name)

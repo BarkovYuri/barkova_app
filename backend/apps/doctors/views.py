@@ -18,7 +18,9 @@ class DoctorProfileView(APIView):
         if data is None:
             profile = DoctorProfile.objects.first()
             if not profile:
-                return Response(None)
+                # 404, а не null со статусом 200: Next кэширует только ответы
+                # 200, и пустой профиль застрял бы в кэше фронтенда.
+                return Response(None, status=404)
             serializer = DoctorProfileSerializer(profile, context={"request": request})
             data = serializer.data
             cache.set(PROFILE_CACHE_KEY, data, timeout=PROFILE_CACHE_TTL)

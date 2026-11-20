@@ -8,11 +8,15 @@ import { ArticleBody } from "../../../components/blog/ArticleBody";
 import { ArticleViewCounter } from "../../../components/blog/ArticleViewCounter";
 import { RelatedArticles } from "../../../components/blog/RelatedArticles";
 import { JsonLd } from "../../../components/common/JsonLd";
-import { buildArticleSchema, buildBreadcrumbSchema } from "../../../lib/seo";
+import { fetchAPI } from "../../../lib/api";
+import { buildArticleSchema, buildAuthorSchema, buildBreadcrumbSchema } from "../../../lib/seo";
 import { loadArticleBySlug, loadArticles } from "../../../lib/siteContent";
+import type { DoctorProfile } from "../../../lib/types";
 import { absoluteMediaUrl } from "../../../lib/url";
 
-export const revalidate = 60;
+// Страница рендерится на каждый запрос, а данные из API кэшируются на
+// минуту в lib/api.ts. Так сборка в CI не требует работающего бэкенда.
+export const revalidate = 0;
 
 const FORMATTER = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
@@ -63,9 +67,10 @@ export async function generateMetadata({
 
 export default async function ArticlePage({ params }: { params: Params }) {
   const { slug } = await params;
-  const [article, allArticles] = await Promise.all([
+  const [article, allArticles, doctor] = await Promise.all([
     loadArticleBySlug(slug),
     loadArticles(),
+    fetchAPI("/profile") as Promise<DoctorProfile | null>,
   ]);
   if (!article) {
     notFound();
@@ -85,7 +90,9 @@ export default async function ArticlePage({ params }: { params: Params }) {
     coverUrl: cover || undefined,
     publishedAt: article.published_at || undefined,
     updatedAt: article.updated_at,
+    author: buildAuthorSchema(doctor),
   });
+  const authorPhoto = absoluteMediaUrl(doctor?.header_avatar_url || doctor?.photo_url);
 
   return (
     <main id="main" className="bg-neutral-0">
@@ -142,6 +149,37 @@ export default async function ArticlePage({ params }: { params: Params }) {
         ) : null}
 
         <ArticleBody markdown={article.body} />
+
+        {/* Автор и характер материала: для медицинской темы поисковики
+            смотрят, кто написал статью и какая у него квалификация. */}
+        <aside className="mt-12 rounded-3xl border border-neutral-200 bg-neutral-50 p-5 sm:p-6">
+          <div className="flex items-center gap-4">
+            {authorPhoto ? (
+              <Image
+                src={authorPhoto}
+                alt={doctor?.full_name || "Автор статьи"}
+                width={56}
+                height={56}
+                className="h-14 w-14 shrink-0 rounded-full object-cover"
+              />
+            ) : null}
+            <div>
+              <p className="text-xs uppercase tracking-wide text-neutral-500">Автор статьи</p>
+              <Link href="/about" className="font-semibold text-neutral-900 hover:text-primary-700">
+                {doctor?.full_name || "Баркова Елена Игоревна"}
+              </Link>
+              <p className="text-sm text-neutral-600">
+                Врач-инфекционист
+                {doctor?.experience_years ? `, стаж ${doctor.experience_years}+ лет` : ""}
+              </p>
+            </div>
+          </div>
+          <p className="mt-4 text-xs leading-5 text-neutral-500">
+            Материал носит информационный характер и не заменяет очную
+            консультацию врача. При ухудшении самочувствия обратитесь к врачу
+            очно или вызовите скорую помощь.
+          </p>
+        </aside>
 
         {/* Глазик с числом просмотров после тела — для тех, кто читает
             до конца. Тот же компонент уже стоит в шапке, но на длинной

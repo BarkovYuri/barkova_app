@@ -9,6 +9,15 @@ export type Slot = {
   is_booked: boolean;
   is_active: boolean;
   is_reserved?: boolean;
+  /** Начало слота с часовым поясом расписания (ISO 8601). */
+  starts_at?: string;
+};
+
+export type ScheduleInfo = {
+  timezone: string;
+  /** «по времени Томска (МСК+4)» */
+  label: string;
+  msk_offset_hours: number;
 };
 
 export type AvailableDateItem =
@@ -108,18 +117,15 @@ export type LegalDocument = {
 
 export type CreatedAppointment = {
   id: number;
-  slot: number;
   slot_date: string;
   slot_start_time: string;
   slot_end_time: string;
-  name: string;
-  phone: string;
-  vk_link_token: string;
   status: string;
   created_at: string;
 };
 
-export type ContactMethod = "vk";
+/** "vk" — подтверждение и напоминания в VK; "phone" — VK нет, врач позвонит. */
+export type ContactMethod = "vk" | "phone";
 
 // ============================================================================
 // Контент сайта — редактируется врачом через Django-админку

@@ -1,2 +1,2 @@
-# Приложение integrations оставлено для совместимости (миграции, INSTALLED_APPS).
-# Вся функциональность перенесена в apps/appointments/services/linking.py
+# Приложение integrations оставлено только ради истории миграций и
+# INSTALLED_APPS. Логика бота живёт в apps/notifications/vk_bot.py.

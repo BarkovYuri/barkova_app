@@ -9,20 +9,18 @@ from __future__ import annotations
 
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.appointments.models import Appointment, AppointmentAttachment
 from apps.content.models import LegalDocument
 from apps.scheduling.models import TimeSlot
-from apps.appointments.models import Appointment, AppointmentAttachment
+from apps.scheduling.timefmt import slot_start_datetime
 
 logger = logging.getLogger("apps.appointments.services.booking")
-
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx", ".heic"}
-
 
 def get_available_slot_or_error(slot_id: int) -> TimeSlot:
     """
@@ -32,19 +30,12 @@ def get_available_slot_or_error(slot_id: int) -> TimeSlot:
     try:
         slot = TimeSlot.objects.get(id=slot_id, is_active=True)
     except TimeSlot.DoesNotExist:
-        raise serializers.ValidationError({"slot_id": "Слот не найден или недоступен."})
+        raise serializers.ValidationError({"slot_id": "Слот не найден или недоступен."}) from None
 
     if slot.is_booked:
         raise serializers.ValidationError({"slot_id": "Этот слот уже занят."})
 
-    current_tz = timezone.get_current_timezone()
-    slot_dt = timezone.make_aware(
-        datetime.combine(slot.date, slot.start_time),
-        current_tz,
-    )
-    threshold = timezone.now() + timedelta(hours=1)
-
-    if slot_dt <= threshold:
+    if slot_start_datetime(slot.date, slot.start_time) <= timezone.now() + timedelta(hours=1):
         raise serializers.ValidationError(
             {"slot_id": "Запись на это время уже закрыта. Выберите слот позже чем через 1 час."}
         )
@@ -100,10 +91,10 @@ def create_appointment_with_slot_lock(
             **appointment_data,
             **legal_versions,
         )
-    except IntegrityError:
+    except IntegrityError as exc:
         raise serializers.ValidationError(
             {"slot_id": "Этот слот уже только что заняли. Пожалуйста, выберите другое время."}
-        )
+        ) from exc
 
     for file in files:
         AppointmentAttachment.objects.create(appointment=appointment, file=file)
@@ -112,20 +103,14 @@ def create_appointment_with_slot_lock(
     locked_slot.save(update_fields=["is_booked"])
 
     def _notify() -> None:
-        from apps.notifications.services import (
-            send_appointment_created_notification,
-            send_created_message_to_patient_with_actions_vk,
-        )
-        appt = (
-            Appointment.objects
-            .select_related("slot")
-            .prefetch_related("attachments")
-            .get(pk=appointment.pk)
-        )
-        send_appointment_created_notification(appt)
+        # Уведомления — в Celery: медленный VK не должен тормозить ответ
+        # пациенту и не может уронить запись по таймауту gunicorn.
+        from apps.notifications import tasks
+        from apps.notifications.tasks import enqueue
 
-        if appt.preferred_contact_method == "vk" and appt.vk_user_id:
-            send_created_message_to_patient_with_actions_vk(appt)
+        enqueue(tasks.alert_doctor_new_appointment, appointment.pk)
+        if appointment.preferred_contact_method == "vk" and appointment.vk_user_id:
+            enqueue(tasks.deliver_booking_to_patient, appointment.pk)
 
     transaction.on_commit(_notify)
     logger.info("Appointment %s created for slot %s", appointment.id, locked_slot.id)

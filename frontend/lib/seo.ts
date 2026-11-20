@@ -49,21 +49,25 @@ function buildGeo() {
   };
 }
 
-function buildAggregateRating(doctor: DoctorProfile): Record<string, unknown> | undefined {
-  const rating = doctor.prodoktorov_rating;
-  const count = doctor.prodoktorov_reviews_count;
-  if (rating == null || count == null || Number(count) <= 0) {
-    return undefined;
-  }
-  return {
-    "@type": "AggregateRating",
-    ratingValue: String(rating),
-    reviewCount: count,
-    bestRating: 5,
-    worstRating: 1,
-  };
+function sameAsLinks(doctor: DoctorProfile): string[] {
+  return [
+    doctor.instagram_url,
+    doctor.vk_url,
+    doctor.dzen_url,
+    doctor.prodoktorov_url,
+  ].filter((url): url is string => Boolean(url));
 }
 
+/**
+ * Physician — единственная сущность врача на сайте.
+ *
+ * Сознательно НЕ размечаем:
+ * - aggregateRating с ПроДокторов: Google запрещает размечать отзывы,
+ *   собранные на сторонних сайтах, и может наложить ручную санкцию;
+ * - отдельный MedicalBusiness: это дубль той же сущности;
+ * - онлайн-разбор как медицинскую услугу: он носит информационный
+ *   характер (у кабинета нет медицинской лицензии).
+ */
 export function buildPhysicianSchema(
   doctor: DoctorProfile,
   photoAbsolute: string | undefined,
@@ -71,9 +75,10 @@ export function buildPhysicianSchema(
   return clean({
     "@context": "https://schema.org",
     "@type": "Physician",
+    "@id": `${SITE_URL}/#physician`,
     name: doctor.full_name,
     medicalSpecialty: ["InfectiousDisease"],
-    description: doctor.description || doctor.short_intro || undefined,
+    description: doctor.short_intro || doctor.description || undefined,
     image: photoAbsolute,
     url: SITE_URL,
     email: doctor.email || undefined,
@@ -81,52 +86,19 @@ export function buildPhysicianSchema(
     address: buildPostalAddress(doctor),
     geo: buildGeo(),
     areaServed: { "@type": "City", name: DEFAULT_LOCALITY },
-    aggregateRating: buildAggregateRating(doctor),
-    availableService: [
-      {
-        "@type": "MedicalTherapy",
-        name: "Онлайн-разбор",
-        description:
-          "Информационно-просветительский разбор инфекционных и связанных с ними состояний по видеосвязи.",
-      },
-      {
-        "@type": "MedicalProcedure",
-        name: "Очный приём",
-        description: "Консультация инфекциониста в кабинете в Томске.",
-      },
-    ],
-    sameAs: [
-      doctor.instagram_url,
-      doctor.vk_url,
-      doctor.dzen_url,
-      doctor.prodoktorov_url,
-    ].filter(Boolean),
+    sameAs: sameAsLinks(doctor),
   });
 }
 
-export function buildMedicalBusinessSchema(
-  doctor: DoctorProfile,
-  photoAbsolute: string | undefined,
-): Record<string, unknown> {
+/** Автор статей — врач, со ссылкой на страницу «О враче» и профили. */
+export function buildAuthorSchema(doctor: DoctorProfile | null): Record<string, unknown> {
   return clean({
-    "@context": "https://schema.org",
-    "@type": "MedicalBusiness",
-    name: `Кабинет врача-инфекциониста · ${doctor.full_name}`,
-    image: photoAbsolute,
-    url: SITE_URL,
-    telephone: doctor.phone || undefined,
-    email: doctor.email || undefined,
-    address: buildPostalAddress(doctor),
-    geo: buildGeo(),
-    priceRange: "₽₽",
-    areaServed: { "@type": "City", name: DEFAULT_LOCALITY },
-    aggregateRating: buildAggregateRating(doctor),
-    sameAs: [
-      doctor.instagram_url,
-      doctor.vk_url,
-      doctor.dzen_url,
-      doctor.prodoktorov_url,
-    ].filter(Boolean),
+    "@type": "Person",
+    "@id": `${SITE_URL}/about#author`,
+    name: doctor?.full_name || "Баркова Елена Игоревна",
+    jobTitle: "Врач-инфекционист",
+    url: `${SITE_URL}/about`,
+    sameAs: doctor ? sameAsLinks(doctor) : undefined,
   });
 }
 
@@ -157,6 +129,7 @@ type ArticleSchemaInput = {
   publishedAt?: string;
   updatedAt?: string;
   categoryName?: string;
+  author?: Record<string, unknown>;
 };
 
 export function buildArticleSchema(
@@ -179,11 +152,8 @@ export function buildArticleSchema(
     dateModified: article.updatedAt,
     wordCount,
     articleSection: article.categoryName,
-    author: {
-      "@type": "Person",
-      name: "Баркова Елена Игоревна",
-      url: `${SITE_URL}/about`,
-    },
+    inLanguage: "ru-RU",
+    author: article.author ?? buildAuthorSchema(null),
     publisher: {
       "@type": "Organization",
       name: "Кабинет врача-инфекциониста",

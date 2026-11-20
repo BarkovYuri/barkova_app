@@ -1,8 +1,9 @@
 VK_EVENT_CONFIRMATION = "confirmation"
 VK_EVENT_MESSAGE_NEW = "message_new"
 VK_EVENT_MESSAGE_EVENT = "message_event"
+VK_EVENT_MESSAGE_REPLY = "message_reply"
+VK_EVENT_MESSAGE_ALLOW = "message_allow"
 
-VK_CMD_CONNECT = "connect"
 VK_CMD_MANAGE = "manage"
 VK_CMD_CONFIRM = "confirm"
 VK_CMD_CANCEL_REQUEST = "cancel_request"

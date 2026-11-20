@@ -1,17 +1,18 @@
 "use client";
 
 import { UserRound } from "lucide-react";
-import Script from "next/script";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { IS_MOCK_MODE } from "../../lib/api";
+import { reachGoal } from "../../lib/metrika";
 import { isPhoneValid } from "../../lib/phone";
 import type { ContactMethod } from "../../lib/types";
 import { BookingSummary } from "./BookingSummary";
 import { BookingStepper } from "./BookingStepper";
 import { useDates, useSlots } from "./hooks/useSlots";
 import { useSlotReservation } from "./hooks/useSlotReservation";
+import { useScheduleInfo } from "./hooks/useScheduleInfo";
 import { useVkId } from "./hooks/useVkId";
+import { useVkMessaging } from "./hooks/useVkMessaging";
 import { useBookingSubmit } from "./hooks/useBookingSubmit";
 
 import { CalendarSection } from "./steps/CalendarSection";
@@ -46,13 +47,19 @@ export default function BookingForm() {
 
   // Soft-reservation: при выборе слота держим за пользователем 5 минут.
   // 409 от backend → слот успели забрать; сбрасываем выбор и обновляем список.
+  // Колбэк стабилен между рендерами: иначе эффект резервирования
+  // перезапускался бы на каждый ввод в форме и мог сам себе вернуть 409.
+  const handleReservationConflict = useCallback(async () => {
+    clearSelectedSlot();
+    await refreshSlots();
+  }, [clearSelectedSlot, refreshSlots]);
   const { getToken: getReservationToken } = useSlotReservation({
     selectedSlotId,
-    onConflict: async () => {
-      clearSelectedSlot();
-      await refreshSlots();
-    },
+    onConflict: handleReservationConflict,
   });
+
+  // Часовой пояс расписания: «по времени Томска (МСК+4)».
+  const scheduleInfo = useScheduleInfo();
 
   // ── Данные пациента ─────────────────────────────────────────────
   const [name, setName] = useState("");
@@ -66,8 +73,23 @@ export default function BookingForm() {
   const [offerAccepted, setOfferAccepted] = useState(false);
 
   // ── Способ связи ────────────────────────────────────────────────
-  const contactMethod: ContactMethod = "vk";
-  const vkId = useVkId(true);
+  const [contactMethod, setContactMethodState] = useState<ContactMethod>("vk");
+  const setContactMethod = useCallback((method: ContactMethod) => {
+    if (method === "phone") reachGoal("booking_contact_phone");
+    setContactMethodState(method);
+  }, []);
+  const vkId = useVkId(contactMethod === "vk");
+  const vkMessaging = useVkMessaging(
+    contactMethod === "vk" && vkId.authorized ? vkId.payload?.user_id : null
+  );
+
+  // Цели Метрики по шагам воронки записи.
+  useEffect(() => {
+    if (vkId.authorized) reachGoal("booking_vk_login");
+  }, [vkId.authorized]);
+  useEffect(() => {
+    if (vkMessaging.allowed) reachGoal("booking_vk_messages_allowed");
+  }, [vkMessaging.allowed]);
 
   // ── Отправка ────────────────────────────────────────────────────
   const {
@@ -79,12 +101,13 @@ export default function BookingForm() {
   } = useBookingSubmit();
 
   // Объединяем ошибки: от хука submit + от VK
-  const errorText = error || vkId.loadError;
+  const errorText = error || (contactMethod === "vk" ? vkId.loadError : "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    await submit({
+    reachGoal("booking_submit", { contact: contactMethod });
+    const ok = await submit({
       selectedSlotId,
       selectedDate,
       selectedSlot,
@@ -100,6 +123,7 @@ export default function BookingForm() {
       onSlotsRefresh: refreshSlots,
       reservationToken: getReservationToken(selectedSlotId),
     });
+    reachGoal(ok ? "booking_success" : "booking_error", { contact: contactMethod });
   }
 
   // ── Progress calculation ─────────────────────────────────────────
@@ -112,7 +136,8 @@ export default function BookingForm() {
     privacyAccepted &&
     offerAccepted
   );
-  const hasContactMethod = vkId.authorized;
+  const hasContactMethod =
+    contactMethod === "phone" || (vkId.authorized && vkMessaging.allowed === true);
 
   // ── Success ─────────────────────────────────────────────────────
   if (success) {
@@ -121,6 +146,9 @@ export default function BookingForm() {
         selectedDate={selectedDate}
         selectedSlot={selectedSlot}
         contactMethod={contactMethod}
+        messagesAllowed={vkMessaging.allowed === true}
+        dialogUrl={vkMessaging.dialogUrl}
+        timezoneLabel={scheduleInfo?.label ?? ""}
       />
     );
   }
@@ -128,18 +156,6 @@ export default function BookingForm() {
   // ── Main form ───────────────────────────────────────────────────
   return (
     <>
-      {/* VK SDK — тяжёлый внешний скрипт с unpkg, в РФ может грузиться
-          5–10 секунд или таймаутить. На `afterInteractive` он блокировал
-          парсинг и хydration на медленных мобильных → «кнопки не
-          нажимаются». Переводим на `lazyOnload` (грузится после полной
-          отрисовки страницы). */}
-      {!IS_MOCK_MODE ? (
-        <Script
-          src="https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js"
-          strategy="lazyOnload"
-        />
-      ) : null}
-
       <BookingStepper
         hasSelectedDate={hasSelectedDate}
         hasSelectedSlot={hasSelectedSlot}
@@ -162,6 +178,7 @@ export default function BookingForm() {
           setSelectedSlotId={setSelectedSlotId}
           formSectionRef={formSectionRef}
           slotsSectionRef={slotsSectionRef}
+          scheduleInfo={scheduleInfo}
         />
 
         {/* Form */}
@@ -204,13 +221,19 @@ export default function BookingForm() {
               files={files}
               setFiles={setFiles}
               errorText={errorText}
+              setErrorText={setError}
               submitting={submitting}
+              timezoneLabel={scheduleInfo?.label ?? ""}
             >
               <ContactMethodSection
+                contactMethod={contactMethod}
+                setContactMethod={setContactMethod}
                 vkIdReady={vkId.ready}
                 vkIdLoadError={vkId.loadError}
                 vkIdAuthorized={vkId.authorized}
                 vkIdContainerRef={vkId.containerRef}
+                messagesAllowed={vkMessaging.allowed}
+                dialogUrl={vkMessaging.dialogUrl}
               />
             </PatientForm>
           </form>
@@ -225,6 +248,7 @@ export default function BookingForm() {
             contactMethod={contactMethod}
             contactReady={hasContactMethod}
             formReady={hasFilledForm}
+            timezoneLabel={scheduleInfo?.label ?? ""}
           />
         </div>
       </div>

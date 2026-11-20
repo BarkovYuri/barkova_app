@@ -6,6 +6,7 @@ import {
   Circle,
   Clock,
   MessageSquare,
+  Phone,
   Users,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ type Props = {
   contactMethod: ContactMethod;
   contactReady: boolean;
   formReady: boolean;
+  timezoneLabel: string;
 };
 
 function formatDateLong(dateString: string) {
@@ -31,6 +33,7 @@ function formatDateLong(dateString: string) {
 
 const ContactIcon = {
   vk: Users,
+  phone: Phone,
 } as const;
 
 export function BookingSummary({
@@ -39,12 +42,14 @@ export function BookingSummary({
   contactMethod,
   contactReady,
   formReady,
+  timezoneLabel,
 }: Props) {
   const dateLabel = formatDateLong(selectedDate);
   const ContactIconCmp =
     ContactIcon[contactMethod as keyof typeof ContactIcon] ?? MessageSquare;
-  const contactLabel =
-    contactMethod === "vk" ? "VK" : "Способ связи";
+  const contactLabel = contactMethod === "vk" ? "VK" : "Телефон";
+  const contactValue =
+    contactMethod === "phone" ? "Врач позвонит" : contactReady ? "VK подключён" : null;
 
   const checklist = [
     { label: "Дата выбрана", done: !!selectedDate },
@@ -87,10 +92,9 @@ export function BookingSummary({
             label="Время"
             value={
               selectedSlot
-                ? `${selectedSlot.start_time.slice(
-                    0,
-                    5
-                  )} – ${selectedSlot.end_time.slice(0, 5)}`
+                ? `${selectedSlot.start_time.slice(0, 5)} – ${selectedSlot.end_time.slice(0, 5)}${
+                    timezoneLabel ? ` ${timezoneLabel}` : ""
+                  }`
                 : null
             }
             placeholder="Выберите слот"
@@ -100,7 +104,7 @@ export function BookingSummary({
           <SummaryRow
             icon={ContactIconCmp}
             label="Подтверждение"
-            value={contactReady ? `${contactLabel} подключён` : null}
+            value={contactValue}
             placeholder={`${contactLabel}: ожидание подключения`}
           />
 

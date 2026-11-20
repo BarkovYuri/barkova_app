@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { fetchAPI } from "../../../lib/api";
 import type { LegalDocument } from "../../../lib/types";
 
-export const revalidate = 300;
+// Страница рендерится на каждый запрос, а данные из API кэшируются на
+// минуту в lib/api.ts. Так сборка в CI не требует работающего бэкенда.
+export const revalidate = 0;
 
 async function loadPrivacy(): Promise<LegalDocument | undefined> {
   const documents = ((await fetchAPI("/legal")) || []) as LegalDocument[];

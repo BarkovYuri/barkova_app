@@ -1,8 +1,18 @@
 "use client";
 
-import { CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarOff, ChevronLeft, ChevronRight, Globe2 } from "lucide-react";
+import { reachGoal } from "../../../lib/metrika";
+import { localTimeHint } from "../hooks/useScheduleInfo";
 import { addMonths, startOfMonth } from "../hooks/useSlots";
-import type { CalendarDay, Slot } from "../../../lib/types";
+import type { CalendarDay, ScheduleInfo, Slot } from "../../../lib/types";
+
+function plural(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+  return many;
+}
 
 const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
@@ -35,6 +45,7 @@ type Props = {
   setSelectedSlotId: (id: number) => void;
   formSectionRef: React.RefObject<HTMLDivElement | null>;
   slotsSectionRef: React.RefObject<HTMLDivElement | null>;
+  scheduleInfo: ScheduleInfo | null;
 };
 
 export function CalendarSection({
@@ -50,6 +61,7 @@ export function CalendarSection({
   setSelectedSlotId,
   formSectionRef,
   slotsSectionRef,
+  scheduleInfo,
 }: Props) {
   return (
     <section className="animate-fade-in rounded-3xl border border-neutral-200 bg-neutral-0 p-4 shadow-card sm:p-6">
@@ -174,7 +186,7 @@ export function CalendarSection({
                     >
                       {day.isAvailable
                         ? typeof day.freeSlots === "number"
-                          ? `${day.freeSlots} мест`
+                          ? `${day.freeSlots} ${plural(day.freeSlots, "место", "места", "мест")}`
                           : "•"
                         : "—"}
                     </span>
@@ -197,10 +209,17 @@ export function CalendarSection({
           </div>
           {selectedDate ? (
             <div className="rounded-full bg-primary-100 px-3 py-1.5 text-xs font-semibold text-primary-700 sm:px-4 sm:text-sm">
-              {slots.length} {slots.length % 10 === 1 ? "слот" : "слотов"}
+              {slots.length} {plural(slots.length, "слот", "слота", "слотов")}
             </div>
           ) : null}
         </div>
+
+        {scheduleInfo?.label ? (
+          <p className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+            <Globe2 className="h-3.5 w-3.5" strokeWidth={2} />
+            Указано {scheduleInfo.label}
+          </p>
+        ) : null}
 
         {loadingSlots ? (
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -225,12 +244,18 @@ export function CalendarSection({
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {slots.map((slot) => {
               const active = selectedSlotId === slot.id;
+              // Слот держит другой пациент, который сейчас заполняет форму.
+              const reservedByOther = Boolean(slot.is_reserved) && !active;
+              const hint = localTimeHint(slot.starts_at, slot.start_time);
               return (
                 <button
                   key={slot.id}
                   type="button"
+                  disabled={reservedByOther}
+                  title={reservedByOther ? "Это время сейчас бронирует другой пациент" : undefined}
                   onClick={() => {
                     setSelectedSlotId(slot.id);
+                    reachGoal("booking_slot_selected");
                     if (typeof window !== "undefined" && window.innerWidth < 1024) {
                       setTimeout(() => {
                         formSectionRef.current?.scrollIntoView({
@@ -246,11 +271,18 @@ export function CalendarSection({
                     ${
                       active
                         ? "border-primary-600 bg-primary-600 text-neutral-0 shadow-lg shadow-primary-500/30"
+                        : reservedByOther
+                        ? "cursor-not-allowed border-neutral-200 bg-neutral-50 text-neutral-400"
                         : "border-neutral-300 bg-neutral-0 text-neutral-700 hover:border-primary-400 hover:bg-primary-50 hover:-translate-y-0.5"
                     }
                   `}
                 >
-                  {slot.start_time.slice(0, 5)}
+                  <span className="block">{slot.start_time.slice(0, 5)}</span>
+                  {hint ? (
+                    <span className={`block text-[11px] font-medium ${active ? "text-primary-100" : "text-neutral-500"}`}>
+                      у вас {hint}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}

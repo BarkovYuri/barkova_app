@@ -10,7 +10,9 @@ import { buildBreadcrumbSchema } from "../../../../lib/seo";
 import { loadBlogCategoryBySlug } from "../../../../lib/siteContent";
 import { absoluteMediaUrl } from "../../../../lib/url";
 
-export const revalidate = 60;
+// Страница рендерится на каждый запрос, а данные из API кэшируются на
+// минуту в lib/api.ts. Так сборка в CI не требует работающего бэкенда.
+export const revalidate = 0;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://doctor-barkova.ru";
 

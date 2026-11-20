@@ -3,10 +3,7 @@ import Image from "next/image";
 import { ArrowRight, ExternalLink, Sparkles, Star } from "lucide-react";
 
 import { JsonLd } from "../components/common/JsonLd";
-import {
-  buildMedicalBusinessSchema,
-  buildPhysicianSchema,
-} from "../lib/seo";
+import { buildPhysicianSchema } from "../lib/seo";
 import { SectionDivider } from "../components/common/SectionDivider";
 import { Faq } from "../components/home/Faq";
 import { HowItWorks } from "../components/home/HowItWorks";
@@ -29,10 +26,9 @@ function pluralizeReviews(n: number): string {
   return "отзывов";
 }
 
-// ISR: страница пересобирается не чаще раза в минуту. Без этого Next 16
-// может статически отрендерить её при build и игнорировать изменения в
-// админке (стаж, фото, тексты) до следующего деплоя.
-export const revalidate = 60;
+// Страница рендерится на каждый запрос, а данные из API кэшируются на
+// минуту в lib/api.ts. Так сборка в CI не требует работающего бэкенда.
+export const revalidate = 0;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://doctor-barkova.ru";
 
@@ -40,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
   if (!doctor) return {};
 
-  const title = `${doctor.full_name} — врач-инфекционист`;
+  const title = `${doctor.full_name} — врач-инфекционист в Томске`;
   const description =
     doctor.short_intro?.trim() ||
     doctor.description?.slice(0, 200) ||
@@ -77,18 +73,10 @@ export default async function Home() {
   ]);
 
   if (!doctor) {
-    return (
-      <main id="main" className="min-h-screen bg-neutral-0">
-        <div className="container section flex items-center justify-center">
-          <div className="card max-w-2xl">
-            <h1>Профиль врача не найден</h1>
-            <p className="mt-4 text-neutral-600">
-              Добавьте профиль врача в админке Django.
-            </p>
-          </div>
-        </div>
-      </main>
-    );
+    // Без профиля главная бессмысленна. Бросаем ошибку, а не отдаём
+    // заглушку со статусом 200: иначе при сбое API поисковик может
+    // проиндексировать «Профиль врача не найден» вместо главной.
+    throw new Error("Doctor profile is not available");
   }
 
   // Тексты с fallback'ами
@@ -122,18 +110,16 @@ export default async function Home() {
   );
   const ctaButton = textOr(blocks, "cta.home.button", "Записаться сейчас");
 
-  // Structured data — Physician + MedicalBusiness для Google rich-cards
-  // и local-pack по запросам «врач инфекционист Томск».
+  // Structured data — Physician (подтип MedicalBusiness в schema.org) для
+  // карточки врача и local-pack по запросам «врач инфекционист Томск».
   const photoAbsolute = absoluteMediaUrl(doctor.photo_url) || undefined;
   const heroPhoto = absoluteMediaUrl(doctor.photo_url);
 
   const physicianLd = buildPhysicianSchema(doctor, photoAbsolute);
-  const medicalBusinessLd = buildMedicalBusinessSchema(doctor, photoAbsolute);
 
   return (
     <main id="main" className="bg-neutral-0">
       <JsonLd data={physicianLd} />
-      <JsonLd data={medicalBusinessLd} />
 
       {/* ========== HERO SECTION ========== */}
       <section className="relative overflow-hidden">
@@ -154,7 +140,14 @@ export default async function Home() {
               </div>
 
               {/* Doctor Name */}
-              <h1 className="mt-6 text-neutral-900">{doctor.full_name}</h1>
+              {/* В H1 — имя, специальность и город: главный запрос
+                  страницы «врач инфекционист Томск». */}
+              <h1 className="mt-6 text-neutral-900">
+                {doctor.full_name}
+                <span className="mt-3 block font-sans text-xl font-semibold text-primary-700 sm:text-2xl">
+                  {textOr(blocks, "hero.h1_subtitle", "Врач-инфекционист в Томске")}
+                </span>
+              </h1>
 
               {/* Description */}
               <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-neutral-600 whitespace-pre-line">
@@ -162,8 +155,8 @@ export default async function Home() {
               </p>
 
               {/* Рейтинг ПроДокторов — рендерим только если в админке
-                  заполнены поля. Видимый блок нужен для AggregateRating
-                  schema (Google требует чтобы оценка отображалась). */}
+                  заполнены поля. В schema.org его не размечаем: отзывы
+                  собраны на стороннем сайте. */}
               {doctor.prodoktorov_rating && doctor.prodoktorov_reviews_count ? (
                 <a
                   href={doctor.prodoktorov_url || "#"}

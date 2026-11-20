@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.core.cache import cache
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path, reverse
@@ -8,10 +9,10 @@ from unfold.admin import ModelAdmin
 from .admin_forms import AvailabilityRuleAdminForm
 from .forms import SlotGenerationForm
 from .models import (
+    WEEKDAY_SHORT,
     AvailabilityRule,
     DayException,
     TimeSlot,
-    WEEKDAY_SHORT,
 )
 from .services import (
     apply_day_exception,
@@ -20,6 +21,33 @@ from .services import (
     generate_slots_for_rule,
     generate_slots_for_rules,
 )
+
+
+def _invalidate_dates_cache(dates) -> None:
+    """queryset.update() не вызывает сигналы, поэтому кэш свободных слотов
+    сбрасываем вручную."""
+    cache.delete("scheduling:available_dates")
+    for d in set(dates):
+        cache.delete(f"scheduling:available_slots:{d}")
+
+
+def _warn_about_appointments(model_admin, request, dates) -> None:
+    from apps.appointments.models import ACTIVE_STATUSES, Appointment
+
+    booked = (
+        Appointment.objects.select_related("slot")
+        .filter(slot__date__in=list(dates), status__in=ACTIVE_STATUSES)
+        .order_by("slot__date", "slot__start_time")
+    )
+    if booked:
+        lines = ", ".join(f"{a.slot.date:%d.%m} {a.slot.start_time:%H:%M} {a.name}" for a in booked[:10])
+        model_admin.message_user(
+            request,
+            f"Внимание: на эти дни уже есть записи пациентов ({lines}). "
+            "Их слоты не закрыты. Отмените или перенесите записи вручную, "
+            "пациент получит сообщение об отмене.",
+            level=messages.WARNING,
+        )
 
 
 # ============================================================================
@@ -231,7 +259,9 @@ class TimeSlotAdmin(ModelAdmin):
 
     @admin.action(description="Сделать выбранные слоты недоступными")
     def deactivate_slots(self, request, queryset):
+        dates = list(queryset.values_list("date", flat=True))
         updated = queryset.update(is_active=False)
+        _invalidate_dates_cache(dates)
         self.message_user(
             request,
             f"Недоступными отмечено слотов: {updated}",
@@ -240,7 +270,9 @@ class TimeSlotAdmin(ModelAdmin):
 
     @admin.action(description="Сделать выбранные слоты доступными")
     def activate_slots(self, request, queryset):
+        dates = list(queryset.values_list("date", flat=True))
         updated = queryset.update(is_active=True)
+        _invalidate_dates_cache(dates)
         self.message_user(
             request,
             f"Доступными отмечено слотов: {updated}",
@@ -293,6 +325,8 @@ class DayExceptionAdmin(ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         affected = apply_day_exception(obj)
+        _invalidate_dates_cache([obj.date])
+        _warn_about_appointments(self, request, [obj.date])
         if affected:
             self.message_user(
                 request,
@@ -305,6 +339,9 @@ class DayExceptionAdmin(ModelAdmin):
         total = 0
         for exc in queryset:
             total += apply_day_exception(exc)
+        dates = [exc.date for exc in queryset]
+        _invalidate_dates_cache(dates)
+        _warn_about_appointments(self, request, dates)
         self.message_user(
             request,
             f"Сделано недоступными слотов: {total}",

@@ -1,53 +1,50 @@
-import secrets
+import hmac
+import logging
 
-from django.core.cache import cache
 from django.conf import settings
-from django.utils import timezone
+from django.core.cache import cache
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from rest_framework.decorators import authentication_classes
 
 from apps.core.permissions import IsAdminUser
-from apps.core.throttling import AppointmentCreateThrottle, PrelinkThrottle
-from apps.notifications.models import VKPrelink
-from apps.notifications.services import (
-    send_appointment_status_notification,
-    send_doctor_contact_request_notification,
-    send_to_patient_vk,
-    build_vk_booking_keyboard,
-    build_vk_active_root_keyboard,
+from apps.core.throttling import AppointmentCreateThrottle
+from apps.notifications.tasks import process_vk_callback_event
+from apps.notifications.transports import vk as vk_transport
+from apps.notifications.vk_constants import (
+    VK_EVENT_CONFIRMATION,
+    VK_EVENT_MESSAGE_ALLOW,
+    VK_EVENT_MESSAGE_EVENT,
+    VK_EVENT_MESSAGE_NEW,
+    VK_EVENT_MESSAGE_REPLY,
 )
-from apps.appointments.services.linking import (
-    create_vk_prelink,
-    confirm_vk_prelink,
-    get_vk_prelink_status,
-    create_vk_pending_link,
-    resolve_vk_auto_link,
-)
-from apps.appointments.services.actions import AppointmentActionService
+from apps.notifications.vk_serializers import VKCallbackEnvelopeSerializer
+
 from .models import Appointment
 from .serializers import (
     AppointmentCreateSerializer,
+    AppointmentPublicSerializer,
     AppointmentSerializer,
     AppointmentStatusUpdateSerializer,
-    QuickAppointmentCreateSerializer,
 )
 
-from apps.notifications.tasks import process_vk_callback_event
-from apps.notifications.vk_serializers import VKCallbackEnvelopeSerializer
-from apps.notifications.vk_constants import (
-    VK_EVENT_CONFIRMATION,
+logger = logging.getLogger("apps.appointments.views")
+
+_HANDLED_VK_EVENTS = {
     VK_EVENT_MESSAGE_NEW,
     VK_EVENT_MESSAGE_EVENT,
-)
+    VK_EVENT_MESSAGE_REPLY,
+    VK_EVENT_MESSAGE_ALLOW,
+}
 
 
-@authentication_classes([])
 class AppointmentCreateView(CreateAPIView):
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
     queryset = Appointment.objects.all()
     serializer_class = AppointmentCreateSerializer
     throttle_classes = [AppointmentCreateThrottle]
@@ -56,22 +53,7 @@ class AppointmentCreateView(CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         appointment = serializer.save()
-
-        response_serializer = AppointmentSerializer(appointment)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-
-
-@authentication_classes([])
-class QuickAppointmentCreateView(APIView):
-    throttle_classes = [AppointmentCreateThrottle]
-
-    def post(self, request):
-        serializer = QuickAppointmentCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        appointment = serializer.save()
-
-        response_serializer = AppointmentSerializer(appointment)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(AppointmentPublicSerializer(appointment).data, status=status.HTTP_201_CREATED)
 
 
 class AdminAppointmentListView(ListAPIView):
@@ -79,270 +61,91 @@ class AdminAppointmentListView(ListAPIView):
     serializer_class = AppointmentSerializer
 
     def get_queryset(self):
-        queryset = (
-            Appointment.objects
-            .select_related("slot")
-            .prefetch_related("attachments")
-            .order_by("-created_at")
-        )
-
+        queryset = Appointment.objects.select_related("slot").prefetch_related("attachments").order_by("-created_at")
         status_param = self.request.query_params.get("status")
         if status_param:
             queryset = queryset.filter(status=status_param)
-
         date_param = self.request.query_params.get("date")
         if date_param:
             queryset = queryset.filter(slot__date=date_param)
-
         return queryset
 
 
 class AdminAppointmentUpdateView(UpdateAPIView):
     permission_classes = [IsAdminUser]
-    queryset = Appointment.objects.all()
+    queryset = Appointment.objects.select_related("slot")
     serializer_class = AppointmentStatusUpdateSerializer
 
 
-# =========================
-# VK prelink
-# =========================
-
-@authentication_classes([])
-class VKPrelinkCreateView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [PrelinkThrottle]
-
-    def post(self, request):
-        data = create_vk_prelink(group_id=settings.VK_GROUP_ID)
-        return Response(data, status=status.HTTP_201_CREATED)
-
-
-@authentication_classes([])
-class VKPrelinkLinkView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        token = request.data.get("token", "").strip()
-        user_id = str(request.data.get("user_id", "")).strip()
-        peer_id = str(request.data.get("peer_id", "")).strip()
-
-        ok, error_msg = confirm_vk_prelink(token, user_id, peer_id)
-        if not ok:
-            http_status = status.HTTP_400_BAD_REQUEST if "обязательны" in error_msg else status.HTTP_404_NOT_FOUND
-            return Response({"detail": error_msg}, status=http_status)
-        return Response({"status": "ok"})
-
-
-@authentication_classes([])
-class VKPrelinkStatusView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        token = request.query_params.get("token", "").strip()
-        if not token:
-            return Response({"detail": "token обязателен."}, status=status.HTTP_400_BAD_REQUEST)
-
-        result = get_vk_prelink_status(token)
-        if result is None:
-            return Response({"detail": "Токен не найден."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(result)
-
-
-@authentication_classes([])
 class VKMessagingStatusView(APIView):
+    """Может ли сообщество писать пользователю. Форма записи опрашивает его
+    после входа через VK ID, чтобы попросить разрешить сообщения."""
+
+    authentication_classes: list = []
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "vk_status"
 
     def get(self, request):
         vk_user_id = request.query_params.get("vk_user_id", "").strip()
-        if not vk_user_id:
+        if not vk_user_id.isdigit():
             return Response({"detail": "vk_user_id обязателен."}, status=status.HTTP_400_BAD_REQUEST)
 
-        from apps.notifications.services import _vk_is_messages_allowed
-        allowed, error = _vk_is_messages_allowed(vk_user_id)
-        dialog_url = f"https://vk.com/im?sel=-{settings.VK_GROUP_ID}"
-
-        return Response({
-            "vk_user_id": vk_user_id,
-            "can_message_user": allowed,
-            "error": error,
-            "dialog_url": dialog_url,
-        })
+        allowed, _ = vk_transport.is_messages_allowed(vk_user_id)
+        return Response(
+            {
+                "vk_user_id": vk_user_id,
+                "can_message_user": allowed,
+                "dialog_url": vk_transport.community_dialog_url(),
+            }
+        )
 
 
-@authentication_classes([])
-class VKPendingLinkCreateView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [PrelinkThrottle]
-
-    def post(self, request):
-        vk_user_id = str(request.data.get("vk_user_id", "")).strip()
-        if not vk_user_id:
-            return Response({"detail": "vk_user_id обязателен."}, status=status.HTTP_400_BAD_REQUEST)
-
-        data = create_vk_pending_link(vk_user_id=vk_user_id, group_id=settings.VK_GROUP_ID)
-        return Response(data)
-
-
-@authentication_classes([])
-class VKAutoLinkView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        user_id = str(request.data.get("user_id", "")).strip()
-        peer_id = str(request.data.get("peer_id", "")).strip()
-        if not user_id or not peer_id:
-            return Response({"detail": "user_id и peer_id обязательны."}, status=status.HTTP_400_BAD_REQUEST)
-
-        link_status = resolve_vk_auto_link(user_id=user_id, peer_id=peer_id)
-        return Response({"status": link_status})
-
-
-@authentication_classes([])
-class VKAppointmentActionView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        appointment_id = request.data.get("appointment_id")
-        token = request.data.get("token", "").strip()
-        action = request.data.get("action", "").strip()
-        user_id = str(request.data.get("user_id", "")).strip()
-
-        if not appointment_id or not token or not action or not user_id:
-            return Response(
-                {"detail": "appointment_id, token, action и user_id обязательны."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
-        if not appointment:
-            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
-        if appointment.vk_link_token != token:
-            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
-        if str(appointment.vk_user_id) != user_id:
-            return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
-
-        result = AppointmentActionService.handle(appointment, action)
-        if "error" in result:
-            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(result)
-
-
-    def post(self, request):
-        appointment_id = request.data.get("appointment_id")
-        token = request.data.get("token", "").strip()
-        action = request.data.get("action", "").strip()
-        user_id = str(request.data.get("user_id", "")).strip()
-
-        if not appointment_id or not token or not action or not user_id:
-            return Response(
-                {"detail": "appointment_id, token, action и user_id обязательны."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
-        if not appointment:
-            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
-        if appointment.vk_link_token != token:
-            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
-        if str(appointment.vk_user_id) != user_id:
-            return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
-
-        result = AppointmentActionService.handle(appointment, action)
-        if "error" in result:
-            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(result)
-
-
-    def post(self, request):
-        appointment_id = request.data.get("appointment_id")
-        token = request.data.get("token", "").strip()
-        action = request.data.get("action", "").strip()
-        user_id = str(request.data.get("user_id", "")).strip()
-
-        if not appointment_id or not token or not action or not user_id:
-            return Response(
-                {"detail": "appointment_id, token, action и user_id обязательны."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
-        if not appointment:
-            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
-        if appointment.vk_link_token != token:
-            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
-        if str(appointment.vk_user_id) != user_id:
-            return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
-
-        result = AppointmentActionService.handle(appointment, action)
-        if "error" in result:
-            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(result)
-
-
-    def post(self, request):
-        appointment_id = request.data.get("appointment_id")
-        token = request.data.get("token", "").strip()
-        action = request.data.get("action", "").strip()
-        user_id = str(request.data.get("user_id", "")).strip()
-
-        if not appointment_id or not token or not action or not user_id:
-            return Response(
-                {"detail": "appointment_id, token, action и user_id обязательны."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        appointment = Appointment.objects.select_related("slot").filter(id=appointment_id).first()
-        if not appointment:
-            return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
-        if appointment.vk_link_token != token:
-            return Response({"detail": "Неверный токен."}, status=status.HTTP_403_FORBIDDEN)
-        if str(appointment.vk_user_id) != user_id:
-            return Response({"detail": "Неверный user_id."}, status=status.HTTP_403_FORBIDDEN)
-
-        result = AppointmentActionService.handle(appointment, action)
-        if "error" in result:
-            return Response({"detail": "Неизвестное действие."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(result)
-
-
-@authentication_classes([])
 class VKCallbackView(APIView):
+    """Callback API сообщества. Отвечает VK сразу, обработку делает Celery."""
+
+    authentication_classes: list = []
     permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = VKCallbackEnvelopeSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return HttpResponse("ok")
         data = serializer.validated_data
-
         event_type = data["type"]
+
+        expected_group = str(getattr(settings, "VK_GROUP_ID", "") or "")
+        incoming_group = str(data.get("group_id") or "")
+        if expected_group and incoming_group and incoming_group != expected_group:
+            return HttpResponse("forbidden", status=403)
 
         if event_type == VK_EVENT_CONFIRMATION:
             return HttpResponse(settings.VK_CALLBACK_CONFIRMATION_CODE)
 
+        # Без секрета эндпоинт не принимает события вообще. Сравнение
+        # constant-time, чтобы не было timing-атаки.
         callback_secret = getattr(settings, "VK_CALLBACK_SECRET", "")
-        incoming_secret = data.get("secret", "") or ""
-        # Если секрет не задан в настройках — отклоняем все запросы,
-        # чтобы не открывать эндпоинт без защиты. Сравниваем через
-        # hmac.compare_digest (constant-time) — простой `!=` уязвим
-        # к timing-attack.
-        import hmac as _hmac
-        if not callback_secret or not _hmac.compare_digest(
-            str(incoming_secret), str(callback_secret)
-        ):
+        incoming_secret = str(data.get("secret", "") or "")
+        if not callback_secret or not hmac.compare_digest(incoming_secret, str(callback_secret)):
             return HttpResponse("forbidden", status=403)
 
-        if event_type not in {VK_EVENT_MESSAGE_NEW, VK_EVENT_MESSAGE_EVENT}:
+        if event_type not in _HANDLED_VK_EVENTS:
             return HttpResponse("ok")
 
         event_id = data.get("event_id")
-        if event_id:
-            # cache.add — атомарный SETNX. Возвращает True, если ключа
-            # не было (мы первые). Если cache.add вернёт False —
-            # значит другой воркер уже обрабатывает этот event_id.
-            cache_key = f"vk_callback_event:{event_id}"
-            if not cache.add(cache_key, "1", timeout=60 * 10):
-                return HttpResponse("ok")
+        cache_key = f"vk_callback_event:{event_id}" if event_id else ""
+        # cache.add — атомарный SETNX: VK повторяет событие, если не получил
+        # «ok» вовремя, и второй раз обрабатывать его не нужно.
+        if cache_key and not cache.add(cache_key, "1", timeout=60 * 10):
+            return HttpResponse("ok")
 
-        process_vk_callback_event.delay(data)
+        try:
+            process_vk_callback_event.delay(dict(request.data))
+        except Exception:
+            logger.exception("Failed to enqueue VK callback event %s", event_id)
+            if cache_key:
+                cache.delete(cache_key)
+            # Не «ok» — VK повторит событие позже, и оно не потеряется.
+            return HttpResponse("retry", status=503)
 
         return HttpResponse("ok")

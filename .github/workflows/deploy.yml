@@ -83,14 +83,41 @@ jobs:
 
       - name: Deploy on server
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          # Получатели алертов врачу: числовые id страниц VK через запятую.
+          # Задаётся в GitHub: Settings, Secrets and variables, Actions
+          # (подойдёт и Variable, и Secret).
+          VK_DOCTOR_USER_IDS: ${{ vars.VK_DOCTOR_USER_IDS || secrets.VK_DOCTOR_USER_IDS }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           command_timeout: 60m
+          envs: VK_DOCTOR_USER_IDS
           script: |
             set -e
             cd /var/www/barkova_app
+
+            # Записываем VK_DOCTOR_USER_IDS в .env, а не только в окружение
+            # этого запуска: иначе ручной `docker compose up` на сервере
+            # пересоздал бы контейнеры без получателей, и алерты врачу
+            # молча перестали бы приходить.
+            DOCTOR_IDS=$(printf '%s' "${VK_DOCTOR_USER_IDS:-}" | tr -d ' ')
+            if [ -n "$DOCTOR_IDS" ]; then
+              case "$DOCTOR_IDS" in
+                *[!0-9,]*)
+                  echo "VK_DOCTOR_USER_IDS: допустимы только цифры и запятые" >&2
+                  exit 1
+                  ;;
+              esac
+              if grep -q '^VK_DOCTOR_USER_IDS=' .env; then
+                sed -i "s/^VK_DOCTOR_USER_IDS=.*/VK_DOCTOR_USER_IDS=${DOCTOR_IDS}/" .env
+              else
+                printf '\nVK_DOCTOR_USER_IDS=%s\n' "$DOCTOR_IDS" >> .env
+              fi
+            else
+              echo "ВНИМАНИЕ: VK_DOCTOR_USER_IDS не задан в GitHub, оставляю значение из .env"
+            fi
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u barkovyuri --password-stdin
 
@@ -103,6 +130,12 @@ jobs:
               celery_beat \
               frontend \
               nginx
+
+            # Проверка канала алертов врачу: только статус, без отправки
+            # сообщений. Результат виден в логе этого шага; деплой не валит.
+            sleep 15
+            docker compose -f docker-compose.prod.yml exec -T backend \
+              python manage.py send_test_doctor_alert --check || true
 
             docker image prune -a -f || true
             docker builder prune -a -f || true

@@ -8,7 +8,8 @@ import { absoluteMediaUrl } from "../../lib/url";
 import MobileMenu from "./MobileMenu";
 
 export default async function Header() {
-  const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;
+  // Шапка есть на каждой странице: сбой API не должен ронять весь сайт.
+  const doctor = (await fetchAPI("/profile").catch(() => null)) as DoctorProfile | null;
 
   const links = [
     { href: "/", label: "Главная" },

@@ -3,6 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.core.views import protected_media
 from apps.doctors.views import DoctorProfileView
 
 admin.site.site_header = "Кабинет врача"
@@ -10,6 +11,9 @@ admin.site.site_title = "Кабинет врача"
 admin.site.index_title = "Управление сайтом и записями"
 
 urlpatterns = [
+    # Файлы пациентов — только для сотрудников. Маршрут под /admin/, чтобы
+    # nginx проксировал его в Django так же, как саму админку.
+    path("admin/files/<path:path>", protected_media, name="protected-media"),
     path("admin/", admin.site.urls),
 
     path("api/", include("apps.core.urls")),

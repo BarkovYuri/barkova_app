@@ -26,7 +26,9 @@ import { absoluteMediaUrl } from "../../lib/url";
 
 // ISR: пересобирается не чаще раза в минуту. Без этого Next 16 может
 // статически отрендерить страницу при build и не обновить контент из админки.
-export const revalidate = 60;
+// Страница рендерится на каждый запрос, а данные из API кэшируются на
+// минуту в lib/api.ts. Так сборка в CI не требует работающего бэкенда.
+export const revalidate = 0;
 
 export async function generateMetadata(): Promise<Metadata> {
   const doctor = (await fetchAPI("/profile")) as DoctorProfile | null;

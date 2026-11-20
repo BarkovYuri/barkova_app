@@ -1,13 +1,15 @@
+from django.conf import settings
 from django.db import transaction
+from django.urls import reverse
 from rest_framework import serializers
 
-from apps.notifications.models import VKPrelink
-from apps.notifications.services import send_appointment_status_notification
-from apps.notifications.services_vk_id import verify_vk_id_token
 from apps.appointments.services.booking import (
-    get_available_slot_or_error as _get_available_slot_or_error,
-    create_appointment_with_slot_lock as _create_appointment_with_slot_lock,
+    create_appointment_with_slot_lock,
+    get_available_slot_or_error,
 )
+from apps.appointments.services.status import SOURCE_DOCTOR, change_status
+from apps.notifications.services_vk_id import verify_vk_id_token
+
 from .models import Appointment, AppointmentAttachment
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx", ".heic"}
@@ -15,26 +17,45 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx", ".heic"}
 
 def _validate_legal_flags(attrs):
     if not attrs.get("consent_given"):
-        raise serializers.ValidationError(
-            {"consent_given": "Необходимо согласие на обработку персональных данных."}
-        )
+        raise serializers.ValidationError({"consent_given": "Необходимо согласие на обработку персональных данных."})
     if not attrs.get("privacy_accepted"):
-        raise serializers.ValidationError(
-            {"privacy_accepted": "Необходимо принять политику конфиденциальности."}
-        )
+        raise serializers.ValidationError({"privacy_accepted": "Необходимо принять политику конфиденциальности."})
     if not attrs.get("offer_accepted"):
-        raise serializers.ValidationError(
-            {"offer_accepted": "Необходимо принять оферту."}
-        )
+        raise serializers.ValidationError({"offer_accepted": "Необходимо принять оферту."})
+
+
+def validate_phone_value(value: str) -> str:
+    value = value.strip()
+    allowed_chars = set("0123456789+() -")
+    if any(char not in allowed_chars for char in value):
+        raise serializers.ValidationError("Телефон может содержать только цифры, пробелы и символы +()-")
+    digits_only = "".join(char for char in value if char.isdigit())
+    if len(digits_only) < 10:
+        raise serializers.ValidationError("Введите корректный номер телефона.")
+    return value
 
 
 class AppointmentAttachmentSerializer(serializers.ModelSerializer):
+    """Файл пациента для API админки. Ссылка ведёт на защищённую выдачу,
+    публичного URL у файлов нет."""
+
+    url = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = AppointmentAttachment
-        fields = ["id", "file", "uploaded_at"]
+        fields = ["id", "name", "url", "uploaded_at"]
+
+    def get_url(self, obj):
+        return reverse("protected-media", kwargs={"path": obj.file.name})
+
+    def get_name(self, obj):
+        return str(obj)
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    """Полная запись — только для API админки."""
+
     attachments = AppointmentAttachmentSerializer(many=True, read_only=True)
     slot_date = serializers.DateField(source="slot.date", read_only=True)
     slot_start_time = serializers.TimeField(source="slot.start_time", read_only=True)
@@ -51,7 +72,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "name",
             "phone",
             "preferred_contact_method",
-            "vk_link_token",
             "reason",
             "consent_given",
             "privacy_accepted",
@@ -61,9 +81,22 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "legal_consent_version",
             "status",
             "notes",
+            "patient_notified_at",
             "created_at",
             "attachments",
         ]
+
+
+class AppointmentPublicSerializer(serializers.ModelSerializer):
+    """Ответ пациенту после записи: без файлов, заметок и служебных токенов."""
+
+    slot_date = serializers.DateField(source="slot.date", read_only=True)
+    slot_start_time = serializers.TimeField(source="slot.start_time", read_only=True)
+    slot_end_time = serializers.TimeField(source="slot.end_time", read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = ["id", "slot_date", "slot_start_time", "slot_end_time", "status", "created_at"]
 
 
 class AppointmentCreateSerializer(serializers.ModelSerializer):
@@ -74,20 +107,13 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
     )
-    preferred_contact_method = serializers.ChoiceField(
-        choices=["vk"],
-        required=False,
-        allow_blank=True,
-    )
-    vk_prelink_token = serializers.CharField(required=False, allow_blank=True)
+    # "vk" — подтверждение и напоминания в VK; "phone" — у пациента нет VK,
+    # врач свяжется по телефону.
+    preferred_contact_method = serializers.ChoiceField(choices=["vk", "phone"], required=False, allow_blank=True)
     vk_user_id = serializers.CharField(required=False, allow_blank=True)
     vk_id_access_token = serializers.CharField(required=False, allow_blank=True)
-    # Legacy поля — на случай старой версии фронта во время раскатки.
-    vk_id_code = serializers.CharField(required=False, allow_blank=True)
-    vk_id_device_id = serializers.CharField(required=False, allow_blank=True)
     # Soft-reservation токен. Если передан и валиден — освобождаем лок после
-    # успешного create. Если не передан — старый flow, защита через
-    # unique_active_appointment_per_slot constraint.
+    # успешного create. Финальная защита от двойной записи — DB-constraint.
     reservation_token = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
@@ -98,11 +124,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             "name",
             "phone",
             "preferred_contact_method",
-            "vk_prelink_token",
             "vk_user_id",
             "vk_id_access_token",
-            "vk_id_code",
-            "vk_id_device_id",
             "reservation_token",
             "reason",
             "consent_given",
@@ -121,123 +144,72 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_phone(self, value):
-        value = value.strip()
-
-        allowed_chars = set("0123456789+() -")
-        if any(char not in allowed_chars for char in value):
-            raise serializers.ValidationError("Телефон может содержать только цифры, пробелы и символы +()-")
-
-        digits_only = "".join(char for char in value if char.isdigit())
-        if len(digits_only) < 10:
-            raise serializers.ValidationError("Введите корректный номер телефона.")
-
-        return value
+        return validate_phone_value(value)
 
     def validate_reason(self, value):
         return value.strip()
 
     def validate_files(self, files):
+        max_files = settings.APPOINTMENT_MAX_FILES
+        max_mb = settings.APPOINTMENT_MAX_FILE_MB
+        if len(files) > max_files:
+            raise serializers.ValidationError(f"Можно приложить не больше {max_files} файлов.")
         for file in files:
             file_name = file.name.lower()
             if "." not in file_name:
                 raise serializers.ValidationError(f"Файл {file.name} не имеет расширения.")
-
             extension = "." + file_name.rsplit(".", 1)[-1]
             if extension not in ALLOWED_EXTENSIONS:
                 raise serializers.ValidationError(f"Формат файла {file.name} не поддерживается.")
+            if file.size > max_mb * 1024 * 1024:
+                raise serializers.ValidationError(f"Файл {file.name} больше {max_mb} МБ.")
         return files
 
     def validate(self, attrs):
         _validate_legal_flags(attrs)
 
-        preferred_contact_method = attrs.get("preferred_contact_method", "").strip()
-        vk_prelink_token = attrs.get("vk_prelink_token", "").strip()
-        vk_user_id = attrs.get("vk_user_id", "").strip()
-
-        if preferred_contact_method == "vk":
+        if attrs.get("preferred_contact_method", "").strip() == "vk":
+            vk_user_id = attrs.get("vk_user_id", "").strip()
             vk_id_access_token = attrs.get("vk_id_access_token", "").strip()
+            if not vk_user_id or not vk_id_access_token:
+                raise serializers.ValidationError({"vk_user_id": "Сначала войдите через VK ID."})
 
-            if vk_id_access_token and vk_user_id:
-                # VK ID 2.x использует PKCE: code обмениваем мы НЕ можем
-                # (code_verifier живёт в браузерном VKID SDK). Фронт делает
-                # exchange сам, мы получаем уже выданный access_token и
-                # верифицируем его через users.get.
-                result = verify_vk_id_token(
-                    access_token=vk_id_access_token,
-                    claimed_user_id=vk_user_id,
-                )
-                if not result.get("verified"):
-                    raise serializers.ValidationError(
-                        {"vk_user_id": "Не удалось подтвердить авторизацию VK ID. Войдите заново."}
-                    )
-
-                attrs["vk_id_authorized"] = True
-                attrs["vk_id_user_id"] = result["user_id"]
-
-            elif vk_prelink_token:
-                prelink = VKPrelink.objects.filter(
-                    token=vk_prelink_token,
-                    is_used=False,
-                ).first()
-
-                if not prelink or not prelink.user_id or not prelink.peer_id:
-                    raise serializers.ValidationError(
-                        {"vk_prelink_token": "VK ещё не подключён."}
-                    )
-
-                attrs["vk_prelink"] = prelink
-            else:
+            # VK ID 2.x использует PKCE: code обменивает браузерный SDK,
+            # мы получаем готовый access_token и проверяем его у VK.
+            result = verify_vk_id_token(access_token=vk_id_access_token, claimed_user_id=vk_user_id)
+            if not result.get("verified"):
                 raise serializers.ValidationError(
-                    {"vk_user_id": "Сначала войдите через VK ID."}
+                    {"vk_user_id": "Не удалось подтвердить авторизацию VK ID. Войдите заново."}
                 )
+            attrs["verified_vk_user_id"] = result["user_id"]
 
-        attrs["slot"] = _get_available_slot_or_error(attrs["slot_id"])
+        attrs["slot"] = get_available_slot_or_error(attrs["slot_id"])
         return attrs
 
     @transaction.atomic
     def create(self, validated_data):
         files = validated_data.pop("files", [])
-        validated_data.pop("slot_id", None)
         slot = validated_data.pop("slot")
-
-        vk_prelink = validated_data.pop("vk_prelink", None)
-        vk_id_authorized = validated_data.pop("vk_id_authorized", False)
-        vk_id_user_id = validated_data.pop("vk_id_user_id", "")
-
-        validated_data.pop("vk_prelink_token", None)
-        validated_data.pop("vk_user_id", None)
-        validated_data.pop("vk_id_access_token", None)
-        validated_data.pop("vk_id_code", None)
-        validated_data.pop("vk_id_device_id", None)
         reservation_token = validated_data.pop("reservation_token", "") or ""
+        vk_user_id = validated_data.pop("verified_vk_user_id", "")
 
-        appointment_data = {
-            "name": validated_data["name"],
-            "phone": validated_data["phone"],
-            "preferred_contact_method": validated_data.get("preferred_contact_method", ""),
-            "vk_user_id": (
-                vk_prelink.user_id if vk_prelink else (vk_id_user_id if vk_id_authorized else "")
-            ),
-            "vk_peer_id": vk_prelink.peer_id if vk_prelink else "",
-            "vk_linked_at": vk_prelink.linked_at if vk_prelink else None,
-            "reason": validated_data.get("reason", ""),
-            "consent_given": validated_data["consent_given"],
-            "privacy_accepted": validated_data["privacy_accepted"],
-            "offer_accepted": validated_data["offer_accepted"],
-        }
-
-        appointment = _create_appointment_with_slot_lock(
+        appointment = create_appointment_with_slot_lock(
             slot=slot,
-            appointment_data=appointment_data,
+            appointment_data={
+                "name": validated_data["name"],
+                "phone": validated_data["phone"],
+                "preferred_contact_method": validated_data.get("preferred_contact_method", ""),
+                "vk_user_id": vk_user_id,
+                "vk_peer_id": vk_user_id,
+                "reason": validated_data.get("reason", ""),
+                "consent_given": validated_data["consent_given"],
+                "privacy_accepted": validated_data["privacy_accepted"],
+                "offer_accepted": validated_data["offer_accepted"],
+            },
             files=files,
         )
 
-        if vk_prelink:
-            vk_prelink.is_used = True
-            vk_prelink.save(update_fields=["is_used"])
-
-        # Best-effort освобождение soft-reservation. Промахи здесь
-        # неопасны — TTL всё равно истечёт через 5 минут.
+        # Best-effort освобождение soft-reservation: TTL всё равно истечёт.
         if reservation_token:
             from apps.scheduling.reservation import release_slot
 
@@ -246,79 +218,15 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         return appointment
 
 
-class QuickAppointmentCreateSerializer(serializers.Serializer):
-    slot_id = serializers.IntegerField()
-    phone = serializers.CharField(max_length=50)
-    consent_given = serializers.BooleanField()
-    privacy_accepted = serializers.BooleanField()
-    offer_accepted = serializers.BooleanField()
-
-    def validate_phone(self, value):
-        value = value.strip()
-
-        allowed_chars = set("0123456789+() -")
-        if any(char not in allowed_chars for char in value):
-            raise serializers.ValidationError("Телефон может содержать только цифры, пробелы и символы +()-")
-
-        digits_only = "".join(char for char in value if char.isdigit())
-        if len(digits_only) < 10:
-            raise serializers.ValidationError("Введите корректный номер телефона.")
-
-        return value
-
-    def validate(self, attrs):
-        _validate_legal_flags(attrs)
-        attrs["slot"] = _get_available_slot_or_error(attrs["slot_id"])
-        return attrs
-
-    @transaction.atomic
-    def create(self, validated_data):
-        slot = validated_data["slot"]
-
-        appointment_data = {
-            "name": "Быстрая запись",
-            "phone": validated_data["phone"],
-            "reason": "",
-            "consent_given": validated_data["consent_given"],
-            "privacy_accepted": validated_data["privacy_accepted"],
-            "offer_accepted": validated_data["offer_accepted"],
-        }
-
-        return _create_appointment_with_slot_lock(
-            slot=slot,
-            appointment_data=appointment_data,
-        )
-
-
 class AppointmentStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ["status", "notes"]
 
-    def validate_status(self, value):
-        allowed_statuses = {"new", "confirmed", "completed", "cancelled"}
-        if value not in allowed_statuses:
-            raise serializers.ValidationError("Недопустимый статус.")
-        return value
-
     def update(self, instance, validated_data):
-        old_status = instance.status
-        new_status = validated_data.get("status", instance.status)
-
-        instance.status = new_status
-        instance.notes = validated_data.get("notes", instance.notes)
-        instance.save()
-
-        if old_status != "cancelled" and new_status == "cancelled":
-            slot = instance.slot
-            slot.is_booked = False
-            slot.save(update_fields=["is_booked"])
-
-        if old_status != new_status:
-            transaction.on_commit(
-                lambda: send_appointment_status_notification(
-                    Appointment.objects.select_related("slot").get(pk=instance.pk)
-                )
-            )
-
+        if "notes" in validated_data:
+            instance.notes = validated_data["notes"]
+            instance.save(update_fields=["notes"])
+        if "status" in validated_data:
+            change_status(instance, validated_data["status"], source=SOURCE_DOCTOR)
         return instance

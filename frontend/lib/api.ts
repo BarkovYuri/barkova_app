@@ -1,5 +1,4 @@
 import { ApiError } from "./errors";
-import { tryMockResponse } from "./mock";
 
 const isServer = typeof window === "undefined";
 
@@ -11,6 +10,19 @@ const USE_MOCK =
   (isServer ? process.env.USE_MOCK : process.env.NEXT_PUBLIC_USE_MOCK) === "1";
 
 export const IS_MOCK_MODE = USE_MOCK;
+
+// Серверные (SSR) GET-запросы кэшируем в Data Cache Next.js на минуту:
+// раньше каждый просмотр страницы делал по 5–10 запросов в Django.
+// Страницы при этом остаются динамическими (revalidate = 0 в page.tsx),
+// поэтому `next build` в CI не ходит в недоступный бэкенд.
+const SERVER_REVALIDATE_SECONDS = 60;
+
+async function tryMock(endpoint: string, method: string): Promise<unknown> {
+  if (!USE_MOCK) return undefined;
+  // Моки подгружаются только в mock-режиме и не попадают в продакшн-бандл.
+  const { tryMockResponse } = await import("./mock");
+  return tryMockResponse(endpoint, method);
+}
 
 function normalizeEndpoint(endpoint: string): string {
   if (!endpoint.startsWith("/")) endpoint = `/${endpoint}`;
@@ -59,14 +71,17 @@ export async function fetchAPI(
   const normalizedEndpoint = normalizeEndpoint(endpoint);
   const method = (options?.method ?? "GET").toUpperCase();
 
-  if (USE_MOCK) {
-    const mock = tryMockResponse(normalizedEndpoint, method);
-    if (mock !== undefined) return mock;
-  }
+  const mock = await tryMock(normalizedEndpoint, method);
+  if (mock !== undefined) return mock;
+
+  const caching: RequestInit =
+    isServer && method === "GET"
+      ? { next: { revalidate: SERVER_REVALIDATE_SECONDS } }
+      : { cache: "no-store" };
 
   const res = await fetch(`${API_URL}${normalizedEndpoint}`, {
+    ...caching,
     ...options,
-    cache: "no-store",
   });
 
   if (res.status === 404) return null;
@@ -84,10 +99,8 @@ export async function postFormData(
 ): Promise<unknown> {
   const normalizedEndpoint = normalizeEndpoint(endpoint);
 
-  if (USE_MOCK) {
-    const mock = tryMockResponse(normalizedEndpoint, "POST");
-    if (mock !== undefined) return mock;
-  }
+  const mock = await tryMock(normalizedEndpoint, "POST");
+  if (mock !== undefined) return mock;
 
   const res = await fetch(`${API_URL}${normalizedEndpoint}`, {
     method: "POST",

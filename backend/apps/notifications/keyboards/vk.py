@@ -1,20 +1,22 @@
 """
-VK callback-клавиатуры для записей пациентов.
-Единственный источник правды — дублирование из vk_bot.py устранено.
+VK-клавиатуры для записей пациентов. Единственный источник правды:
+ими пользуются и уведомления, и бот.
 """
 from __future__ import annotations
 
 import json
 
+from django.conf import settings
+
 from apps.notifications.vk_constants import (
-    VK_CMD_CONFIRM,
+    VK_CMD_CANCEL_CONFIRM,
+    VK_CMD_CANCEL_KEEP,
     VK_CMD_CANCEL_REQUEST,
-    VK_CMD_YES,
+    VK_CMD_CONFIRM,
     VK_CMD_DOCTOR,
     VK_CMD_MANAGE,
+    VK_CMD_YES,
 )
-
-from django.conf import settings
 
 
 def _btn(label: str, cmd: str, appointment, color: str) -> dict:
@@ -83,9 +85,21 @@ def manage(appointment) -> dict:
     }
 
 
+def cancel_confirm(appointment) -> dict:
+    """Кнопки «Подтвердить отмену» / «Оставить запись»."""
+    return {
+        "one_time": False,
+        "inline": False,
+        "buttons": [[
+            _btn("Подтвердить отмену", VK_CMD_CANCEL_CONFIRM, appointment, "negative"),
+            _btn("Оставить запись",    VK_CMD_CANCEL_KEEP,    appointment, "secondary"),
+        ]],
+    }
+
+
 def booking() -> dict:
     """Кнопка «Записаться онлайн» (ссылка на сайт)."""
-    base_url = getattr(settings, "PUBLIC_BASE_URL", "https://doctor-barkova.ru")
+    base_url = getattr(settings, "PUBLIC_BASE_URL", "https://doctor-barkova.ru").rstrip("/")
     return {
         "one_time": False,
         "inline": False,

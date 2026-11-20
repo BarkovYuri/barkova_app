@@ -1,5 +1,7 @@
 from pathlib import Path
 import os
+
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -272,6 +274,16 @@ UNFOLD = {
                         "icon": "group",
                         "link": "/admin/auth/group/",
                     },
+                    {
+                        "title": "Логи уведомлений",
+                        "icon": "notifications",
+                        "link": "/admin/doctor_notifications/notificationlog/",
+                    },
+                    {
+                        "title": "Диалоги VK",
+                        "icon": "forum",
+                        "link": "/admin/doctor_notifications/vkdialogstate/",
+                    },
                 ],
             },
         ],
@@ -320,10 +332,18 @@ DATABASES = {
     }
 }
 
-AUTH_PASSWORD_VALIDATORS = []
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 10}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 LANGUAGE_CODE = "ru-ru"
-TIME_ZONE = "Europe/Moscow"
+# Часовой пояс, в котором врач вводит слоты расписания. Слоты хранятся как
+# «дата + время» без пояса, поэтому от этой настройки зависят напоминания,
+# закрытие записи за час до начала и подпись времени на сайте.
+TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Tomsk")
 
 USE_I18N = True
 USE_TZ = True
@@ -333,6 +353,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+LOGIN_URL = "/admin/login/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -345,8 +366,12 @@ CORS_ALLOWED_ORIGINS = [
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
+        *(["rest_framework.renderers.BrowsableAPIRenderer"] if DEBUG else []),
     ],
+    # Перед Django стоит ровно один прокси (nginx), который дописывает
+    # реальный IP клиента в конец X-Forwarded-For. Без этой настройки DRF
+    # брал весь заголовок целиком, и лимиты обходились подделкой заголовка.
+    "NUM_PROXIES": 1,
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
         "rest_framework.parsers.FormParser",
@@ -364,7 +389,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_CLASSES": [],
     "DEFAULT_THROTTLE_RATES": {
         "appointment_create": "10/hour",
-        "prelink": "30/hour",
+        "slot_reserve": "60/hour",
+        "vk_status": "300/hour",
         "article_view": "120/hour",
     },
 }
@@ -419,11 +445,6 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
-        "vk_bot": {
-            "handlers": ["console"],
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
     },
 }
 
@@ -464,93 +485,72 @@ if SENTRY_DSN:
         )
 
 # ============================================================================
-# BOT CONFIGURATION
+# VK: сообщество, VK ID, бот и оповещения врача
 # ============================================================================
+#
+# Telegram в проекте не используется вообще: и пациентам, и врачу всё
+# приходит через сообщения сообщества ВКонтакте.
 
-# Telegram — служебный канал оповещения врача о записях (не выведен на сайт).
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+def _env_list(name: str) -> list[str]:
+    return [item.strip() for item in os.getenv(name, "").split(",") if item.strip()]
 
-# VK (VKontakte) Bot Settings
+
 VK_GROUP_TOKEN = os.getenv("VK_GROUP_TOKEN", "")
 VK_GROUP_ID = os.getenv("VK_GROUP_ID", "")
+# Короткое имя сообщества (vk.com/<domain>). Нужно для ссылки vk.me/<domain>,
+# которая на телефоне сразу открывает диалог в приложении VK.
 VK_GROUP_DOMAIN = os.getenv("VK_GROUP_DOMAIN", "")
 VK_CALLBACK_CONFIRMATION_CODE = os.getenv("VK_CALLBACK_CONFIRMATION_CODE", "")
-VK_APP_ID = os.getenv("VK_APP_ID", "")
-VK_APP_SECRET = os.getenv("VK_APP_SECRET", "")
-VK_ID_REDIRECT_URL = os.getenv(
-    "VK_ID_REDIRECT_URL",
-    "https://doctor-barkova.ru/auth/vk/callback",
-)
 VK_CALLBACK_SECRET = os.getenv("VK_CALLBACK_SECRET", "")
-
-# Bot API Settings
+VK_APP_ID = os.getenv("VK_APP_ID", "")
 VK_API_VERSION = os.getenv("VK_API_VERSION", "5.199")
-API_REQUEST_TIMEOUT = int(os.getenv("API_REQUEST_TIMEOUT", "30"))
-BOT_POLLING_TIMEOUT = int(os.getenv("BOT_POLLING_TIMEOUT", "25"))
+VK_API_TIMEOUT = int(os.getenv("VK_API_TIMEOUT", "15"))
 
-# Booking Link
-BOOKING_LINK = os.getenv("BOOKING_LINK", "https://doctor-barkova.ru/booking")
+# Личные VK-аккаунты врача/администратора, которым сообщество шлёт алерты:
+# новая запись, отмена, входящее сообщение пациента, утренняя сводка.
+# Каждый получатель должен один раз написать сообществу, иначе VK не даст
+# сообществу писать ему первым.
+VK_DOCTOR_USER_IDS = _env_list("VK_DOCTOR_USER_IDS")
 
-# Публичный базовый URL сайта — используется для ссылок в уведомлениях/клавиатурах
-PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://doctor-barkova.ru")
+# Резервный канал: если VK-алерт врачу не ушёл, дублируем на email.
+DOCTOR_ALERT_EMAILS = _env_list("DOCTOR_ALERT_EMAILS")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "True") == "True"
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False") == "True"
+EMAIL_TIMEOUT = 15
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@doctor-barkova.ru")
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
+)
 
-# Token Configuration
-TOKEN_EXPIRY_HOURS = int(os.getenv("TOKEN_EXPIRY_HOURS", "24"))
-MAX_RETRY_ATTEMPTS = int(os.getenv("MAX_RETRY_ATTEMPTS", "3"))
+# Поведение бота в диалоге сообщества.
+# Приветствие с кнопкой записи — не чаще раза в N дней на человека.
+VK_BOT_GREETING_COOLDOWN_DAYS = int(os.getenv("VK_BOT_GREETING_COOLDOWN_DAYS", "30"))
+# После ручного ответа врача бот молчит в этом диалоге N часов.
+VK_BOT_OPERATOR_PAUSE_HOURS = int(os.getenv("VK_BOT_OPERATOR_PAUSE_HOURS", "24"))
+# Алерт врачу о входящих сообщениях — не чаще раза в N минут на собеседника.
+VK_DOCTOR_ALERT_COOLDOWN_MINUTES = int(os.getenv("VK_DOCTOR_ALERT_COOLDOWN_MINUTES", "30"))
 
+# Публичный базовый URL сайта — для ссылок в уведомлениях и клавиатурах.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://doctor-barkova.ru").rstrip("/")
 
-# ============================================================================
-# CONFIGURATION VALIDATION
-# ============================================================================
+# Город, по времени которого ведётся расписание (в родительном падеже).
+# Используется в подписи «время указано по времени Томска (МСК+4)».
+SCHEDULE_CITY_GENITIVE = os.getenv("SCHEDULE_CITY_GENITIVE", "Томска")
 
-def validate_bot_configuration() -> None:
-    """
-    Validate bot configuration at startup.
-    
-    Ensures all required environment variables are set and valid.
-    
-    Raises:
-        ImproperlyConfigured: If required settings are missing or invalid
-    """
-    from django.core.exceptions import ImproperlyConfigured
-    
-    # Validate Telegram settings (optional but warn if partially configured)
-    if TELEGRAM_BOT_TOKEN and not TELEGRAM_CHAT_ID:
-        import warnings
-        warnings.warn(
-            "TELEGRAM_BOT_TOKEN is set but TELEGRAM_CHAT_ID is not. "
-            "Doctor notifications will not work properly.",
-            RuntimeWarning
-        )
-    
-    # Validate VK settings (optional but warn if partially configured)
-    if VK_GROUP_TOKEN and not VK_GROUP_ID:
-        import warnings
-        warnings.warn(
-            "VK_GROUP_TOKEN is set but VK_GROUP_ID is not. "
-            "VK notifications will not work properly.",
-            RuntimeWarning
-        )
-    
-    # Validate timeout settings
-    if API_REQUEST_TIMEOUT <= 0:
-        raise ImproperlyConfigured("API_REQUEST_TIMEOUT must be > 0")
-    
-    if BOT_POLLING_TIMEOUT <= 0:
-        raise ImproperlyConfigured("BOT_POLLING_TIMEOUT must be > 0")
-    
-    if TOKEN_EXPIRY_HOURS <= 0:
-        raise ImproperlyConfigured("TOKEN_EXPIRY_HOURS must be > 0")
+# Ограничения на файлы, которые пациент прикладывает к записи.
+APPOINTMENT_MAX_FILES = int(os.getenv("APPOINTMENT_MAX_FILES", "5"))
+APPOINTMENT_MAX_FILE_MB = int(os.getenv("APPOINTMENT_MAX_FILE_MB", "10"))
 
+if VK_GROUP_TOKEN and not VK_GROUP_ID:
+    import warnings
 
-# Call validation only if not in migrations
-if os.getenv("DJANGO_SETTINGS_MODULE", "").endswith("settings"):
-    try:
-        validate_bot_configuration()
-    except Exception as exc:
-        import warnings
-        warnings.warn(f"Bot configuration validation warning: {exc}", RuntimeWarning)
+    warnings.warn("VK_GROUP_TOKEN задан, а VK_GROUP_ID нет: VK-уведомления работать не будут.", RuntimeWarning, stacklevel=1)
 
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
@@ -559,14 +559,22 @@ CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/1
 # Shared cache backend. Без него django.core.cache по умолчанию локален
 # (locmem) на каждый gunicorn-воркер — инвалидация кэша срабатывает только
 # в одном процессе, остальные продолжают отдавать stale данные.
+_REDIS_CACHE_URL = os.getenv("REDIS_CACHE_URL", "redis://redis:6379/2")
 CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.getenv("REDIS_CACHE_URL", "redis://redis:6379/2"),
-        "TIMEOUT": 300,
-        "KEY_PREFIX": "doctor_app",
-    },
+    "default": (
+        # Для локальной разработки без Redis: REDIS_CACHE_URL=locmem://
+        {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "dev"}
+        if _REDIS_CACHE_URL.startswith("locmem://")
+        else {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": _REDIS_CACHE_URL,
+            "TIMEOUT": 300,
+            "KEY_PREFIX": "doctor_app",
+        }
+    ),
 }
+# Для локальной разработки без брокера: задачи выполняются сразу в процессе.
+CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "False") == "True"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -583,5 +591,9 @@ CELERY_BEAT_SCHEDULE = {
     "send-appointment-reminders-every-minute": {
         "task": "apps.appointments.tasks.send_appointment_reminders",
         "schedule": 60.0,
+    },
+    "doctor-daily-digest": {
+        "task": "apps.notifications.tasks.send_doctor_daily_digest",
+        "schedule": crontab(hour=int(os.getenv("DOCTOR_DIGEST_HOUR", "8")), minute=0),
     },
 }

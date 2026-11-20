@@ -1,27 +1,10 @@
 from datetime import date, time
 
-from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from apps.appointments.models import Appointment
-from apps.notifications.models import (
-    NotificationLog,
-    VKPrelink,
-)
+from apps.notifications.models import NotificationLog
 from apps.scheduling.models import TimeSlot
-
-
-class PrelinkTokenUniquenessTests(TestCase):
-    def test_vk_prelink_token_unique(self):
-        VKPrelink.objects.create(token="xyz")
-        with transaction.atomic(), self.assertRaises(IntegrityError):
-            VKPrelink.objects.create(token="xyz")
-
-    def test_prelink_defaults(self):
-        link = VKPrelink.objects.create(token="t1")
-        self.assertFalse(link.is_used)
-        self.assertEqual(link.user_id, "")
-        self.assertIsNone(link.linked_at)
 
 
 class NotificationLogTests(TestCase):
@@ -43,7 +26,7 @@ class NotificationLogTests(TestCase):
     def test_create_with_default_pending(self):
         log = NotificationLog.objects.create(
             appointment=self.appointment,
-            channel="telegram",
+            channel="vk",
             notification_type="created",
         )
         self.assertEqual(log.status, "pending")
@@ -53,13 +36,13 @@ class NotificationLogTests(TestCase):
     def test_ordering_newest_first(self):
         first = NotificationLog.objects.create(
             appointment=self.appointment,
-            channel="telegram",
+            channel="vk",
             notification_type="created",
         )
         second = NotificationLog.objects.create(
             appointment=self.appointment,
-            channel="telegram",
-            notification_type="reminder_3h",
+            channel="vk",
+            notification_type="reminder",
         )
         ids = list(NotificationLog.objects.values_list("id", flat=True))
         self.assertEqual(ids, [second.id, first.id])

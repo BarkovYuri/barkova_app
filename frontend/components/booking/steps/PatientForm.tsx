@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   FileText,
+  Info,
   Loader2,
   ScrollText,
   ShieldCheck,
@@ -15,6 +16,22 @@ import type { Slot } from "../../../lib/types";
 import { LegalModal } from "../LegalModal";
 
 type LegalDocType = "offer" | "privacy" | "consent";
+
+// Совпадает с ограничениями бэкенда (APPOINTMENT_MAX_FILES / _MB).
+const ACCEPTED_FILES = ".jpg,.jpeg,.png,.pdf,.doc,.docx,.heic";
+const MAX_FILES = 5;
+const MAX_FILE_MB = 10;
+
+function validateFiles(list: FileList | null): string {
+  if (!list) return "";
+  if (list.length > MAX_FILES) return `Можно приложить не больше ${MAX_FILES} файлов.`;
+  for (const file of Array.from(list)) {
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      return `Файл «${file.name}» больше ${MAX_FILE_MB} МБ.`;
+    }
+  }
+  return "";
+}
 
 function formatDateLong(dateString: string) {
   const date = new Date(`${dateString}T00:00:00`);
@@ -35,7 +52,9 @@ type Props = {
   files: FileList | null; setFiles: (f: FileList | null) => void;
   children: React.ReactNode;
   errorText: string;
+  setErrorText: (v: string) => void;
   submitting: boolean;
+  timezoneLabel: string;
 };
 
 export function PatientForm({
@@ -47,7 +66,9 @@ export function PatientForm({
   files, setFiles,
   children,
   errorText,
+  setErrorText,
   submitting,
+  timezoneLabel,
 }: Props) {
   // ── Модалка legal ────────────────────────────────────────────
   const [legalModal, setLegalModal] = useState<LegalDocType | null>(null);
@@ -101,6 +122,7 @@ export function PatientForm({
               <p className="font-semibold text-secondary-800">Вы выбрали:</p>
               <p className="mt-1 text-sm text-secondary-700">
                 {formatDateLong(selectedDate)} в {selectedSlot.start_time.slice(0, 5)}
+                {timezoneLabel ? ` ${timezoneLabel}` : ""}
               </p>
             </div>
           </div>
@@ -201,9 +223,24 @@ export function PatientForm({
           <input
             type="file"
             multiple
-            onChange={(e) => setFiles(e.target.files)}
+            accept={ACCEPTED_FILES}
+            onChange={(e) => {
+              const problem = validateFiles(e.target.files);
+              if (problem) {
+                setErrorText(problem);
+                e.target.value = "";
+                setFiles(null);
+                return;
+              }
+              setErrorText("");
+              setFiles(e.target.files);
+            }}
             className="block w-full rounded-2xl border border-dashed border-neutral-300 bg-neutral-0 px-4 py-6 text-sm text-neutral-600 transition-colors hover:border-primary-400 hover:bg-primary-50 focus:border-primary-500 focus:outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-primary-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-700 file:cursor-pointer hover:file:bg-primary-200"
           />
+          <p className="mt-2 text-xs text-neutral-500">
+            Анализы, выписки, фото: JPG, PNG, HEIC, PDF, DOC. До {MAX_FILES} файлов, каждый до {MAX_FILE_MB} МБ.
+            Файлы видит только врач.
+          </p>
           {files && files.length > 0 && (
             <p className="mt-2 text-xs text-secondary-700 flex items-center gap-1">
               <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -310,6 +347,14 @@ export function PatientForm({
             </div>
           </div>
         ) : null}
+
+        <div className="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs leading-5 text-neutral-600">
+          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-600" strokeWidth={2} />
+          <p>
+            Онлайн-разбор носит информационный характер, не является медицинской
+            услугой и не заменяет очный приём врача.
+          </p>
+        </div>
 
         <button
           type="submit"

@@ -252,12 +252,11 @@ export function tryMockResponse(
     };
   }
 
-  // VK prelink GET-status
-  if (endpoint.startsWith("/appointments/vk/prelink/status")) {
-    return { linked: false };
-  }
   if (endpoint.startsWith("/appointments/vk/messaging-status")) {
-    return { allowed: false };
+    return { can_message_user: true, dialog_url: "https://vk.com" };
+  }
+  if (endpoint.startsWith("/schedule-info")) {
+    return { timezone: "Asia/Tomsk", label: "по времени Томска (МСК+4)", msk_offset_hours: 4 };
   }
 
   return undefined;

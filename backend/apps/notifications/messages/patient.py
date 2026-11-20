@@ -1,27 +1,24 @@
 """
-Форматтеры уведомлений пациента (канал — VK).
+Тексты сообщений пациенту в VK. Единственный источник правды для всех
+фраз бота и уведомлений.
 
-Сообщения форматируются как HTML; VK вырезает тег при отправке
-(см. transports/vk.py), остаётся читаемый plain text.
-
-Стиль:
-- Заголовок жирный (<b>) с эмодзи в начале
-- Основная информация в одной "карточке" — дата/время/врач
-- Метаинформация курсивом (<i>)
-- Разделитель: ━━━━━━━━━━━━━━━
+VK не поддерживает разметку, поэтому только plain-text и эмодзи.
 """
+
 from __future__ import annotations
 
 from datetime import date as date_type
 
+from apps.scheduling.timefmt import timezone_label
+
 WEEKDAY_RU = {
-    0: "Понедельник",
-    1: "Вторник",
-    2: "Среда",
-    3: "Четверг",
-    4: "Пятница",
-    5: "Суббота",
-    6: "Воскресенье",
+    0: "понедельник",
+    1: "вторник",
+    2: "среда",
+    3: "четверг",
+    4: "пятница",
+    5: "суббота",
+    6: "воскресенье",
 }
 
 MONTH_RU = {
@@ -39,77 +36,109 @@ MONTH_RU = {
     12: "декабря",
 }
 
+DIVIDER = "━━━━━━━━━━━━━━━"
 
-def _format_date_human(d: date_type) -> str:
+INFORMATIONAL_NOTE = (
+    "Онлайн-разбор носит информационный характер, не является медицинской услугой и не заменяет очный приём врача."
+)
+
+
+def format_date_human(d: date_type) -> str:
     """29 апреля, среда"""
-    return f"{d.day} {MONTH_RU[d.month]}, {WEEKDAY_RU[d.weekday()].lower()}"
+    return f"{d.day} {MONTH_RU[d.month]}, {WEEKDAY_RU[d.weekday()]}"
 
 
-def _slot_card(appointment) -> str:
-    """Карточка с датой, временем и врачом."""
+def slot_card(appointment) -> str:
     slot = appointment.slot
+    return f"📅 {format_date_human(slot.date)}\n🕐 {slot.start_time:%H:%M}–{slot.end_time:%H:%M} {timezone_label()}"
+
+
+# ─── Уведомления о записи ─────────────────────────────────────────────────────
+
+
+def booking_created(appointment) -> str:
     return (
-        f"📅  <b>{_format_date_human(slot.date)}</b>\n"
-        f"🕐  <b>{slot.start_time.strftime('%H:%M')} – "
-        f"{slot.end_time.strftime('%H:%M')}</b>"
-    )
-
-
-# ============================================================================
-# Сообщения пациенту
-# ============================================================================
-
-
-def booking_created_vk(appointment) -> str:
-    """То же что booking_created, но без упоминания «написать в чат»
-    — VK не любит свободные сообщения от ботов."""
-    return (
-        "✅  Вы записаны на онлайн-разбор\n\n"
-        f"{_slot_card(appointment)}\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "Пожалуйста, подтвердите запись кнопкой ниже."
+        "✅ Вы записаны на онлайн-разбор\n\n"
+        f"{slot_card(appointment)}\n\n"
+        f"{DIVIDER}\n"
+        "Пожалуйста, подтвердите запись кнопкой ниже. "
+        "Если планы изменятся, запись можно отменить здесь же.\n\n"
+        f"{INFORMATIONAL_NOTE}"
     )
 
 
 def reminder(appointment) -> str:
-    """Напоминание за 2 часа до приёма."""
     return (
-        "⏰  <b>Напоминание об онлайн-разборе</b>\n\n"
-        f"{_slot_card(appointment)}\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "<b>Сможете присутствовать?</b>\n"
-        "<i>Подтвердите или отмените кнопкой ниже.</i>"
+        "⏰ Напоминание об онлайн-разборе\n\n"
+        f"{slot_card(appointment)}\n\n"
+        f"{DIVIDER}\n"
+        "Сможете присутствовать? Ответьте кнопкой ниже."
     )
 
 
-def confirmed(appointment) -> str:
-    """Сообщение когда запись подтверждена врачом."""
+def confirmed_by_doctor(appointment) -> str:
+    return f"✅ Врач подтвердил вашу запись\n\n{slot_card(appointment)}\n\n{DIVIDER}\nДетали врач уточнит в этом чате."
+
+
+def cancelled_by_doctor(appointment) -> str:
     return (
-        "✅  <b>Запись подтверждена</b>\n\n"
-        f"{_slot_card(appointment)}\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "<i>Все детали приёма врач уточнит дополнительно в этом же чате.</i>"
+        "❌ Запись отменена врачом\n\n"
+        f"{slot_card(appointment)}\n\n"
+        f"{DIVIDER}\n"
+        "Приносим извинения. Выбрать другое время можно на сайте, "
+        "а если есть вопросы, напишите сюда."
     )
 
 
-def cancelled(appointment) -> str:
-    """Сообщение об отмене записи."""
+def confirmed_by_patient(appointment) -> str:
+    return f"✅ Запись подтверждена\n\n{slot_card(appointment)}"
+
+
+def cancelled_by_patient(appointment) -> str:
+    return f"❌ Запись отменена\n\n{slot_card(appointment)}\n\nЗаписаться на другое время можно по кнопке ниже."
+
+
+def reminder_yes(appointment) -> str:
+    return f"✅ Отлично, ждём вас на онлайн-разборе.\n\n{slot_card(appointment)}"
+
+
+def reminder_no(appointment) -> str:
     return (
-        "❌  <b>Запись отменена</b>\n\n"
-        f"{_slot_card(appointment)}\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "<i>Слот снова доступен другим пациентам. "
-        "Чтобы записаться повторно — нажмите кнопку «Записаться» в меню.</i>"
+        f"❌ Запись отменена по вашему ответу на напоминание.\n\n{slot_card(appointment)}\n\n"
+        "Записаться на другое время можно по кнопке ниже."
     )
 
 
 def doctor_will_contact(appointment) -> str:
-    """Сообщение когда пациент попросил связаться."""
     return (
-        "💬  <b>Запрос отправлен врачу</b>\n\n"
-        f"{_slot_card(appointment)}\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "Врач или администратор свяжется с вами в этом чате в ближайшее "
-        "время.\n\n"
-        "<i>Если вопрос срочный — позвоните по контактам с сайта.</i>"
+        "💬 Передали врачу, что вам нужна связь.\n\n"
+        f"{slot_card(appointment)}\n\n"
+        "Врач ответит в этом чате. Если вопрос срочный, позвоните по телефону с сайта."
     )
+
+
+def action_not_allowed() -> str:
+    return "Эта запись уже завершена или отменена, изменить её нельзя. Новую запись можно оформить на сайте."
+
+
+# ─── Диалог с ботом ───────────────────────────────────────────────────────────
+
+
+def greeting() -> str:
+    return (
+        "Здравствуйте! Это сообщество врача-инфекциониста.\n\n"
+        "Записаться на онлайн-разбор можно по кнопке ниже. "
+        "Если у вас вопрос, просто напишите его здесь: врач прочитает и ответит лично."
+    )
+
+
+def manage_prompt(appointment) -> str:
+    return f"Что вы хотите сделать с записью?\n\n{slot_card(appointment)}"
+
+
+def cancel_confirm_prompt(appointment) -> str:
+    return f"Вы действительно хотите отменить запись?\n\n{slot_card(appointment)}"
+
+
+def kept(appointment) -> str:
+    return f"✅ Запись оставлена без изменений.\n\n{slot_card(appointment)}"

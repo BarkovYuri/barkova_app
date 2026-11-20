@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from .models import (
@@ -180,9 +181,10 @@ class ArticleViewIncrementView(APIView):
 
     Защита от накрутки на стороне фронта: один инкремент за сессию
     (sessionStorage). На бэке дополнительно стоит scope-throttle
-    «article_view» — 60 инкрементов в час с одного IP.
+    «article_view» (лимит в settings.REST_FRAMEWORK).
     """
 
+    throttle_classes = [ScopedRateThrottle]
     throttle_scope = "article_view"
 
     def post(self, request, slug: str):

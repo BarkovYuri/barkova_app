@@ -1,16 +1,22 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowLeft,
   Calendar,
+  CalendarPlus,
   CheckCircle2,
   Clock,
+  ExternalLink,
   MessageCircle,
+  Phone,
   Sparkles,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 
+import { buildIcs, downloadIcs, slotDurationMinutes } from "../../../lib/calendar";
+import { reachGoal } from "../../../lib/metrika";
 import type { Slot, ContactMethod } from "../../../lib/types";
 
 function formatDateLong(dateString: string) {
@@ -26,21 +32,43 @@ type Props = {
   selectedDate: string;
   selectedSlot: Slot | null;
   contactMethod: ContactMethod;
+  /** Может ли сообщество уже писать пациенту в VK. */
+  messagesAllowed: boolean;
+  dialogUrl: string;
+  timezoneLabel: string;
 };
 
 const ContactIcon = {
   vk: Users,
+  phone: Phone,
 } as const;
 
 export function SuccessView({
   selectedDate,
   selectedSlot,
   contactMethod,
+  messagesAllowed,
+  dialogUrl,
+  timezoneLabel,
 }: Props) {
   const ContactIconCmp =
     ContactIcon[contactMethod as keyof typeof ContactIcon] ?? MessageCircle;
-  const contactLabel =
-    contactMethod === "vk" ? "VK" : "Способ связи";
+  const isVk = contactMethod === "vk";
+  const needsVkPermission = isVk && !messagesAllowed;
+
+  function addToCalendar() {
+    if (!selectedSlot?.starts_at) return;
+    const ics = buildIcs({
+      startsAt: selectedSlot.starts_at,
+      durationMinutes: slotDurationMinutes(selectedSlot.start_time, selectedSlot.end_time),
+      title: "Онлайн-разбор у врача-инфекциониста",
+      description: isVk
+        ? "Подтверждение и ссылка придут в сообщения VK."
+        : "Врач позвонит, чтобы подтвердить запись.",
+      url: typeof window !== "undefined" ? window.location.origin : "https://doctor-barkova.ru",
+    });
+    if (ics) downloadIcs(ics, "onlain-razbor.ics");
+  }
 
   return (
     <div className="mx-auto max-w-2xl animate-fade-in">
@@ -66,15 +94,38 @@ export function SuccessView({
         <div className="text-center">
           <h2 className="text-neutral-900">Отлично! Заявка отправлена</h2>
           <p className="mt-4 text-neutral-600 text-base-large leading-relaxed">
-            Мы получили вашу заявку на онлайн-разбор. Врач или
-            администратор свяжется с вами в ближайшее время для подтверждения
-            через{" "}
+            Мы получили вашу заявку на онлайн-разбор. Подтверждение придёт
+            по{" "}
             <span className="font-semibold text-primary-700">
-              {contactLabel}
+              {isVk ? "VK" : "телефону"}
             </span>
             .
           </p>
         </div>
+
+        {needsVkPermission ? (
+          <div className="mt-8 rounded-2xl border border-accent-300 bg-accent-50 p-5 sm:p-6">
+            <p className="inline-flex items-center gap-2 font-semibold text-neutral-900">
+              <AlertTriangle className="h-5 w-5 text-accent-600" strokeWidth={2.25} />
+              Остался один шаг
+            </p>
+            <p className="mt-2 text-sm leading-6 text-neutral-700">
+              Сообщество пока не может вам написать, поэтому подтверждение и
+              напоминание не придут. Откройте диалог и нажмите «Начать» или
+              напишите любое сообщение: подтверждение придёт сразу.
+            </p>
+            <a
+              href={dialogUrl || "https://vk.com"}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => reachGoal("booking_open_vk_dialog")}
+              className="btn-primary mt-4 w-full justify-center sm:w-auto"
+            >
+              Открыть диалог в VK
+              <ExternalLink className="h-4 w-4" strokeWidth={2.5} />
+            </a>
+          </div>
+        ) : null}
 
         {/* Booking Details */}
         {selectedDate && selectedSlot ? (
@@ -108,6 +159,9 @@ export function SuccessView({
                     {selectedSlot.start_time.slice(0, 5)} –{" "}
                     {selectedSlot.end_time.slice(0, 5)}
                   </p>
+                  {timezoneLabel ? (
+                    <p className="text-xs text-secondary-700">{timezoneLabel}</p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -119,7 +173,7 @@ export function SuccessView({
                     Подтверждение
                   </p>
                   <p className="text-base font-semibold text-neutral-900">
-                    {contactLabel}
+                    {isVk ? "VK" : "Звонок врача"}
                   </p>
                 </div>
               </div>
@@ -139,15 +193,10 @@ export function SuccessView({
                 className="h-4 w-4 flex-shrink-0 text-primary-600 mt-0.5"
                 strokeWidth={2.5}
               />
-              <span>Вы получите сообщение в VK для подтверждения записи</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle2
-                className="h-4 w-4 flex-shrink-0 text-primary-600 mt-0.5"
-                strokeWidth={2.5}
-              />
               <span>
-                Все детали приёма врач уточнит дополнительно в этом же чате
+                {isVk
+                  ? "Вы получите сообщение в VK с кнопками подтверждения и отмены"
+                  : "Врач или администратор позвонит, чтобы подтвердить запись"}
               </span>
             </li>
             <li className="flex items-start gap-2">
@@ -156,14 +205,32 @@ export function SuccessView({
                 strokeWidth={2.5}
               />
               <span>
-                Если планы изменятся — вы сможете отменить запись прямо в чате
+                {isVk
+                  ? "За 2 часа до разбора придёт напоминание"
+                  : "Детали онлайн-разбора врач уточнит во время звонка"}
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2
+                className="h-4 w-4 flex-shrink-0 text-primary-600 mt-0.5"
+                strokeWidth={2.5}
+              />
+              <span>
+                Онлайн-разбор носит информационный характер и не заменяет очный
+                приём врача
               </span>
             </li>
           </ul>
         </div>
 
-        {/* Action Button */}
-        <div className="mt-8 flex justify-center">
+        {/* Action Buttons */}
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          {selectedSlot?.starts_at ? (
+            <button type="button" onClick={addToCalendar} className="btn-secondary">
+              <CalendarPlus className="h-4 w-4" strokeWidth={2.5} />
+              Добавить в календарь
+            </button>
+          ) : null}
           <Link href="/" className="btn-primary">
             <ArrowLeft className="h-4 w-4" strokeWidth={2.5} />
             Вернуться на главную

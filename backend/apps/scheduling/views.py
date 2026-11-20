@@ -1,10 +1,13 @@
+from datetime import date as date_type
+from datetime import timedelta
+
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from datetime import datetime, timedelta
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
 
 from apps.core.permissions import IsAdminUser
 
@@ -30,6 +33,15 @@ from .services import (
     get_nearest_available_slot,
     open_day_slots,
 )
+from .timefmt import msk_offset_hours, slot_start_datetime, timezone_label
+
+
+def _parse_date_param(request) -> date_type:
+    raw = request.query_params.get("date", "")
+    try:
+        return date_type.fromisoformat(raw)
+    except ValueError:
+        raise serializers.ValidationError({"date": "Параметр date обязателен в формате ГГГГ-ММ-ДД."}) from None
 
 
 # Ключи серверного кэша. Инвалидация — через сигнал на TimeSlot
@@ -60,9 +72,7 @@ class AvailableSlotsView(APIView):
     def get(self, request):
         from django.core.cache import cache as _cache
 
-        date = request.query_params.get("date")
-        if not date:
-            raise serializers.ValidationError({"date": "Параметр date обязателен."})
+        date = _parse_date_param(request)
 
         # Не кэшируем reserved-флаг (он меняется ежесекундно через
         # Redis-локи), но кэшируем сам список слотов на конкретную
@@ -78,19 +88,10 @@ class AvailableSlotsView(APIView):
             ).order_by("start_time")
 
             threshold = timezone.now() + timedelta(hours=1)
-            current_tz = timezone.get_current_timezone()
-
-            slots = []
-            for slot in raw_slots:
-                slot_dt = timezone.make_aware(
-                    datetime.combine(slot.date, slot.start_time),
-                    current_tz,
-                )
-                if slot_dt > threshold:
-                    slots.append(slot)
+            slots = [slot for slot in raw_slots if slot_start_datetime(slot.date, slot.start_time) > threshold]
 
             # Сериализуем без is_reserved (он накладывается ниже).
-            slots_payload = TimeSlotSerializer(slots, many=True).data
+            slots_payload = [dict(item) for item in TimeSlotSerializer(slots, many=True).data]
             _cache.set(cache_key, slots_payload, timeout=_AVAILABLE_CACHE_TTL)
 
         # is_reserved считаем поверх кэша — он живой из Redis-локов,
@@ -103,10 +104,26 @@ class AvailableSlotsView(APIView):
         return Response(slots_payload)
 
 
+class ScheduleInfoView(APIView):
+    """Часовой пояс расписания — для подписи времени на сайте."""
+
+    def get(self, request):
+        return Response(
+            {
+                "timezone": timezone.get_current_timezone_name(),
+                "label": timezone_label(),
+                "msk_offset_hours": msk_offset_hours(),
+            }
+        )
+
+
 class SlotReserveView(APIView):
     """Soft-reservation: пользователь выбрал слот, держим за ним 5 минут."""
 
-    throttle_scope = "prelink"
+    # Без явного ScopedRateThrottle throttle_scope ничего не ограничивал,
+    # и скрипт мог держать все слоты «занятыми».
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "slot_reserve"
 
     def post(self, request, slot_id: int):
         slot = get_object_or_404(
@@ -134,7 +151,8 @@ class SlotReserveView(APIView):
 class SlotReleaseView(APIView):
     """Освобождает резервирование (например, пользователь поменял слот)."""
 
-    throttle_scope = "prelink"
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "slot_reserve"
 
     def post(self, request, slot_id: int):
         token = (request.data or {}).get("reservation_token", "")
@@ -161,9 +179,7 @@ class NearestAvailableSlotView(APIView):
 class DateSummaryView(APIView):
 
     def get(self, request):
-        date = request.query_params.get("date")
-        if not date:
-            raise serializers.ValidationError({"date": "Параметр date обязателен."})
+        date = _parse_date_param(request)
 
         free_slots_count = get_date_free_slots_count(date)
         return Response(

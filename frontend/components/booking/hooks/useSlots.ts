@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchAPI } from "../../../lib/api";
 import type { NormalizedDate, Slot, CalendarDay } from "../../../lib/types";
 
@@ -171,7 +171,7 @@ export function useSlots(
     [slots, selectedSlotId]
   );
 
-  async function refreshSlots() {
+  const refreshSlots = useCallback(async () => {
     if (!selectedDate) return;
     try {
       const data = await fetchAPI(`/available-slots?date=${selectedDate}`);
@@ -179,11 +179,11 @@ export function useSlots(
     } catch {
       // silent
     }
-  }
+  }, [selectedDate]);
 
-  function clearSelectedSlot() {
+  const clearSelectedSlot = useCallback(() => {
     setSelectedSlotId(null);
-  }
+  }, []);
 
   return {
     slots,

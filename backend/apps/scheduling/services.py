@@ -1,11 +1,11 @@
-from datetime import date as date_type, datetime, time, timedelta
-from typing import Iterable
+from collections.abc import Iterable
+from datetime import date as date_type
+from datetime import datetime, time, timedelta
 
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from .models import AvailabilityRule, DayException, TimeSlot
-
 
 # ============================================================================
 # Генерация слотов
@@ -125,10 +125,23 @@ def generate_slots_bulk(
 # ============================================================================
 
 
+BOOKING_CUTOFF = timedelta(hours=1)
+
+
+def _bookable_q() -> Q:
+    """Слоты, на которые ещё можно записаться: не раньше чем через час.
+
+    Не полагаемся только на периодическую задачу deactivate_near_slots:
+    между её запусками прошедшие слоты попадали в счётчики дат, и форма
+    автоматически открывала сегодняшний день, в котором записаться уже некуда.
+    """
+    threshold = timezone.localtime(timezone.now() + BOOKING_CUTOFF)
+    return Q(date__gt=threshold.date()) | Q(date=threshold.date(), start_time__gt=threshold.time())
+
+
 def get_available_slots_queryset():
-    today = timezone.localdate()
     return TimeSlot.objects.filter(
-        date__gte=today,
+        _bookable_q(),
         is_booked=False,
         is_active=True,
     ).order_by("date", "start_time")
@@ -140,6 +153,7 @@ def get_nearest_available_slot():
 
 def get_date_free_slots_count(target_date):
     return TimeSlot.objects.filter(
+        _bookable_q(),
         date=target_date,
         is_booked=False,
         is_active=True,
@@ -147,10 +161,9 @@ def get_date_free_slots_count(target_date):
 
 
 def get_available_dates_with_counts():
-    today = timezone.localdate()
     return (
         TimeSlot.objects.filter(
-            date__gte=today,
+            _bookable_q(),
             is_booked=False,
             is_active=True,
         )

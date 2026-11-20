@@ -1,46 +1,26 @@
 """
-AppointmentActionService — единый обработчик действий пациента над записью.
+Действия пациента над записью из VK: подтвердить, отменить, ответить на
+напоминание, попросить связь с врачом.
 
-Транспорт передаётся через callable: send_fn(appointment, text, keyboard=None)
+Статус меняется только через services.status.change_status(), поэтому слот
+освобождается, а врач получает алерт в любом сценарии.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from django.utils import timezone
 
-from apps.notifications.services import (
-    send_appointment_status_notification,
-    send_doctor_contact_request_notification,
-    build_vk_active_root_keyboard,
-    build_vk_booking_keyboard,
-)
+from apps.appointments.services.status import SOURCE_PATIENT, change_status
+from apps.notifications.keyboards import vk as vk_kb
+from apps.notifications.messages import patient as patient_msg
 
 logger = logging.getLogger("apps.appointments.services.actions")
 
-
-class AppointmentActionService:
-    """Фасад для удобного использования из views."""
-
-    @staticmethod
-    def handle(appointment, action: str) -> dict:
-        from apps.notifications.services import send_to_patient_vk
-        return handle_action(appointment, action, send_fn=send_to_patient_vk)
-
-
-def _slot_time_str(appointment) -> str:
-    slot = appointment.slot
-    return (
-        f"Дата: {slot.date}\n"
-        f"Время: {slot.start_time.strftime('%H:%M')}–{slot.end_time.strftime('%H:%M')}"
-    )
-
-
-# Whitelist валидных переходов статуса. Без этой проверки старый callback
-# по уже завершённой записи мог откатить статус на cancelled (баг #6
-# из аудита). Ключи — действия, значения — статусы, из которых это
-# действие допустимо.
+# Из каких статусов допустимо каждое действие. Старые кнопки в истории
+# переписки не должны менять завершённую или отменённую запись.
 _ALLOWED_TRANSITIONS = {
     "confirm": {"new"},
     "cancel": {"new", "confirmed"},
@@ -50,71 +30,41 @@ _ALLOWED_TRANSITIONS = {
 }
 
 
-def _is_action_allowed(action: str, current_status: str) -> bool:
-    allowed_from = _ALLOWED_TRANSITIONS.get(action)
-    if allowed_from is None:
-        return False
-    return current_status in allowed_from
+def is_action_allowed(action: str, current_status: str) -> bool:
+    return current_status in _ALLOWED_TRANSITIONS.get(action, set())
 
 
-def handle_action(
-    appointment,
-    action: str,
-    send_fn: Callable,
-) -> dict:
+class AppointmentActionService:
+    @staticmethod
+    def handle(appointment, action: str) -> dict:
+        from apps.notifications.notifiers import send_to_patient_vk
+
+        return handle_action(appointment, action, send_fn=send_to_patient_vk)
+
+
+def handle_action(appointment, action: str, send_fn: Callable) -> dict:
     """
-    Выполняет действие над записью и отправляет ответ пациенту через send_fn.
-
-    send_fn(appointment, text, keyboard=None) — транспортная функция
-      (сейчас всегда send_to_patient_vk).
-
-    Возвращает dict с полями status и (опционально) changed,
-    либо {"error": "unknown_action"} для неизвестного действия.
+    Выполняет действие и отвечает пациенту через send_fn(appointment, text, keyboard=None).
+    Возвращает {"status": ..., "changed": bool} или {"error": "unknown_action"}.
     """
-    # Отсекаем недопустимые переходы (например, попытка отменить
-    # уже completed/cancelled запись через старый callback).
-    if not _is_action_allowed(action, appointment.status):
-        logger.info(
-            "Action '%s' not allowed for appointment %s in status '%s'",
-            action, appointment.id, appointment.status,
-        )
-        send_fn(
-            appointment,
-            "Эта запись уже завершена или отменена — изменить её нельзя. "
-            "Если нужна новая запись, оформите её на сайте.",
-        )
+    if action not in _ALLOWED_TRANSITIONS:
+        logger.warning("Unknown action '%s' for appointment %s", action, appointment.id)
+        return {"error": "unknown_action"}
+
+    if not is_action_allowed(action, appointment.status):
+        send_fn(appointment, patient_msg.action_not_allowed())
         return {"status": "not_allowed", "changed": False}
 
     if action == "confirm":
-        changed = appointment.status != "confirmed"
+        changed = change_status(appointment, "confirmed", source=SOURCE_PATIENT)
         if changed:
-            appointment.status = "confirmed"
-            appointment.save(update_fields=["status"])
-            send_appointment_status_notification(appointment)
-            send_fn(
-                appointment,
-                "✅ Запись подтверждена\n" + _slot_time_str(appointment),
-                keyboard=build_vk_active_root_keyboard(appointment),
-            )
+            send_fn(appointment, patient_msg.confirmed_by_patient(appointment), keyboard=vk_kb.active_root(appointment))
         return {"status": "confirmed", "changed": changed}
 
     if action == "cancel":
-        changed = appointment.status != "cancelled"
+        changed = change_status(appointment, "cancelled", source=SOURCE_PATIENT)
         if changed:
-            appointment.status = "cancelled"
-            appointment.save(update_fields=["status"])
-
-            slot = appointment.slot
-            if slot.is_booked:
-                slot.is_booked = False
-                slot.save(update_fields=["is_booked"])
-
-            send_appointment_status_notification(appointment)
-            send_fn(
-                appointment,
-                "❌ Запись отменена\n" + _slot_time_str(appointment),
-                keyboard=build_vk_booking_keyboard(),
-            )
+            send_fn(appointment, patient_msg.cancelled_by_patient(appointment), keyboard=vk_kb.booking())
         return {"status": "cancelled", "changed": changed}
 
     if action == "yes":
@@ -123,54 +73,32 @@ def handle_action(
             appointment.reminder_response = "yes"
             appointment.reminder_response_at = timezone.now()
             appointment.save(update_fields=["reminder_response", "reminder_response_at"])
-            send_fn(
-                appointment,
-                "✅ Отлично, ждём вас на онлайн-разборе.\n" + _slot_time_str(appointment),
-                keyboard=build_vk_active_root_keyboard(appointment),
-            )
+            send_fn(appointment, patient_msg.reminder_yes(appointment), keyboard=vk_kb.active_root(appointment))
         return {"status": "reminder_yes", "changed": changed}
 
     if action == "no":
-        changed = appointment.status != "cancelled" or appointment.reminder_response != "no"
         appointment.reminder_response = "no"
         appointment.reminder_response_at = timezone.now()
-        if appointment.status != "cancelled":
-            appointment.status = "cancelled"
-        appointment.save(update_fields=["reminder_response", "reminder_response_at", "status"])
-
-        if changed:
-            slot = appointment.slot
-            if slot.is_booked:
-                slot.is_booked = False
-                slot.save(update_fields=["is_booked"])
-            send_appointment_status_notification(appointment)
-
-        send_fn(
-            appointment,
-            "❌ Запись отменена по вашему ответу на напоминание.\n" + _slot_time_str(appointment),
-            keyboard=build_vk_booking_keyboard(),
-        )
+        appointment.save(update_fields=["reminder_response", "reminder_response_at"])
+        changed = change_status(appointment, "cancelled", source=SOURCE_PATIENT)
+        send_fn(appointment, patient_msg.reminder_no(appointment), keyboard=vk_kb.booking())
         return {"status": "reminder_no", "changed": changed}
 
-    if action == "doctor":
-        changed = appointment.reminder_response != "doctor_contact"
-        if changed:
-            now = timezone.now()
-            appointment.reminder_response = "doctor_contact"
-            appointment.reminder_response_at = now
-            appointment.doctor_contact_requested_at = now
-            appointment.save(update_fields=[
-                "reminder_response",
-                "reminder_response_at",
-                "doctor_contact_requested_at",
-            ])
-            send_doctor_contact_request_notification(appointment)
-            send_fn(
-                appointment,
-                "💬 Передали врачу, что вам нужна связь. С вами свяжутся.",
-                keyboard=build_vk_active_root_keyboard(appointment),
-            )
-        return {"status": "doctor_contact_requested", "changed": changed}
+    # action == "doctor"
+    from apps.notifications import tasks
+    from apps.notifications.tasks import enqueue
+    from apps.notifications.transports import vk as vk_transport
 
-    logger.warning("Unknown action '%s' for appointment %s", action, appointment.id)
-    return {"error": "unknown_action"}
+    changed = appointment.reminder_response != "doctor_contact"
+    if changed:
+        now = timezone.now()
+        appointment.reminder_response = "doctor_contact"
+        appointment.reminder_response_at = now
+        appointment.doctor_contact_requested_at = now
+        appointment.save(update_fields=["reminder_response", "reminder_response_at", "doctor_contact_requested_at"])
+        enqueue(tasks.notify_doctor_contact_request, appointment.pk)
+        send_fn(appointment, patient_msg.doctor_will_contact(appointment), keyboard=vk_kb.active_root(appointment))
+        # Ответ бота перевёл диалог в «отвеченные». Возвращаем его в
+        # неотвеченные, чтобы врач увидел просьбу в интерфейсе сообщества.
+        vk_transport.mark_unanswered(appointment.vk_peer_id or appointment.vk_user_id)
+    return {"status": "doctor_contact_requested", "changed": changed}

@@ -1,10 +1,14 @@
 from rest_framework import serializers
 
 from .models import AvailabilityRule, TimeSlot
+from .timefmt import slot_start_datetime
 
 
 class TimeSlotSerializer(serializers.ModelSerializer):
     datetime = serializers.SerializerMethodField()
+    # Начало слота с часовым поясом (ISO 8601). Фронт по нему показывает
+    # пациенту время в его собственном поясе.
+    starts_at = serializers.SerializerMethodField()
     is_reserved = serializers.SerializerMethodField()
 
     class Meta:
@@ -15,6 +19,7 @@ class TimeSlotSerializer(serializers.ModelSerializer):
             "start_time",
             "end_time",
             "datetime",
+            "starts_at",
             "is_booked",
             "is_active",
             "is_reserved",
@@ -22,6 +27,9 @@ class TimeSlotSerializer(serializers.ModelSerializer):
 
     def get_datetime(self, obj):
         return f"{obj.date} {obj.start_time.strftime('%H:%M')}"
+
+    def get_starts_at(self, obj):
+        return slot_start_datetime(obj.date, obj.start_time).isoformat()
 
     def get_is_reserved(self, obj):
         reserved_ids = self.context.get("reserved_slot_ids")

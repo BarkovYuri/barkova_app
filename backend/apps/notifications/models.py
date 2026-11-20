@@ -5,15 +5,24 @@ from apps.appointments.models import Appointment
 
 class NotificationLog(models.Model):
     CHANNEL_CHOICES = [
-        ("telegram", "Telegram"),
-        ("max", "Max"),
+        ("vk", "VK"),
+        ("email", "Email"),
+        # Архивные каналы: остаются только для отображения старых записей лога.
+        ("telegram", "Telegram (архив)"),
+        ("max", "Max (архив)"),
     ]
 
     TYPE_CHOICES = [
-        ("created", "Создание записи"),
-        ("reminder_3h", "Напоминание за 3 часа"),
-        ("confirmed", "Подтверждение записи"),
-        ("cancelled", "Отмена записи"),
+        ("created", "Врачу: новая запись"),
+        ("confirmed", "Врачу: запись подтверждена"),
+        ("cancelled", "Врачу: запись отменена"),
+        ("doctor_contact", "Врачу: просьба связаться"),
+        ("incoming_message", "Врачу: входящее сообщение"),
+        ("daily_digest", "Врачу: утренняя сводка"),
+        ("patient_created", "Пациенту: запись создана"),
+        ("patient_status", "Пациенту: смена статуса"),
+        ("reminder", "Пациенту: напоминание"),
+        ("reminder_3h", "Напоминание (архив)"),
     ]
 
     STATUS_CHOICES = [
@@ -27,7 +36,10 @@ class NotificationLog(models.Model):
         on_delete=models.CASCADE,
         related_name="notification_logs",
         verbose_name="Запись",
+        null=True,
+        blank=True,
     )
+    recipient = models.CharField("Получатель", max_length=255, blank=True)
 
     channel = models.CharField("Канал", max_length=20, choices=CHANNEL_CHOICES)
     notification_type = models.CharField(
@@ -58,22 +70,6 @@ class NotificationLog(models.Model):
     def __str__(self):
         return f"{self.get_notification_type_display()} / {self.get_channel_display()}"
 
-
-class VKPrelink(models.Model):
-    token = models.CharField("Токен привязки VK", max_length=64, unique=True)
-    user_id = models.CharField("VK user id", max_length=50, blank=True)
-    peer_id = models.CharField("VK peer id", max_length=50, blank=True)
-    linked_at = models.DateTimeField("Привязан", null=True, blank=True)
-    created_at = models.DateTimeField("Создан", auto_now_add=True)
-    is_used = models.BooleanField("Использован", default=False)
-
-    class Meta:
-        verbose_name = "Временная привязка VK"
-        verbose_name_plural = "Временные привязки VK"
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return self.token
 
 class VKDialogState(models.Model):
     STATE_CHOICES = [
@@ -121,6 +117,13 @@ class VKDialogState(models.Model):
         max_length=120,
         blank=True,
         default="",
+    )
+    last_incoming_at = models.DateTimeField("Последнее входящее сообщение", null=True, blank=True)
+    operator_paused_until = models.DateTimeField(
+        "Бот молчит до",
+        null=True,
+        blank=True,
+        help_text="Врач ответил в диалоге вручную, поэтому бот не вмешивается до этого времени.",
     )
 
     updated_at = models.DateTimeField("Обновлено", auto_now=True)
