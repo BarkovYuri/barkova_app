@@ -108,11 +108,15 @@ class ScheduleInfoView(APIView):
     """Часовой пояс расписания — для подписи времени на сайте."""
 
     def get(self, request):
+        from apps.notifications.transports import vk as vk_transport
+
         return Response(
             {
                 "timezone": timezone.get_current_timezone_name(),
                 "label": timezone_label(),
                 "msk_offset_hours": msk_offset_hours(),
+                # Куда написать, если свободного времени нет.
+                "community_url": vk_transport.community_dialog_url() if vk_transport.group_id() else "",
             }
         )
 

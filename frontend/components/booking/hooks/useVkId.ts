@@ -102,6 +102,15 @@ export function useVkId(active: boolean) {
             }
           );
 
+        // У iframe виджета нет title — скринридер объявлял его безымянным.
+        new MutationObserver((_, observer) => {
+          const frame = container.querySelector("iframe");
+          if (frame) {
+            frame.title = "Вход через VK ID";
+            observer.disconnect();
+          }
+        }).observe(container, { childList: true, subtree: true });
+
         setReady(true);
       } catch {
         setLoadError("Не удалось инициализировать VK ID.");

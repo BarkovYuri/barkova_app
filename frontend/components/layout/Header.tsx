@@ -5,20 +5,12 @@ import Link from "next/link";
 import { fetchAPI } from "../../lib/api";
 import type { DoctorProfile } from "../../lib/types";
 import { absoluteMediaUrl } from "../../lib/url";
+import DesktopNav from "./DesktopNav";
 import MobileMenu from "./MobileMenu";
 
 export default async function Header() {
   // Шапка есть на каждой странице: сбой API не должен ронять весь сайт.
   const doctor = (await fetchAPI("/profile").catch(() => null)) as DoctorProfile | null;
-
-  const links = [
-    { href: "/", label: "Главная" },
-    { href: "/about", label: "О враче" },
-    { href: "/booking", label: "Онлайн-запись" },
-    { href: "/office", label: "Очный приём" },
-    { href: "/blog", label: "Блог" },
-    { href: "/contacts", label: "Контакты" },
-  ];
 
   const avatarSrc = absoluteMediaUrl(
     doctor?.header_avatar_url || doctor?.photo_url || null
@@ -26,7 +18,7 @@ export default async function Header() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-neutral-100 bg-neutral-0/95 backdrop-blur-sm transition-all duration-300 shadow-sm">
-      <div className="container flex items-center justify-between py-4">
+      <div className="container flex items-center justify-between gap-4 py-4">
         {/* Logo/Brand */}
         <Link href="/" className="flex min-w-0 items-center gap-3 hover:opacity-80 transition-opacity">
           {avatarSrc ? (
@@ -51,29 +43,18 @@ export default async function Header() {
           </div>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-5 lg:gap-7">
-          {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-neutral-600 transition-colors hover:text-primary-700"
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
+        <DesktopNav />
 
-        {/* Desktop CTA Button — на lg+, чтобы не давить ссылки на md */}
-        <div className="hidden lg:block">
-          <a href="/booking" className="btn-primary text-sm py-2 px-5">
+        <div className="flex shrink-0 items-center gap-3">
+          {/* Кнопка записи — с 640px. На телефоне её заменяет закреплённая
+              кнопка внизу экрана. */}
+          <Link href="/booking" className="btn-primary hidden text-sm py-2 px-5 sm:inline-flex">
             Записаться
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-          </a>
-        </div>
+          </Link>
 
-        {/* Mobile Menu */}
-        <MobileMenu fullName={doctor?.full_name} />
+          <MobileMenu fullName={doctor?.full_name} />
+        </div>
       </div>
     </header>
   );

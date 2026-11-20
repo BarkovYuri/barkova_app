@@ -21,7 +21,7 @@ function formatDate(iso: string | null): string | null {
 }
 
 export function ArticleCard({ article }: { article: ArticleListItem }) {
-  const cover = absoluteMediaUrl(article.cover_url);
+  const cover = absoluteMediaUrl(article.cover_thumb_url || article.cover_url);
   const dateLabel = formatDate(article.published_at);
 
   return (

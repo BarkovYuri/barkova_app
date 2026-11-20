@@ -17,6 +17,7 @@ class NotificationLog(models.Model):
         ("confirmed", "Врачу: запись подтверждена"),
         ("cancelled", "Врачу: запись отменена"),
         ("doctor_contact", "Врачу: просьба связаться"),
+        ("rescheduled", "Врачу: запись перенесена"),
         ("incoming_message", "Врачу: входящее сообщение"),
         ("daily_digest", "Врачу: утренняя сводка"),
         ("patient_created", "Пациенту: запись создана"),

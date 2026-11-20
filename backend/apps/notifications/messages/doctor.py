@@ -154,3 +154,39 @@ def test_alert() -> str:
         "🔔 Проверка оповещений сайта.\n\n"
         "Если вы видите это сообщение, алерты о записях и входящих сообщениях будут приходить сюда."
     )
+
+
+def appointment_rescheduled(appointment, old_slot_text: str) -> str:
+    return "\n".join(
+        [
+            "🔁 Пациент перенёс запись",
+            "",
+            f"Пациент: {appointment.name}",
+            f"Телефон: {appointment.phone}",
+            f"Было: {old_slot_text}",
+            f"Стало: {_slot_line(appointment)}",
+            "",
+            f"Карточка записи: {admin_url(appointment)}",
+        ]
+    )
+
+
+def reschedule_without_slots(appointment, *, dialog_url: str) -> str:
+    return "\n".join(
+        [
+            "🔁 Пациент хочет перенести запись, но свободных слотов нет",
+            "",
+            f"Пациент: {appointment.name}",
+            f"Телефон: {appointment.phone}",
+            f"Текущая запись: {_slot_line(appointment)}",
+            "",
+            f"Ответить: {dialog_url}",
+        ]
+    )
+
+
+def slot_text(slot) -> str:
+    """Текст слота для истории «было/стало»."""
+    from apps.notifications.messages.patient import format_date_human
+
+    return f"{format_date_human(slot.date)}, {slot.start_time:%H:%M}–{slot.end_time:%H:%M}"

@@ -95,7 +95,7 @@ export default async function BlogIndexPage() {
               </p>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:auto-rows-fr">
               {articles.map((article) => (
                 <ArticleCard key={article.id} article={article} />
               ))}

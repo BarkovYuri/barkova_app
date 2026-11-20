@@ -76,11 +76,11 @@ export default async function BookingPage() {
         <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-primary-200 opacity-30 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-40 -right-32 h-80 w-80 rounded-full bg-secondary-100 opacity-40 blur-3xl" />
 
-        <div className="relative container pt-20 pb-12 md:py-20">
+        <div className="relative container pt-10 pb-12 md:py-16">
           {/* H1 имеет scroll-mt чтобы при возврате к якорю (skip-link или
               ручной скролл к самому верху) заголовок не прятался за
               sticky-header'ом высотой ~72px на mobile. */}
-          <div className="mb-10 max-w-3xl animate-fade-in-up scroll-mt-24">
+          <div className="mb-8 max-w-3xl animate-fade-in-up scroll-mt-24">
             <span className="chip">
               <Sparkles className="h-3.5 w-3.5" strokeWidth={2.5} />
               {chip}
@@ -93,15 +93,19 @@ export default async function BookingPage() {
             </p>
           </div>
 
-          {/* Что входит — ВЫШЕ формы, чтобы пациент знал, на что записывается */}
+          {/* Форма сразу после заголовка: раньше на телефоне до календаря
+              нужно было пролистать почти экран текста «Что входит». */}
+          <BookingForm />
+
+          {/* Подробности — под формой и в свёрнутом виде. */}
           <WhatsIncluded
             title={featuresTitle}
             subtitle={featuresSubtitle || undefined}
             intro={featuresIntro}
             features={features}
+            collapsible
+            className="mt-12 md:mt-16"
           />
-
-          <BookingForm />
         </div>
       </main>
     </>

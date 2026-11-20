@@ -37,7 +37,7 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
               <span
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
                   isOpen
-                    ? "bg-primary-600 text-neutral-0 rotate-180"
+                    ? "bg-primary-600 text-white rotate-180"
                     : "bg-neutral-100 text-neutral-500"
                 }`}
               >

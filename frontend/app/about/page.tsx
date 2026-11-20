@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { ConditionsBlock } from "../../components/about/ConditionsBlock";
+import { Credentials } from "../../components/about/Credentials";
 import { JsonLd } from "../../components/common/JsonLd";
 import { SectionDivider } from "../../components/common/SectionDivider";
 import { fetchAPI } from "../../lib/api";
@@ -18,6 +20,7 @@ import { resolveIcon } from "../../lib/iconMap";
 import {
   loadApproachItems,
   loadConditions,
+  loadCredentials,
   loadSiteBlocks,
   textOr,
 } from "../../lib/siteContent";
@@ -60,11 +63,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const [doctor, approach, blocks, conditions] = await Promise.all([
+  const [doctor, approach, blocks, conditions, credentials] = await Promise.all([
     fetchAPI("/profile") as Promise<DoctorProfile | null>,
     loadApproachItems(),
     loadSiteBlocks(),
     loadConditions(),
+    loadCredentials(),
   ]);
 
   if (!doctor) {
@@ -122,7 +126,7 @@ export default async function AboutPage() {
         <div className="pointer-events-none absolute -bottom-40 -right-32 h-80 w-80 rounded-full bg-secondary-100/50 blur-3xl" />
 
         <div className="relative container section">
-          <div className="grid gap-12 md:grid-cols-[400px_1fr] md:items-center">
+          <div className="grid gap-10 lg:gap-12 lg:grid-cols-[400px_1fr] lg:items-center">
             {/* Photo */}
             <div className="order-2 md:order-1 animate-fade-in">
               <div className="relative">
@@ -133,7 +137,7 @@ export default async function AboutPage() {
                       src={heroPhoto}
                       alt={doctor.full_name}
                       fill
-                      priority
+                      preload
                       sizes="(max-width: 768px) 100vw, 400px"
                       className="object-cover"
                     />
@@ -160,10 +164,10 @@ export default async function AboutPage() {
               </p>
 
               <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <a href="/booking" className="btn-primary">
+                <Link href="/booking" className="btn-primary">
                   Записаться на онлайн-разбор
                   <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                </a>
+                </Link>
 
                 {doctor.prodoktorov_url ? (
                   <a
@@ -187,7 +191,7 @@ export default async function AboutPage() {
       {/* ========== STATS SECTION ========== */}
       <section className="py-16 md:py-24">
         <div className="container">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:auto-rows-fr">
             {/* Experience */}
             <div className="flex flex-col rounded-2xl border border-neutral-200 bg-neutral-0 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:shadow-card-hover">
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-100 text-primary-700">
@@ -240,6 +244,9 @@ export default async function AboutPage() {
 
       <SectionDivider />
 
+      {/* ========== ДОКУМЕНТЫ ========== */}
+      <Credentials items={credentials} />
+
       {/* ========== APPROACH SECTION ========== */}
       {approach.length > 0 ? (
         <section className="py-16 md:py-24">
@@ -250,7 +257,7 @@ export default async function AboutPage() {
                 <h2 className="mt-5 text-neutral-900">{approachTitle}</h2>
               </div>
 
-              <div className="mt-12 md:mt-16 grid gap-6 grid-cols-1 sm:grid-cols-3 auto-rows-fr">
+              <div className="mt-12 md:mt-16 grid gap-6 grid-cols-1 sm:grid-cols-3">
                 {approach.map((item) => {
                   const Icon = resolveIcon(item.icon);
                   return (
@@ -258,7 +265,7 @@ export default async function AboutPage() {
                       key={item.id}
                       className="group flex flex-col rounded-2xl border border-neutral-200 bg-neutral-50 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:bg-neutral-0 hover:shadow-card-hover"
                     >
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 transition-colors duration-300 group-hover:bg-primary-600 group-hover:text-neutral-0">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 transition-colors duration-300 group-hover:bg-primary-600 group-hover:text-white">
                         <Icon className="h-7 w-7" strokeWidth={1.75} />
                       </div>
                       <h3 className="mt-6 text-neutral-900">{item.title}</h3>
@@ -284,18 +291,18 @@ export default async function AboutPage() {
       {/* ========== CTA SECTION ========== */}
       <section className="py-16 md:py-24">
         <div className="container">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 px-6 py-14 md:px-12 md:py-20 text-center shadow-xl">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#155e75] via-primary-600 to-primary-500 px-6 py-14 md:px-12 md:py-20 text-center shadow-xl">
             <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-secondary-300/30 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-primary-300/40 blur-3xl" />
 
             <div className="relative">
-              <h2 className="text-neutral-0">{ctaTitle}</h2>
-              <p className="mt-4 text-base sm:text-lg leading-relaxed text-primary-50 max-w-2xl mx-auto whitespace-pre-line">
+              <h2 className="text-white">{ctaTitle}</h2>
+              <p className="mt-4 text-base sm:text-lg leading-relaxed text-white/85 max-w-2xl mx-auto whitespace-pre-line">
                 {ctaText}
               </p>
               <a
                 href="/booking"
-                className="mt-8 inline-flex items-center gap-2 bg-neutral-0 text-primary-700 hover:bg-primary-50 font-semibold px-7 py-4 rounded-[14px] shadow-lg transition-all hover:-translate-y-0.5"
+                className="mt-8 inline-flex items-center gap-2 bg-white text-[#155e75] hover:bg-[#f0fafb] font-semibold px-7 py-4 rounded-[14px] shadow-lg transition-all hover:-translate-y-0.5"
               >
                 {ctaButton}
                 <ArrowRight className="h-4 w-4" strokeWidth={2.5} />

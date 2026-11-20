@@ -8,15 +8,16 @@ from .models import (
     ConditionCategory,
     ConditionItem,
     ConsultationFeature,
+    Credential,
     FaqItem,
     HowItWorksStep,
     LegalDocument,
+    Review,
     Service,
     SiteBlock,
     TransportItem,
     TrustBadge,
 )
-
 
 PAGE_BY_PREFIX = {
     "hero.": "Главная (hero)",
@@ -116,7 +117,7 @@ class HowItWorksStepAdmin(ModelAdmin):
 
 @admin.register(FaqItem)
 class FaqItemAdmin(ModelAdmin):
-    list_display = ("question", "order", "is_active", "updated_at")
+    list_display = ("question", "bot_label", "order", "is_active", "updated_at")
     list_display_links = ("question",)
     list_editable = ("order", "is_active")
     list_filter = ("is_active",)
@@ -124,6 +125,7 @@ class FaqItemAdmin(ModelAdmin):
     ordering = ("order", "id")
     fieldsets = (
         (None, {"fields": ("question", "answer")}),
+        ("VK-бот", {"fields": ("bot_label",)}),
         ("Отображение", {"fields": ("order", "is_active")}),
     )
 
@@ -306,3 +308,22 @@ class LegalDocumentAdmin(ModelAdmin):
     list_display = ("title", "doc_type", "version", "is_active", "created_at")
     list_filter = ("doc_type", "is_active")
     search_fields = ("title", "version")
+
+
+
+@admin.register(Review)
+class ReviewAdmin(ModelAdmin):
+    list_display = ("author_name", "short_text", "rating", "source", "date", "order", "is_active")
+    list_editable = ("order", "is_active")
+    list_filter = ("is_active", "source")
+    search_fields = ("author_name", "text")
+
+    @admin.display(description="Текст")
+    def short_text(self, obj):
+        return obj.text[:80]
+
+
+@admin.register(Credential)
+class CredentialAdmin(ModelAdmin):
+    list_display = ("title", "year", "order", "is_active")
+    list_editable = ("order", "is_active")

@@ -1,6 +1,17 @@
 import { Stethoscope, Heart } from "lucide-react";
 import Link from "next/link";
 
+import { NAV_LINKS } from "./navLinks";
+
+const LEGAL_LINKS = [
+  { href: "/legal/offer", label: "Оферта" },
+  { href: "/legal/privacy", label: "Политика конфиденциальности" },
+  { href: "/legal/consent", label: "Согласие на обработку" },
+];
+
+// py-1.5 даёт ссылкам в подвале нормальную площадь нажатия на телефоне.
+const FOOTER_LINK = "inline-block py-1.5 text-neutral-700 hover:text-primary-700 transition-colors";
+
 export default function Footer() {
   return (
     <footer className="border-t border-neutral-200 bg-neutral-50">
@@ -25,47 +36,14 @@ export default function Footer() {
           {/* Column 2: Quick Links */}
           <div>
             <h4 className="text-ui-label text-neutral-500 uppercase">Меню</h4>
-            <ul className="mt-5 space-y-3 text-sm">
-              <li>
-                <Link
-                  href="/"
-                  className="text-neutral-700 hover:text-primary-700 transition-colors"
-                >
-                  Главная
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  className="text-neutral-700 hover:text-primary-700 transition-colors"
-                >
-                  О враче
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/booking"
-                  className="text-neutral-700 hover:text-primary-700 transition-colors"
-                >
-                  Запись
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/blog"
-                  className="text-neutral-700 hover:text-primary-700 transition-colors"
-                >
-                  Блог
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contacts"
-                  className="text-neutral-700 hover:text-primary-700 transition-colors"
-                >
-                  Контакты
-                </Link>
-              </li>
+            <ul className="mt-4 space-y-1 text-sm">
+              {NAV_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={FOOTER_LINK}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -74,31 +52,14 @@ export default function Footer() {
             <h4 className="text-ui-label text-neutral-500 uppercase">
               Информация
             </h4>
-            <ul className="mt-5 space-y-3 text-sm">
-              <li>
-                <a
-                  href="/legal/offer"
-                  className="text-neutral-700 hover:text-primary-700 transition-colors"
-                >
-                  Оферта
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/legal/privacy"
-                  className="text-neutral-700 hover:text-primary-700 transition-colors"
-                >
-                  Политика конфиденциальности
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/legal/consent"
-                  className="text-neutral-700 hover:text-primary-700 transition-colors"
-                >
-                  Согласие на обработку
-                </a>
-              </li>
+            <ul className="mt-4 space-y-1 text-sm">
+              {LEGAL_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className={FOOTER_LINK}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -109,9 +70,9 @@ export default function Footer() {
               <p className="text-neutral-700 leading-relaxed">
                 Готовы начать? Запишитесь на онлайн-разбор уже сегодня.
               </p>
-              <a href="/booking" className="btn-primary text-sm py-3 px-5">
+              <Link href="/booking" className="btn-primary text-sm py-3 px-5">
                 Записаться
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -119,7 +80,7 @@ export default function Footer() {
         {/* Divider */}
         <div className="border-t border-neutral-200 mt-12 pt-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs text-neutral-500">
-            <p>© 2026 Кабинет врача-инфекциониста. Все права защищены.</p>
+            <p>© {new Date().getFullYear()} Кабинет врача-инфекциониста. Все права защищены.</p>
             <p className="inline-flex items-center gap-1.5">
               Сделано с
               <Heart
@@ -131,6 +92,8 @@ export default function Footer() {
           </div>
         </div>
       </div>
+      {/* Место под закреплённую кнопку записи на телефоне. */}
+      <div className="h-20 sm:hidden" aria-hidden="true" />
     </footer>
   );
 }

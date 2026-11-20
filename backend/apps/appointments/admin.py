@@ -11,8 +11,10 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from unfold.admin import ModelAdmin, TabularInline
 
 from apps.notifications.transports import vk as vk_transport
+from apps.scheduling.models import TimeSlot
 
 from .models import ACTIVE_STATUSES, Appointment, AppointmentAttachment
+from .services.reschedule import schedule_reschedule_notifications
 from .services.status import (
     SOURCE_DOCTOR,
     change_status,
@@ -196,6 +198,12 @@ class AppointmentAdmin(ModelAdmin):
             # Токен нужен VK-кнопкам «подтвердить/отменить» и у записей,
             # созданных врачом вручную.
             obj.vk_link_token = secrets.token_urlsafe(16)
+        slot_changed = bool(old and old["slot_id"] != obj.slot_id)
+        if slot_changed:
+            # Напоминание относилось к старому времени.
+            obj.reminder_sent_at = None
+            obj.reminder_response = ""
+            obj.reminder_response_at = None
         with transaction.atomic():
             super().save_model(request, obj, form, change)
             slot_ids = {obj.slot_id}
@@ -205,6 +213,10 @@ class AppointmentAdmin(ModelAdmin):
                 sync_slot_booking(slot_id)
             if old and old["status"] != obj.status:
                 schedule_status_notifications(obj.pk, obj.status, SOURCE_DOCTOR)
+            elif slot_changed and obj.is_active:
+                schedule_reschedule_notifications(
+                    obj.pk, TimeSlot.objects.get(pk=old["slot_id"]), SOURCE_DOCTOR
+                )
 
     # ===== Массовые действия =====
 

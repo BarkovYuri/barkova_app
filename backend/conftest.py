@@ -18,6 +18,8 @@ def _isolated_infra(settings):
     settings.VK_GROUP_ID = "123"
     settings.VK_DOCTOR_USER_IDS = []
     settings.DOCTOR_ALERT_EMAILS = []
+    # Бот не должен вести себя по-разному днём и ночью во время тестов.
+    settings.VK_BOT_WORKING_HOURS = "00:00-24:00"
 
     from django.core.cache import cache
 

@@ -132,10 +132,11 @@ export function PatientForm({
       <div className="space-y-5">
         {/* Name Input */}
         <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          <label className="mb-2.5 block text-sm font-semibold text-neutral-900">
+          <label htmlFor="booking-name" className="mb-2.5 block text-sm font-semibold text-neutral-900">
             Ваше имя <span className="text-accent-600">*</span>
           </label>
           <input
+            id="booking-name"
             type="text"
             name="name"
             autoComplete="name"
@@ -156,10 +157,11 @@ export function PatientForm({
 
         {/* Phone Input — с маской и валидацией */}
         <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
-          <label className="mb-2.5 block text-sm font-semibold text-neutral-900">
+          <label htmlFor="booking-phone" className="mb-2.5 block text-sm font-semibold text-neutral-900">
             Телефон <span className="text-accent-600">*</span>
           </label>
           <input
+            id="booking-phone"
             type="tel"
             name="phone"
             inputMode="tel"
@@ -197,10 +199,11 @@ export function PatientForm({
 
         {/* Reason Input */}
         <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
-          <label className="mb-2.5 block text-sm font-semibold text-neutral-900">
-            Причина обращения <span className="text-neutral-400">(опционально)</span>
+          <label htmlFor="booking-reason" className="mb-2.5 block text-sm font-semibold text-neutral-900">
+            Причина обращения <span className="text-neutral-500">(опционально)</span>
           </label>
           <textarea
+            id="booking-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Кратко опишите вопрос или симптомы..."
@@ -217,10 +220,11 @@ export function PatientForm({
 
         {/* File Upload */}
         <div className="animate-fade-in" style={{ animationDelay: '0.25s' }}>
-          <label className="mb-2.5 block text-sm font-semibold text-neutral-900">
-            Приложить файлы <span className="text-neutral-400">(опционально)</span>
+          <label htmlFor="booking-files" className="mb-2.5 block text-sm font-semibold text-neutral-900">
+            Приложить файлы <span className="text-neutral-500">(опционально)</span>
           </label>
           <input
+            id="booking-files"
             type="file"
             multiple
             accept={ACCEPTED_FILES}
@@ -364,7 +368,7 @@ export function PatientForm({
             transition-all duration-300 transform
             ${submitting
               ? "bg-neutral-300 text-neutral-600 cursor-not-allowed"
-              : "bg-primary-600 hover:bg-primary-700 text-neutral-0 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+              : "bg-primary-600 hover:bg-[#155e75] text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
             }
             flex items-center justify-center gap-2
           `}

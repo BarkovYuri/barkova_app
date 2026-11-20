@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Clock, Share2 } from "lucide-react";
 
 import { ArticleBody } from "../../../components/blog/ArticleBody";
 import { ArticleViewCounter } from "../../../components/blog/ArticleViewCounter";
 import { RelatedArticles } from "../../../components/blog/RelatedArticles";
 import { JsonLd } from "../../../components/common/JsonLd";
 import { fetchAPI } from "../../../lib/api";
+import { extractHeadings, readingMinutes } from "../../../lib/articleText";
 import { buildArticleSchema, buildAuthorSchema, buildBreadcrumbSchema } from "../../../lib/seo";
 import { loadArticleBySlug, loadArticles } from "../../../lib/siteContent";
 import type { DoctorProfile } from "../../../lib/types";
@@ -17,6 +18,8 @@ import { absoluteMediaUrl } from "../../../lib/url";
 // Страница рендерится на каждый запрос, а данные из API кэшируются на
 // минуту в lib/api.ts. Так сборка в CI не требует работающего бэкенда.
 export const revalidate = 0;
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://doctor-barkova.ru";
 
 const FORMATTER = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
@@ -93,6 +96,9 @@ export default async function ArticlePage({ params }: { params: Params }) {
     author: buildAuthorSchema(doctor),
   });
   const authorPhoto = absoluteMediaUrl(doctor?.header_avatar_url || doctor?.photo_url);
+  const headings = extractHeadings(article.body || "");
+  const minutes = readingMinutes(article.body || "");
+  const articleUrl = `${SITE_URL}/blog/${article.slug}`;
 
   return (
     <main id="main" className="bg-neutral-0">
@@ -123,6 +129,10 @@ export default async function ArticlePage({ params }: { params: Params }) {
                 {dateLabel}
               </p>
             ) : null}
+            <p className="inline-flex items-center gap-1.5 text-sm text-neutral-500">
+              <Clock className="h-3.5 w-3.5" strokeWidth={2.2} />
+              {minutes} мин чтения
+            </p>
             <ArticleViewCounter
               slug={article.slug}
               initialCount={article.views_count ?? 0}
@@ -141,14 +151,42 @@ export default async function ArticlePage({ params }: { params: Params }) {
               src={cover}
               alt={article.cover_alt || article.title}
               fill
-              priority
+              preload
               sizes="(max-width: 768px) 100vw, 768px"
               className="object-cover"
             />
           </div>
         ) : null}
 
-        <ArticleBody markdown={article.body} />
+        {/* Оглавление — для длинных статей, где есть что листать */}
+        {headings.length >= 3 ? (
+          <nav aria-label="Содержание статьи" className="mb-10 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Содержание</p>
+            <ol className="mt-3 space-y-1.5 text-sm sm:text-base">
+              {headings.map((heading) => (
+                <li key={heading.id}>
+                  <a href={`#${heading.id}`} className="inline-block py-0.5 text-primary-700 hover:text-primary-800 hover:underline">
+                    {heading.text}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        ) : null}
+
+        <ArticleBody markdown={article.body} headings={headings} />
+
+        <div className="mt-10 flex flex-wrap items-center gap-3">
+          <a
+            href={`https://vk.com/share.php?url=${encodeURIComponent(articleUrl)}&title=${encodeURIComponent(article.title)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary text-sm"
+          >
+            <Share2 className="h-4 w-4" strokeWidth={2.25} />
+            Поделиться в VK
+          </a>
+        </div>
 
         {/* Автор и характер материала: для медицинской темы поисковики
             смотрят, кто написал статью и какая у него квалификация. */}
@@ -181,15 +219,6 @@ export default async function ArticlePage({ params }: { params: Params }) {
           </p>
         </aside>
 
-        {/* Глазик с числом просмотров после тела — для тех, кто читает
-            до конца. Тот же компонент уже стоит в шапке, но на длинной
-            статье полезен и здесь. */}
-        <div className="mt-10 flex justify-end">
-          <ArticleViewCounter
-            slug={article.slug}
-            initialCount={article.views_count ?? 0}
-          />
-        </div>
 
         {/* CTA в конце статьи — главная цель блога. Идёт СРАЗУ после
             тела, чтобы дочитавший пациент видел «Записаться» первым,

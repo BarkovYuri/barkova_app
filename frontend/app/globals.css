@@ -187,6 +187,10 @@
   h4 {
     font-family: var(--font-display);
     color: var(--color-neutral-900);
+    /* «Политика конфиденциальности» не помещалась в 360px и давала
+       горизонтальную прокрутку. Переносы по слогам — по lang="ru". */
+    overflow-wrap: break-word;
+    hyphens: auto;
   }
 
   h1 {
@@ -318,7 +322,7 @@
     padding: 14px 28px;
     border-radius: var(--radius-md);
     background: var(--color-primary-600);
-    color: var(--color-neutral-0);
+    color: #ffffff;
     border: 1px solid var(--color-primary-600);
     box-shadow: 0 8px 20px -8px rgba(14, 116, 144, 0.45);
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
@@ -330,7 +334,7 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: var(--color-primary-700);
+    background: #155e75;
     box-shadow: 0 14px 28px -10px rgba(14, 116, 144, 0.55),
       0 0 50px -10px rgba(14, 116, 144, 0.45);
     transform: translateY(-2px);
@@ -502,9 +506,15 @@
  * DARK MODE — только desktop (min-width: 1024px)
  *
  * Включается через переопределение CSS-переменных в prefers-color-scheme:
- * dark. Tailwind 4 ссылается на эти переменные через var(), поэтому ВСЕ
- * утилиты вида bg-neutral-*, text-neutral-*, border-neutral-* автоматически
- * переключаются — без правок в компонентах.
+ * dark. Tailwind 4 ссылается на эти переменные через var(), поэтому
+ * утилиты bg-*, text-*, border-* переключаются без правок в компонентах.
+ *
+ * Правило палитры в тёмной теме:
+ *   50–200  — светлые подложки → тёмные тонированные подложки;
+ *   700–900 — тёмный текст на светлом → светлый текст на тёмном;
+ *   300–600 — без изменений (кнопки, акценты, иконки).
+ * Белый текст на цветных кнопках задан как text-white / #fff, а тёмные
+ * фоны кнопок — явными цветами, поэтому инверсия их не ломает.
  *
  * На мобайле и планшете тёмная тема намеренно отключена (заказчик
  * просил): для медицинского сайта на маленьком экране белый фон
@@ -513,18 +523,54 @@
 
 @media (prefers-color-scheme: dark) and (min-width: 1024px) {
   :root {
+    /* Нативные контролы (чекбоксы, file input, скролл) — тоже тёмные. */
+    color-scheme: dark;
+
     /* Инверсия нейтралов: 0 = тёмный фон, 900 = светлый текст */
     --color-neutral-0: #0a0a0a;
     --color-neutral-50: #131311;
     --color-neutral-100: #1c1917;
     --color-neutral-200: #292524;
     --color-neutral-300: #44403c;
-    --color-neutral-400: #57534e;
+    --color-neutral-400: #78716c;
     --color-neutral-500: #a8a29e;
     --color-neutral-600: #d6d3d1;
     --color-neutral-700: #e7e5e4;
     --color-neutral-800: #f5f5f4;
     --color-neutral-900: #fafaf9;
+
+    /* Бирюзовый: подложки и текст */
+    --color-primary-50: #0b2329;
+    --color-primary-100: #0f3039;
+    --color-primary-200: #15444f;
+    --color-primary-700: #6cc3cf;
+    --color-primary-800: #9bd8e1;
+    --color-primary-900: #c9ecf1;
+
+    /* Зелёный (успех, подтверждение) */
+    --color-secondary-50: #082419;
+    --color-secondary-100: #0b3324;
+    --color-secondary-200: #10503a;
+    --color-secondary-700: #4ade9b;
+    --color-secondary-800: #86efbf;
+    --color-secondary-900: #bbf7d9;
+
+    /* Акцент, ошибки, предупреждения, рейтинг */
+    --color-accent-50: #2a0c12;
+    --color-accent-100: #3d111b;
+    --color-accent-700: #fb8a9b;
+    --color-error-50: #2b0d0d;
+    --color-error-100: #3f1212;
+    --color-error-700: #f87171;
+    --color-success-50: #082419;
+    --color-success-100: #0b3324;
+    --color-success-700: #4ade9b;
+    --color-warning-50: #2a1c05;
+    --color-warning-100: #3d2908;
+    --color-warning-700: #fbbf24;
+    --color-amber-50: #2a1f06;
+    --color-amber-200: #5c430e;
+    --color-amber-300: #7a5a12;
 
     /* В тёмной теме плоские тени почти не видны — даём лёгкий glow */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.45);
@@ -538,8 +584,8 @@
   }
 
   ::selection {
-    background: var(--color-primary-700);
-    color: var(--color-primary-100);
+    background: #155e75;
+    color: #ffffff;
   }
 
   /* Картинки чуть мягче на тёмном фоне */
@@ -547,8 +593,6 @@
     opacity: 0.92;
   }
 
-  /* В тёмной теме нет смысла в glassmorphism через bg-white/95 — он
-     становится почти непрозрачным белым; явно делаем header тёмно-стеклом. */
   header.sticky {
     background: rgba(10, 10, 10, 0.85) !important;
     border-color: var(--color-neutral-200) !important;

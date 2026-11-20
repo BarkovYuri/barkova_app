@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   ArrowRight,
   Building2,
@@ -151,7 +152,7 @@ export default async function OfficePage() {
         </div>
 
         {/* Info Cards Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 mb-12 max-w-4xl mx-auto auto-rows-fr">
+        <div className="grid gap-6 sm:grid-cols-2 mb-12 max-w-4xl mx-auto sm:auto-rows-fr">
           {/* Address Card */}
           <div className="card-interactive">
             <div className="flex items-start gap-4">
@@ -273,10 +274,10 @@ export default async function OfficePage() {
               <ExternalLink className="h-4 w-4" strokeWidth={2.5} />
             </a>
           ) : (
-            <a href="/booking" className="btn-primary">
+            <Link href="/booking" className="btn-primary">
               {ctaButtonOnline}
               <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-            </a>
+            </Link>
           )}
         </div>
       </div>

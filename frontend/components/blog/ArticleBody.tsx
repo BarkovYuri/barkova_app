@@ -1,6 +1,8 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import type { ArticleHeading } from "../../lib/articleText";
+
 /**
  * Безопасный рендер Markdown-тела статьи.
  *
@@ -12,17 +14,30 @@ import remarkGfm from "remark-gfm";
  * @tailwindcss/typography, но добавлять отдельный плагин ради одной
  * страницы избыточно — ручная настройка контролируемая и без deps.)
  */
-export function ArticleBody({ markdown }: { markdown: string }) {
+export function ArticleBody({
+  markdown,
+  headings = [],
+}: {
+  markdown: string;
+  /** Заголовки из extractHeadings — дают h2 якоря для оглавления. */
+  headings?: ArticleHeading[];
+}) {
+  // react-markdown рендерит h2 в порядке документа, тот же порядок у
+  // extractHeadings, поэтому id берём по счётчику.
+  let h2Index = 0;
   return (
     <div className="article-body text-base sm:text-lg leading-relaxed text-neutral-800">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          h2: ({ children }) => (
-            <h2 className="mt-12 mb-4 text-2xl sm:text-3xl font-bold text-neutral-900 tracking-tight">
-              {children}
-            </h2>
-          ),
+          h2: ({ children }) => {
+            const id = headings[h2Index++]?.id;
+            return (
+              <h2 id={id} className="mt-12 mb-4 scroll-mt-24 text-2xl sm:text-3xl font-bold text-neutral-900 tracking-tight">
+                {children}
+              </h2>
+            );
+          },
           h3: ({ children }) => (
             <h3 className="mt-8 mb-3 text-xl sm:text-2xl font-semibold text-neutral-900">
               {children}

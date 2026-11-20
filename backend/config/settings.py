@@ -182,6 +182,11 @@ UNFOLD = {
                         "icon": "help_outline",
                         "link": "/admin/content/faqitem/",
                     },
+                    {
+                        "title": "Отзывы",
+                        "icon": "reviews",
+                        "link": "/admin/content/review/",
+                    },
                 ],
             },
             {
@@ -198,6 +203,11 @@ UNFOLD = {
                         "title": "С чем можно обратиться",
                         "icon": "checklist",
                         "link": "/admin/content/conditioncategory/",
+                    },
+                    {
+                        "title": "Дипломы и сертификаты",
+                        "icon": "workspace_premium",
+                        "link": "/admin/content/credential/",
                     },
                 ],
             },
@@ -533,6 +543,9 @@ EMAIL_BACKEND = (
 VK_BOT_GREETING_COOLDOWN_DAYS = int(os.getenv("VK_BOT_GREETING_COOLDOWN_DAYS", "30"))
 # После ручного ответа врача бот молчит в этом диалоге N часов.
 VK_BOT_OPERATOR_PAUSE_HOURS = int(os.getenv("VK_BOT_OPERATOR_PAUSE_HOURS", "24"))
+# Рабочие часы по поясу расписания: вне их бот один раз за ночь отвечает,
+# что врач ответит утром.
+VK_BOT_WORKING_HOURS = os.getenv("VK_BOT_WORKING_HOURS", "09:00-21:00")
 # Алерт врачу о входящих сообщениях — не чаще раза в N минут на собеседника.
 VK_DOCTOR_ALERT_COOLDOWN_MINUTES = int(os.getenv("VK_DOCTOR_ALERT_COOLDOWN_MINUTES", "30"))
 

@@ -21,7 +21,7 @@ function pluralizeArticles(n: number): string {
  * Если у кластера нет обложки — показывается фирменный градиент.
  */
 export function CategoryCard({ category }: { category: BlogCategoryListItem }) {
-  const cover = absoluteMediaUrl(category.cover_url);
+  const cover = absoluteMediaUrl(category.cover_thumb_url || category.cover_url);
 
   return (
     <Link

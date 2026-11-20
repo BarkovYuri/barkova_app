@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { capitalizeFirst } from "../../../lib/format";
 import { buildIcs, downloadIcs, slotDurationMinutes } from "../../../lib/calendar";
 import { reachGoal } from "../../../lib/metrika";
 import type { Slot, ContactMethod } from "../../../lib/types";
@@ -83,7 +84,7 @@ export function SuccessView({
         {/* Success Icon */}
         <div className="flex justify-center mb-6">
           <div className="relative h-24 w-24">
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-secondary-500 text-neutral-0 shadow-lg shadow-secondary-500/40">
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-secondary-500 text-white shadow-lg shadow-secondary-500/40">
               <CheckCircle2 className="h-12 w-12" strokeWidth={2.25} />
             </div>
             <div className="absolute inset-0 rounded-full border-2 border-secondary-300 animate-pulse-gentle" />
@@ -142,8 +143,8 @@ export function SuccessView({
                   <p className="text-xs text-secondary-700 uppercase tracking-wide font-medium">
                     Дата приёма
                   </p>
-                  <p className="text-base font-semibold text-neutral-900 capitalize">
-                    {formatDateLong(selectedDate)}
+                  <p className="text-base font-semibold text-neutral-900">
+                    {capitalizeFirst(formatDateLong(selectedDate))}
                   </p>
                 </div>
               </div>

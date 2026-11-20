@@ -27,7 +27,7 @@ export function RelatedArticles({ articles, currentSlug, limit = 3 }: Props) {
       <p className="mt-2 text-sm text-neutral-500">
         Другие статьи в блоге — простыми словами о&nbsp;медицине.
       </p>
-      <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+      <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:auto-rows-fr">
         {others.map((article) => (
           <ArticleCard key={article.id} article={article} />
         ))}

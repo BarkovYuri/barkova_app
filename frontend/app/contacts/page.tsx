@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ArrowRight, MapPin, Phone } from "lucide-react";
 
 import { JsonLd } from "../../components/common/JsonLd";
@@ -100,13 +101,14 @@ function SocialIconLink({
   return (
     <a
       href={href}
-      target="_blank"
+      target={href.startsWith("mailto:") ? undefined : "_blank"}
       rel="noreferrer"
-      aria-label={label}
-      title={label}
-      className={`flex h-12 w-12 items-center justify-center rounded-lg border-2 border-neutral-300 text-neutral-600 transition-all hover:scale-110 hover:shadow-lg hover:border-primary-600 hover:bg-primary-50 ${hoverClass || ""}`}
+      className={`group inline-flex items-center gap-2.5 rounded-xl border border-neutral-300 py-2 pl-2 pr-4 text-sm font-medium text-neutral-700 transition-all hover:border-primary-600 hover:bg-primary-50 ${hoverClass || ""}`}
     >
-      {children}
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-600 group-hover:text-current">
+        {children}
+      </span>
+      {label}
     </a>
   );
 }
@@ -123,7 +125,7 @@ export default async function ContactsPage() {
     "contacts.section_subtitle",
     "Свяжитесь со мной удобным для вас способом"
   );
-  const socialTitle = textOr(blocks, "contacts.social.title", "Мессенджеры");
+  const socialTitle = textOr(blocks, "contacts.social.title", "Соцсети и почта");
   const mapTitle = textOr(blocks, "contacts.map.title", "Где проходит приём");
   const ctaText = textOr(
     blocks,
@@ -240,7 +242,7 @@ export default async function ContactsPage() {
               <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 {socialTitle}
               </p>
-              <div className="mt-6 flex flex-wrap gap-4">
+              <div className="mt-5 flex flex-wrap gap-3">
                 {doctor?.instagram_url ? (
                   <SocialIconLink
                     href={doctor.instagram_url}
@@ -306,10 +308,10 @@ export default async function ContactsPage() {
           <p className="text-base-large text-neutral-600 mb-6 whitespace-pre-line">
             {ctaText}
           </p>
-          <a href="/booking" className="btn-primary">
+          <Link href="/booking" className="btn-primary">
             {ctaButton}
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-          </a>
+          </Link>
         </div>
       </div>
     </main>

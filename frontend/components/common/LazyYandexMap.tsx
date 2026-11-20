@@ -50,7 +50,7 @@ export function LazyYandexMap({ src, title = "Карта", address }: Props) {
       />
 
       <div className="relative z-10 flex flex-col items-center gap-3 text-center px-4">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600 text-neutral-0 shadow-lg group-hover:scale-105 transition-transform">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-lg group-hover:scale-105 transition-transform">
           <MapIcon className="h-7 w-7" strokeWidth={2} />
         </span>
         <p className="text-sm font-semibold text-neutral-900">

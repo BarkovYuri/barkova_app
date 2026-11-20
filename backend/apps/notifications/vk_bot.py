@@ -46,8 +46,11 @@ from .vk_constants import (
     VK_CMD_CANCEL_REQUEST,
     VK_CMD_CONFIRM,
     VK_CMD_DOCTOR,
+    VK_CMD_FAQ,
     VK_CMD_MANAGE,
     VK_CMD_NO,
+    VK_CMD_RESCHEDULE_REQUEST,
+    VK_CMD_RESCHEDULE_TO,
     VK_CMD_YES,
     VK_MENU_KIND_ACTIVE_ROOT,
     VK_MENU_KIND_BOOKING,
@@ -200,6 +203,50 @@ def _alert_doctor_about_message(user_id: str, peer_id: str, message: dict, appoi
     notifiers.alert_doctor(text, notification_type="incoming_message", appointment=appointment)
 
 
+# ─── Рабочие часы и быстрые ответы ────────────────────────────────────────────
+
+
+def _working_hours() -> tuple[int, int, str]:
+    """(начало в минутах, конец в минутах, «09:00») из VK_BOT_WORKING_HOURS="09:00-21:00"."""
+    raw = getattr(settings, "VK_BOT_WORKING_HOURS", "09:00-21:00") or "09:00-21:00"
+    try:
+        start, end = (part.strip() for part in raw.split("-", 1))
+        sh, sm = (int(x) for x in start.split(":"))
+        eh, em = (int(x) for x in end.split(":"))
+        return sh * 60 + sm, eh * 60 + em, f"{sh:02d}:{sm:02d}"
+    except ValueError:
+        return 9 * 60, 21 * 60, "09:00"
+
+
+def is_off_hours(now=None) -> bool:
+    start, end, _ = _working_hours()
+    local = timezone.localtime(now or timezone.now())
+    minutes = local.hour * 60 + local.minute
+    return not (start <= minutes < end)
+
+
+def _off_hours_reply_allowed(user_id: str) -> bool:
+    """Не чаще раза в 12 часов на человека: одной ночи — одно сообщение."""
+    return cache.add(f"vk_off_hours:{user_id}", "1", timeout=12 * 60 * 60)
+
+
+def bot_faq_items():
+    from apps.content.models import FaqItem
+
+    return list(FaqItem.objects.filter(is_active=True).exclude(bot_label="").order_by("order", "id")[:8])
+
+
+def _answer_faq(peer: str, faq_id) -> None:
+    from apps.content.models import FaqItem
+
+    item = FaqItem.objects.filter(pk=faq_id, is_active=True).first()
+    if item is None:
+        return
+    vk_transport.send_message(
+        peer, patient_msg.faq_answer(item.question, item.answer), keyboard=vk_kb.welcome(bot_faq_items())
+    )
+
+
 # ─── message_new ──────────────────────────────────────────────────────────────
 
 
@@ -221,6 +268,11 @@ def handle_message_new(message: dict) -> None:
     state.last_incoming_at = timezone.now()
     state.save(update_fields=["last_incoming_at", "updated_at"])
 
+    # Кнопка быстрого ответа: отвечаем из FAQ, врача не беспокоим.
+    if payload.get("cmd") == VK_CMD_FAQ:
+        _answer_faq(peer, payload.get("id"))
+        return
+
     # Пациент написал в сообщество: теперь ему можно писать, досылаем
     # подтверждения записей, которые не ушли сразу после бронирования.
     bot_replied = deliver_pending_booking_messages(user_id) > 0
@@ -229,16 +281,27 @@ def handle_message_new(message: dict) -> None:
     is_start_button = payload.get("command") == "start"
     has_content = bool(text and not is_start_button) or bool(message.get("attachments"))
 
+    operator_active = _operator_active(state)
+    off_hours = is_off_hours()
+    _, _, work_start = _working_hours()
+
     if (
         appointment is None
-        and not _operator_active(state)
+        and not operator_active
         and (is_start_button or is_meaningful_text(text))
         and _greeting_allowed(state)
     ):
-        ok, _, _ = vk_transport.send_message(peer, patient_msg.greeting(), keyboard=vk_kb.booking())
+        greeting = patient_msg.greeting()
+        if off_hours and has_content and _off_hours_reply_allowed(user_id):
+            greeting += "\n\n" + patient_msg.off_hours_note(work_start)
+        ok, _, _ = vk_transport.send_message(peer, greeting, keyboard=vk_kb.welcome(bot_faq_items()))
         if ok:
             _mark_menu(state, VK_MENU_KIND_BOOKING)
             bot_replied = True
+    elif has_content and off_hours and not operator_active and _off_hours_reply_allowed(user_id):
+        # Ночью человек не должен думать, что его проигнорировали.
+        ok, _, _ = vk_transport.send_message(peer, patient_msg.off_hours_note(work_start))
+        bot_replied = bot_replied or ok
 
     if has_content:
         if bot_replied:
@@ -321,7 +384,9 @@ def handle_message_event(obj: dict) -> None:
     state.last_action_at = timezone.now()
     state.save(update_fields=["last_action_at", "updated_at"])
 
-    if cmd in {VK_CMD_MANAGE, VK_CMD_CANCEL_REQUEST} and not appointment.is_active:
+    if cmd in {VK_CMD_MANAGE, VK_CMD_CANCEL_REQUEST, VK_CMD_RESCHEDULE_REQUEST, VK_CMD_RESCHEDULE_TO} and not (
+        appointment.is_active
+    ):
         notifiers.send_to_patient_vk(appointment, patient_msg.action_not_allowed())
         return
 
@@ -337,6 +402,14 @@ def handle_message_event(obj: dict) -> None:
         _mark_menu(state, VK_MENU_KIND_CANCEL_CONFIRM, appointment, VK_STATE_CONFIRM_CANCEL)
         return
 
+    if cmd == VK_CMD_RESCHEDULE_REQUEST:
+        _offer_reschedule(appointment, user, peer)
+        return
+
+    if cmd == VK_CMD_RESCHEDULE_TO:
+        _do_reschedule(appointment, (payload or {}).get("slot_id"), user, peer)
+        return
+
     if cmd == VK_CMD_CANCEL_KEEP:
         vk_transport.send_message(peer, patient_msg.kept(appointment), keyboard=vk_kb.active_root(appointment))
         _mark_menu(state, VK_MENU_KIND_ACTIVE_ROOT, appointment, VK_STATE_HAS_ACTIVE_APPOINTMENT)
@@ -348,3 +421,41 @@ def handle_message_event(obj: dict) -> None:
         return
 
     logger.warning("Unknown VK button command: %s", cmd)
+
+
+# ─── Перенос записи ───────────────────────────────────────────────────────────
+
+
+def _offer_reschedule(appointment, user_id: str, peer: str) -> None:
+    from apps.appointments.services.reschedule import reschedule_options
+
+    slots = reschedule_options(appointment)
+    if slots:
+        vk_transport.send_message(
+            peer, patient_msg.reschedule_prompt(appointment), keyboard=vk_kb.reschedule_options(appointment, slots)
+        )
+        return
+
+    # Свободных слотов нет: передаём врачу, пусть подберёт время сам.
+    vk_transport.send_message(peer, patient_msg.reschedule_no_slots(), keyboard=vk_kb.active_root(appointment))
+    vk_transport.mark_unanswered(peer)
+    notifiers.alert_doctor(
+        doctor_msg.reschedule_without_slots(appointment, dialog_url=vk_transport.admin_dialog_url(peer)),
+        notification_type="doctor_contact",
+        appointment=appointment,
+    )
+
+
+def _do_reschedule(appointment, slot_id, user_id: str, peer: str) -> None:
+    from apps.appointments.services.reschedule import RescheduleError, reschedule, reschedule_options
+    from apps.appointments.services.status import SOURCE_PATIENT
+
+    try:
+        reschedule(appointment, int(slot_id), source=SOURCE_PATIENT)
+    except (RescheduleError, TypeError, ValueError):
+        slots = reschedule_options(appointment)
+        keyboard = vk_kb.reschedule_options(appointment, slots) if slots else vk_kb.active_root(appointment)
+        vk_transport.send_message(peer, patient_msg.reschedule_unavailable(), keyboard=keyboard)
+        return
+    appointment.refresh_from_db()
+    vk_transport.send_message(peer, patient_msg.rescheduled(appointment), keyboard=vk_kb.active_root(appointment))

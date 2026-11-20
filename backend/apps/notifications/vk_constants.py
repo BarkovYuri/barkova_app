@@ -23,3 +23,7 @@ VK_MENU_KIND_BOOKING = "booking"
 VK_MENU_KIND_ACTIVE_ROOT = "active_root"
 VK_MENU_KIND_MANAGE = "manage"
 VK_MENU_KIND_CANCEL_CONFIRM = "cancel_confirm"
+
+VK_CMD_RESCHEDULE_REQUEST = "reschedule_request"
+VK_CMD_RESCHEDULE_TO = "reschedule_to"
+VK_CMD_FAQ = "faq"

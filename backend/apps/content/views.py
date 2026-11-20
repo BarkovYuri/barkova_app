@@ -12,9 +12,11 @@ from .models import (
     BlogCategory,
     ConditionCategory,
     ConsultationFeature,
+    Credential,
     FaqItem,
     HowItWorksStep,
     LegalDocument,
+    Review,
     Service,
     SiteBlock,
     TransportItem,
@@ -28,9 +30,11 @@ from .serializers import (
     BlogCategoryListSerializer,
     ConditionCategorySerializer,
     ConsultationFeatureSerializer,
+    CredentialSerializer,
     FaqItemSerializer,
     HowItWorksStepSerializer,
     LegalDocumentSerializer,
+    ReviewSerializer,
     ServiceSerializer,
     SiteBlockSerializer,
     TransportItemSerializer,
@@ -210,3 +214,22 @@ class ConditionCategoryListView(ListAPIView):
             .prefetch_related("items")
             .order_by("order", "id")
         )
+
+
+
+class ReviewListView(ListAPIView):
+    """Отзывы для главной."""
+
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        return Review.objects.filter(is_active=True).order_by("order", "-date", "-id")[:12]
+
+
+class CredentialListView(ListAPIView):
+    """Дипломы и сертификаты для страницы «О враче»."""
+
+    serializer_class = CredentialSerializer
+
+    def get_queryset(self):
+        return Credential.objects.filter(is_active=True).order_by("order", "id")

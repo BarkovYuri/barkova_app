@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { capitalizeFirst } from "../../lib/format";
 import type { ContactMethod, Slot } from "../../lib/types";
 
 type Props = {
@@ -44,7 +45,7 @@ export function BookingSummary({
   formReady,
   timezoneLabel,
 }: Props) {
-  const dateLabel = formatDateLong(selectedDate);
+  const dateLabel = capitalizeFirst(formatDateLong(selectedDate));
   const ContactIconCmp =
     ContactIcon[contactMethod as keyof typeof ContactIcon] ?? MessageSquare;
   const contactLabel = contactMethod === "vk" ? "VK" : "Телефон";
@@ -64,7 +65,7 @@ export function BookingSummary({
     <aside className="lg:sticky lg:top-24">
       <div className="rounded-3xl border border-neutral-200 bg-neutral-0 shadow-card overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-br from-primary-600 to-primary-700 text-neutral-0">
+        <div className="px-6 py-5 bg-gradient-to-br from-primary-600 to-[#155e75] text-white">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary-100">
             Ваша запись
           </p>
@@ -83,7 +84,7 @@ export function BookingSummary({
             icon={Calendar}
             label="Дата"
             value={dateLabel}
-            placeholder="Выберите дату слева"
+            placeholder="Выберите дату"
           />
 
           {/* Time */}
@@ -177,8 +178,8 @@ function SummaryRow({
           {label}
         </p>
         <p
-          className={`mt-0.5 text-sm font-semibold capitalize leading-snug ${
-            filled ? "text-neutral-900" : "text-neutral-400"
+          className={`mt-0.5 text-sm font-semibold leading-snug ${
+            filled ? "text-neutral-900" : "text-neutral-500"
           }`}
         >
           {value || placeholder}

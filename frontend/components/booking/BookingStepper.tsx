@@ -65,7 +65,7 @@ export function BookingStepper({
                   className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-500
                     ${
                       step.complete
-                        ? "border-secondary-500 bg-secondary-500 text-neutral-0 shadow-md shadow-secondary-500/30"
+                        ? "border-secondary-500 bg-secondary-500 text-white shadow-md shadow-secondary-500/30"
                         : isActive
                           ? "border-primary-600 bg-neutral-0 text-primary-700 ring-4 ring-primary-100"
                           : "border-neutral-300 bg-neutral-0 text-neutral-400"

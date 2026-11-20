@@ -410,3 +410,22 @@ def test_admin_when_filter_today(fake_vk, staff_user):
 
 def test_missing_doctor_profile_is_404_so_frontend_does_not_cache_it():
     assert APIClient().get("/api/profile/").status_code == 404
+
+
+def test_admin_slot_change_notifies_patient_and_resets_reminder(
+    fake_vk, staff_user, django_capture_on_commit_callbacks
+):
+    appointment = _appointment()
+    Appointment.objects.filter(pk=appointment.pk).update(reminder_sent_at=timezone.now())
+    appointment.refresh_from_db()
+    new_slot = _slot(days=4)
+
+    appointment.slot = new_slot
+    with django_capture_on_commit_callbacks(execute=True):
+        AppointmentAdmin(Appointment, AdminSite()).save_model(
+            _admin_request(staff_user), appointment, form=None, change=True
+        )
+
+    appointment.refresh_from_db()
+    assert appointment.reminder_sent_at is None
+    assert "изменено врачом" in fake_vk.sent(PATIENT_ID)[-1]["message"]

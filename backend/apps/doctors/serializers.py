@@ -1,4 +1,7 @@
 from rest_framework import serializers
+
+from apps.core.images import AVATAR_SIZE, variant_url
+
 from .models import DoctorProfile
 
 
@@ -38,6 +41,7 @@ class DoctorProfileSerializer(serializers.ModelSerializer):
         return None
 
     def get_header_avatar_url(self, obj):
-        if obj.header_avatar:
-            return obj.header_avatar.url
-        return None
+        # Шапка и блок автора показывают аватар 40–56 px: отдаём квадратную
+        # копию 128 px вместо оригинала 720×1080.
+        source = obj.header_avatar or obj.photo
+        return variant_url(source, AVATAR_SIZE, square=True) if source else None

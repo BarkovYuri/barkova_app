@@ -1,6 +1,7 @@
 "use client";
 
-import { UserRound } from "lucide-react";
+import { CalendarOff, MessageCircle, UserRound } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { reachGoal } from "../../lib/metrika";
@@ -154,6 +155,13 @@ export default function BookingForm() {
     );
   }
 
+  // ── Свободного времени нет вообще ───────────────────────────────
+  // Форма бесполезна: человек заполнит всё и упрётся в тупик. Показываем,
+  // куда написать, чтобы не потерять пациента.
+  if (!loadingDates && dates.length === 0) {
+    return <NoSlotsView communityUrl={scheduleInfo?.community_url || ""} />;
+  }
+
   // ── Main form ───────────────────────────────────────────────────
   return (
     <>
@@ -241,9 +249,9 @@ export default function BookingForm() {
           </form>
         </section>
 
-        {/* Sticky Summary — на xl+ как третья колонка справа,
-         * на меньших экранах опускается под форму на всю ширину */}
-        <div className="lg:col-span-2 xl:col-span-1">
+        {/* Сводка — только третьей колонкой на широком экране. На телефоне
+         * и планшете она оказывалась под кнопкой отправки и дублировала шаги. */}
+        <div className="hidden xl:block">
           <BookingSummary
             selectedDate={selectedDate}
             selectedSlot={selectedSlot}
@@ -255,5 +263,33 @@ export default function BookingForm() {
         </div>
       </div>
     </>
+  );
+}
+
+function NoSlotsView({ communityUrl }: { communityUrl: string }) {
+  return (
+    <section className="mx-auto max-w-2xl animate-fade-in rounded-3xl border border-neutral-200 bg-neutral-0 p-6 text-center shadow-card sm:p-10">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700">
+        <CalendarOff className="h-7 w-7" strokeWidth={1.75} />
+      </span>
+      <h2 className="mt-5 text-h3-mobile sm:text-h3-desktop text-neutral-900">
+        Свободного времени сейчас нет
+      </h2>
+      <p className="mt-3 text-base leading-relaxed text-neutral-600">
+        Новые даты для онлайн-разбора скоро появятся. Напишите в сообщество
+        VK, врач подберёт удобное время и ответит лично.
+      </p>
+      <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+        {communityUrl ? (
+          <a href={communityUrl} target="_blank" rel="noopener noreferrer" className="btn-primary">
+            <MessageCircle className="h-4 w-4" strokeWidth={2.5} />
+            Написать в VK
+          </a>
+        ) : null}
+        <Link href="/contacts" className="btn-secondary">
+          Контакты врача
+        </Link>
+      </div>
+    </section>
   );
 }

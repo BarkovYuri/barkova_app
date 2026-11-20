@@ -70,14 +70,14 @@ export async function HowItWorks() {
           {/* Соединительная линия (только на md+) */}
           <div
             aria-hidden="true"
-            className="hidden md:block absolute top-7 left-0 right-0 h-px"
+            className="hidden lg:block absolute top-7 left-0 right-0 h-px"
             style={{
               background:
                 "linear-gradient(90deg, transparent 4%, var(--color-primary-200) 12%, var(--color-primary-200) 88%, transparent 96%)",
             }}
           />
 
-          <div className="grid gap-8 md:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 auto-rows-fr">
+          <div className="grid gap-10 grid-cols-1 sm:grid-cols-2 lg:gap-6 lg:grid-cols-4">
             {items.map((step, idx) => {
               const Icon = resolveIcon(step.icon);
               return (
@@ -91,7 +91,7 @@ export async function HowItWorks() {
                       <Icon className="h-6 w-6" strokeWidth={1.75} />
                     </div>
                     {/* Номер шага */}
-                    <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-neutral-0 text-xs font-bold shadow-md">
+                    <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-white text-xs font-bold shadow-md">
                       {idx + 1}
                     </div>
                   </div>

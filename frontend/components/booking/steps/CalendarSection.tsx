@@ -2,6 +2,7 @@
 
 import { CalendarOff, ChevronLeft, ChevronRight, Globe2 } from "lucide-react";
 import Link from "next/link";
+import { capitalizeFirst } from "../../../lib/format";
 import { reachGoal } from "../../../lib/metrika";
 import { localTimeHint } from "../hooks/useScheduleInfo";
 import { addMonths, startOfMonth } from "../hooks/useSlots";
@@ -106,8 +107,8 @@ export function CalendarSection({
           >
             <ChevronLeft className="h-5 w-5" strokeWidth={2.25} />
           </button>
-          <p className="flex-1 text-center text-lg font-semibold font-heading capitalize text-neutral-900 sm:text-xl">
-            {formatMonthTitle(currentMonth)}
+          <p className="flex-1 text-center text-lg font-semibold font-heading text-neutral-900 sm:text-xl">
+            {capitalizeFirst(formatMonthTitle(currentMonth))}
           </p>
           <button
             type="button"
@@ -124,7 +125,7 @@ export function CalendarSection({
           {WEEKDAY_LABELS.map((label) => (
             <div
               key={label}
-              className="py-2 text-center text-xs font-bold uppercase tracking-widest text-neutral-400"
+              className="py-2 text-center text-xs font-bold uppercase tracking-widest text-neutral-500"
             >
               {label}
             </div>
@@ -201,7 +202,7 @@ export function CalendarSection({
                       border text-center font-semibold transition-all duration-200
                       ${
                         isSelected
-                          ? "border-primary-600 bg-primary-600 text-neutral-0 shadow-lg shadow-primary-500/30"
+                          ? "border-primary-600 bg-primary-600 text-white shadow-lg shadow-primary-500/30"
                           : isDisabled
                           ? "cursor-not-allowed border-neutral-200 bg-neutral-50 text-neutral-300"
                           : "border-neutral-200 bg-neutral-0 text-neutral-800 hover:border-primary-400 hover:bg-primary-50 hover:-translate-y-0.5"
@@ -234,8 +235,8 @@ export function CalendarSection({
           <div className="flex-1">
             <p className="text-xs font-bold uppercase tracking-widest text-neutral-500">Свободное время</p>
             {selectedDate ? (
-              <p className="mt-2 text-lg font-bold capitalize text-neutral-900">
-                {formatDateLong(selectedDate)}
+              <p className="mt-2 text-lg font-bold text-neutral-900">
+                {capitalizeFirst(formatDateLong(selectedDate))}
               </p>
             ) : null}
           </div>
@@ -302,7 +303,7 @@ export function CalendarSection({
                     transition-all duration-200
                     ${
                       active
-                        ? "border-primary-600 bg-primary-600 text-neutral-0 shadow-lg shadow-primary-500/30"
+                        ? "border-primary-600 bg-primary-600 text-white shadow-lg shadow-primary-500/30"
                         : reservedByOther
                         ? "cursor-not-allowed border-neutral-200 bg-neutral-50 text-neutral-400"
                         : "border-neutral-300 bg-neutral-0 text-neutral-700 hover:border-primary-400 hover:bg-primary-50 hover:-translate-y-0.5"

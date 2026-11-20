@@ -1,22 +1,36 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { ArrowRight, ExternalLink, Sparkles, Star } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CalendarClock, ExternalLink, Sparkles, Star } from "lucide-react";
 
 import { JsonLd } from "../components/common/JsonLd";
 import { buildPhysicianSchema } from "../lib/seo";
 import { SectionDivider } from "../components/common/SectionDivider";
 import { Faq } from "../components/home/Faq";
 import { HowItWorks } from "../components/home/HowItWorks";
+import { Reviews } from "../components/home/Reviews";
 import { fetchAPI } from "../lib/api";
 import { resolveIcon } from "../lib/iconMap";
 import {
+  loadReviews,
   loadServices,
   loadSiteBlocks,
   loadTrustBadges,
   textOr,
 } from "../lib/siteContent";
-import type { DoctorProfile } from "../lib/types";
+import type { DoctorProfile, Slot } from "../lib/types";
 import { absoluteMediaUrl } from "../lib/url";
+
+const MONTHS_GENITIVE = [
+  "января", "февраля", "марта", "апреля", "мая", "июня",
+  "июля", "августа", "сентября", "октября", "ноября", "декабря",
+];
+
+/** «25 ноября, 10:00» — время по поясу расписания, как в календаре записи. */
+function formatSlot(slot: Slot): string {
+  const [, month, day] = slot.date.split("-").map(Number);
+  return `${day} ${MONTHS_GENITIVE[month - 1]}, ${slot.start_time.slice(0, 5)}`;
+}
 
 function pluralizeReviews(n: number): string {
   const mod10 = n % 10;
@@ -65,11 +79,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const [doctor, services, trustBadges, blocks] = await Promise.all([
+  const [doctor, services, trustBadges, blocks, nearestSlot, reviews] = await Promise.all([
     fetchAPI("/profile") as Promise<DoctorProfile | null>,
     loadServices(),
     loadTrustBadges(),
     loadSiteBlocks(),
+    // Ближайшее свободное время вместо статичного «Принимает»: если слотов
+    // нет, сайт не обещает запись, которой нет.
+    (fetchAPI("/nearest-slot").catch(() => null)) as Promise<Slot | null>,
+    loadReviews(),
   ]);
 
   if (!doctor) {
@@ -106,7 +124,7 @@ export default async function Home() {
   const ctaText = textOr(
     blocks,
     "cta.home.text",
-    "Запишитесь на онлайн-разбор уже сегодня и получите профессиональную помощь"
+    "Запишитесь на онлайн-разбор и спокойно разберитесь в своей ситуации вместе с врачом"
   );
   const ctaButton = textOr(blocks, "cta.home.button", "Записаться сейчас");
 
@@ -130,7 +148,7 @@ export default async function Home() {
         />
 
         <div className="relative container section">
-          <div className="grid gap-12 md:grid-cols-[1.1fr_0.9fr] md:items-center">
+          <div className="grid gap-10 lg:gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             {/* Left: Text Content */}
             <div className="animate-fade-in-up">
               {/* Specialty Badge */}
@@ -187,39 +205,36 @@ export default async function Home() {
               ) : null}
 
               {/* CTA Buttons */}
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <a href="/booking" className="btn-primary">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
+                <Link href="/booking" className="btn-primary">
                   Записаться на онлайн-разбор
                   <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                </a>
+                </Link>
 
-                <a href="/office" className="btn-secondary">
+                <Link href="/office" className="btn-secondary">
                   Очный приём
-                </a>
+                </Link>
               </div>
 
-              {/* Stats */}
-              <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[
-                  {
-                    label: "Стаж",
-                    value: `${doctor.experience_years ?? 0}+ лет`,
-                  },
-                  { label: "Формат", value: "Онлайн и очно" },
-                  { label: "Статус", value: "Принимает" },
-                ].map((stat, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl border border-neutral-200 bg-neutral-0 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md min-w-0"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      {stat.label}
-                    </p>
-                    <p className="mt-2 text-lg sm:text-xl font-bold text-neutral-900 font-heading leading-tight break-words">
-                      {stat.value}
-                    </p>
-                  </div>
-                ))}
+              {/* Стаж и ближайшее свободное время — компактно, в одну строку */}
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:max-w-md">
+                <div className="rounded-2xl border border-neutral-200 bg-neutral-0 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Стаж</p>
+                  <p className="mt-1 text-lg font-bold text-neutral-900 font-heading">
+                    {doctor.experience_years ?? 0}+ лет
+                  </p>
+                </div>
+                <Link
+                  href="/booking"
+                  className="rounded-2xl border border-neutral-200 bg-neutral-0 px-4 py-3 transition-colors hover:border-primary-300"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                    {nearestSlot ? "Ближайшее окно" : "Запись"}
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-neutral-900 font-heading leading-tight">
+                    {nearestSlot ? formatSlot(nearestSlot) : "Скоро новые даты"}
+                  </p>
+                </Link>
               </div>
             </div>
 
@@ -232,15 +247,15 @@ export default async function Home() {
               <div className="pointer-events-none absolute -inset-8 rounded-[48px] bg-gradient-to-br from-primary-200/40 to-secondary-100/30 blur-3xl" />
 
               {/* Photo */}
-              <div className="relative h-[360px] w-full sm:h-[480px] md:h-[600px] rounded-3xl overflow-hidden shadow-2xl">
+              <div className="relative h-[340px] w-full sm:h-[440px] lg:h-[600px] rounded-3xl overflow-hidden shadow-2xl">
                 {heroPhoto ? (
                   <Image
                     src={heroPhoto}
                     alt={doctor.full_name}
                     fill
-                    priority
-                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 45vw, 540px"
-                    className="object-cover"
+                    preload
+                    sizes="(max-width: 1024px) 100vw, (max-width: 1280px) 45vw, 540px"
+                    className="object-cover object-[50%_20%]"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-neutral-200 text-neutral-500">
@@ -252,16 +267,15 @@ export default async function Home() {
                   </div>
                 )}
 
-                {/* Floating badge */}
-                <div className="absolute bottom-4 left-4 z-10 inline-flex items-center gap-2 bg-neutral-0 border border-neutral-200 rounded-full px-4 py-2 shadow-lg">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-secondary-400 opacity-75 animate-pulse-gentle" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-secondary-500" />
-                  </span>
-                  <span className="text-xs font-semibold text-neutral-700 whitespace-nowrap">
-                    Принимает записи
-                  </span>
-                </div>
+                {/* Плашка — только когда есть свободное время */}
+                {nearestSlot ? (
+                  <div className="absolute bottom-4 left-4 right-4 z-10 inline-flex w-fit max-w-[calc(100%-2rem)] items-center gap-2 rounded-full border border-neutral-200 bg-neutral-0 px-4 py-2 shadow-lg">
+                    <CalendarClock className="h-4 w-4 shrink-0 text-secondary-600" strokeWidth={2.25} />
+                    <span className="truncate text-xs font-semibold text-neutral-700">
+                      Ближайшая запись: {formatSlot(nearestSlot)}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -272,13 +286,13 @@ export default async function Home() {
       {trustBadges.length > 0 ? (
         <section className="relative">
           <div className="container pb-16">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="flex flex-wrap gap-3 md:gap-4">
               {trustBadges.map((badge) => {
                 const Icon = resolveIcon(badge.icon);
                 return (
                   <div
                     key={badge.id}
-                    className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3"
+                    className="flex min-w-[150px] flex-1 items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 sm:flex-none"
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-primary-700">
                       <Icon className="h-4 w-4" strokeWidth={2} />
@@ -305,7 +319,7 @@ export default async function Home() {
               <h2 className="mt-5 text-neutral-900">{servicesTitle}</h2>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+            <div className={`grid gap-6 sm:grid-cols-2 ${services.length >= 3 ? "lg:grid-cols-3" : ""}`}>
               {services.map((service) => {
                 const Icon = resolveIcon(service.icon);
                 return (
@@ -313,20 +327,20 @@ export default async function Home() {
                     key={service.id}
                     className="group flex flex-col rounded-2xl border border-neutral-200 bg-neutral-0 p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-primary-200 hover:shadow-card-hover"
                   >
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 transition-colors duration-300 group-hover:bg-primary-600 group-hover:text-neutral-0">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-100 text-primary-700 transition-colors duration-300 group-hover:bg-primary-600 group-hover:text-white">
                       <Icon className="h-7 w-7" strokeWidth={1.75} />
                     </div>
                     <h3 className="mt-6 text-neutral-900">{service.title}</h3>
                     <p className="mt-3 text-neutral-600 leading-relaxed flex-1 whitespace-pre-line">
                       {service.description}
                     </p>
-                    <a
+                    <Link
                       href={service.cta_link || "/booking"}
-                      className="mt-6 inline-flex items-center gap-2 text-primary-700 font-semibold hover:gap-3 transition-all"
+                      className="mt-6 inline-flex items-center gap-2 py-1 text-primary-700 font-semibold hover:gap-3 transition-all"
                     >
                       {service.cta_text || "Записаться"}
                       <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                    </a>
+                    </Link>
                   </div>
                 );
               })}
@@ -342,28 +356,31 @@ export default async function Home() {
 
       <SectionDivider />
 
+      {/* ========== ОТЗЫВЫ ========== */}
+      <Reviews reviews={reviews} allReviewsUrl={doctor.prodoktorov_url} />
+
       {/* ========== FAQ ========== */}
       <Faq />
 
       {/* ========== CTA SECTION ========== */}
       <section className="py-16 md:py-24">
         <div className="container">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 px-6 py-14 md:px-12 md:py-20 text-center shadow-xl">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#155e75] via-primary-600 to-primary-500 px-6 py-14 md:px-12 md:py-20 text-center shadow-xl">
             <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-secondary-300/30 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-primary-300/40 blur-3xl" />
 
             <div className="relative">
-              <h2 className="text-neutral-0">{ctaTitle}</h2>
-              <p className="mt-4 text-base sm:text-lg leading-relaxed text-primary-50 max-w-2xl mx-auto whitespace-pre-line">
+              <h2 className="text-white">{ctaTitle}</h2>
+              <p className="mt-4 text-base sm:text-lg leading-relaxed text-white/85 max-w-2xl mx-auto whitespace-pre-line">
                 {ctaText}
               </p>
-              <a
+              <Link
                 href="/booking"
-                className="mt-8 inline-flex items-center gap-2 bg-neutral-0 text-primary-700 hover:bg-primary-50 font-semibold px-7 py-4 rounded-[14px] shadow-lg transition-all hover:-translate-y-0.5"
+                className="mt-8 inline-flex items-center gap-2 bg-white text-[#155e75] hover:bg-[#f0fafb] font-semibold px-7 py-4 rounded-[14px] shadow-lg transition-all hover:-translate-y-0.5"
               >
                 {ctaButton}
                 <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-              </a>
+              </Link>
             </div>
           </div>
         </div>

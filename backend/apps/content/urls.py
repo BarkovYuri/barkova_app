@@ -10,17 +10,20 @@ from .views import (
     BlogCategoryListView,
     ConditionCategoryListView,
     ConsultationFeatureListView,
+    CredentialListView,
     FaqItemListView,
     HowItWorksStepListView,
+    ReviewListView,
     ServiceListView,
     SiteBlockListView,
     TransportItemListView,
     TrustBadgeListView,
 )
 
-
 urlpatterns = [
     path("blocks/", SiteBlockListView.as_view(), name="site-blocks"),
+    path("reviews/", ReviewListView.as_view(), name="reviews"),
+    path("credentials/", CredentialListView.as_view(), name="credentials"),
     path("legal/", ActiveLegalDocumentListView.as_view(), name="legal-documents"),
     path("services/", ServiceListView.as_view(), name="services"),
     path(

@@ -130,7 +130,7 @@ export default async function CategoryPage({ params }: { params: Params }) {
                 src={cover}
                 alt={category.cover_alt || category.name}
                 fill
-                priority
+                preload
                 sizes="(max-width: 768px) 100vw, 480px"
                 className="object-cover"
               />
@@ -156,7 +156,7 @@ export default async function CategoryPage({ params }: { params: Params }) {
             </a>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:auto-rows-fr">
             {category.articles.map((article) => (
               <ArticleCard key={article.id} article={article} />
             ))}

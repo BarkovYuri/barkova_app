@@ -18,6 +18,13 @@ type Props = {
    * равно отрендерится, если есть intro.
    */
   features?: ConsultationFeature[];
+  /**
+   * Свернуть длинный текст: виден первый абзац, остальное раскрывается
+   * по «Читать полностью» (нативный <details>, без JS). Текст остаётся
+   * в HTML для поисковиков.
+   */
+  collapsible?: boolean;
+  className?: string;
 };
 
 export function WhatsIncluded({
@@ -25,6 +32,8 @@ export function WhatsIncluded({
   subtitle,
   intro,
   features = [],
+  collapsible = false,
+  className = "mt-2 mb-12 md:mb-16",
 }: Props) {
   const hasIntro = Boolean(intro?.trim());
   const hasFeatures = features.length > 0;
@@ -32,7 +41,7 @@ export function WhatsIncluded({
   if (!hasIntro && !hasFeatures) return null;
 
   return (
-    <section className="mt-2 mb-12 md:mb-16">
+    <section className={className}>
       <div className="rounded-3xl border border-neutral-200 bg-neutral-0 p-6 sm:p-8 md:p-10 shadow-card">
         <div className="max-w-3xl">
           <span className="chip">Что входит</span>
@@ -46,11 +55,7 @@ export function WhatsIncluded({
           ) : null}
         </div>
 
-        {hasIntro ? (
-          <div className="mt-6 max-w-3xl text-base sm:text-lg text-neutral-700 leading-relaxed whitespace-pre-line">
-            {intro}
-          </div>
-        ) : null}
+        {hasIntro ? <IntroText text={intro!} collapsible={collapsible} /> : null}
 
         {hasFeatures ? (
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -81,5 +86,29 @@ export function WhatsIncluded({
         ) : null}
       </div>
     </section>
+  );
+}
+
+function IntroText({ text, collapsible }: { text: string; collapsible: boolean }) {
+  const paragraphs = text.trim().split(/\n\s*\n/);
+  const cls = "mt-6 max-w-3xl text-base sm:text-lg text-neutral-700 leading-relaxed whitespace-pre-line";
+  if (!collapsible || paragraphs.length < 2) {
+    return <div className={cls}>{text}</div>;
+  }
+  return (
+    <div className={cls}>
+      <p>{paragraphs[0]}</p>
+      <details className="group mt-4">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 py-1 text-base font-semibold text-primary-700 hover:text-primary-800 [&::-webkit-details-marker]:hidden">
+          <span className="group-open:hidden">Читать полностью</span>
+          <span className="hidden group-open:inline">Свернуть</span>
+        </summary>
+        <div className="mt-4 space-y-4">
+          {paragraphs.slice(1).map((paragraph, idx) => (
+            <p key={idx}>{paragraph}</p>
+          ))}
+        </div>
+      </details>
+    </div>
   );
 }

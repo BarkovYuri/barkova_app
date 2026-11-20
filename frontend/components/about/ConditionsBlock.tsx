@@ -38,7 +38,7 @@ export function ConditionsBlock({
           ) : null}
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3 lg:auto-rows-fr">
           {categories.map((category) => {
             const Icon = resolveIcon(category.icon);
             return (

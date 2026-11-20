@@ -6,20 +6,23 @@ import { Suspense } from "react";
 import { MetrikaRouteTracker } from "../components/common/MetrikaRouteTracker";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
+import MobileStickyCta from "../components/layout/MobileStickyCta";
 import { METRIKA_ID } from "../lib/metrika";
 
 const manrope = Manrope({
   subsets: ["latin", "cyrillic"],
   display: "swap",
   variable: "--font-sans",
-  weight: ["400", "500", "600", "700", "800"],
+  // Только реально используемые начертания: каждое — отдельный файл шрифта.
+  weight: ["400", "500", "600", "700"],
 });
 
 const spectral = Spectral({
   subsets: ["latin", "cyrillic"],
   display: "swap",
   variable: "--font-heading",
-  weight: ["400", "500", "600", "700"],
+  // Заголовки используют только 600 и 700.
+  weight: ["600", "700"],
 });
 
 // Все страницы рендерятся на запрос: шапка берёт профиль врача из API, а
@@ -123,6 +126,7 @@ export default function RootLayout({
         <Header />
         {children}
         <Footer />
+        <MobileStickyCta />
 
         {/* Яндекс Метрика — код из кабинета Метрики. afterInteractive не
             блокирует гидратацию и успевает зафиксировать первый просмотр.

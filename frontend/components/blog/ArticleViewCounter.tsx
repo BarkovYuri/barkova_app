@@ -44,7 +44,7 @@ export function ArticleViewCounter({ slug, initialCount }: Props) {
 
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-sm text-neutral-400"
+      className="inline-flex items-center gap-1.5 text-sm text-neutral-500"
       aria-label={`${count} просмотров`}
       title="Количество просмотров статьи"
     >

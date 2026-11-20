@@ -18,8 +18,10 @@ import type {
   BlogCategoryListItem,
   ConditionCategory,
   ConsultationFeature,
+  Credential,
   FaqItem,
   HowItWorksStep,
+  Review,
   Service,
   SiteBlock,
   TransportItem,
@@ -142,4 +144,16 @@ export async function loadBlogCategoryBySlug(
     `/blog-categories/${slug}`
   )) as BlogCategoryDetail | null;
   return data;
+}
+
+// ----- Отзывы и документы -----
+
+export async function loadReviews(): Promise<Review[]> {
+  const data = (await fetchAPI("/reviews").catch(() => null)) as Review[] | null;
+  return Array.isArray(data) ? data : [];
+}
+
+export async function loadCredentials(): Promise<Credential[]> {
+  const data = (await fetchAPI("/credentials").catch(() => null)) as Credential[] | null;
+  return Array.isArray(data) ? data : [];
 }

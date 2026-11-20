@@ -142,3 +142,52 @@ def cancel_confirm_prompt(appointment) -> str:
 
 def kept(appointment) -> str:
     return f"✅ Запись оставлена без изменений.\n\n{slot_card(appointment)}"
+
+
+# ─── Перенос записи ───────────────────────────────────────────────────────────
+
+
+def reschedule_prompt(appointment) -> str:
+    return (
+        "Выберите новое время кнопкой ниже.\n\n"
+        f"Сейчас вы записаны:\n{slot_card(appointment)}\n\n"
+        f"Время указано {timezone_label()}."
+    )
+
+
+def reschedule_no_slots() -> str:
+    return (
+        "Свободного времени для переноса сейчас нет. "
+        "Напишите сюда, какое время вам удобно: врач подберёт вариант и ответит лично."
+    )
+
+
+def reschedule_unavailable() -> str:
+    return "Это время только что заняли или оно уже недоступно. Выберите другое, пожалуйста."
+
+
+def rescheduled(appointment) -> str:
+    return f"✅ Запись перенесена\n\n{slot_card(appointment)}"
+
+
+def rescheduled_by_doctor(appointment) -> str:
+    return (
+        "🔁 Время вашей записи изменено врачом\n\n"
+        f"{slot_card(appointment)}\n\n"
+        f"{DIVIDER}\n"
+        "Если новое время неудобно, нажмите «Управление записью» или напишите сюда."
+    )
+
+
+# ─── Быстрые ответы и нерабочее время ─────────────────────────────────────────
+
+
+def faq_answer(question: str, answer: str) -> str:
+    return f"❓ {question}\n\n{answer}\n\nЕсли остались вопросы, напишите их сюда: врач ответит лично."
+
+
+def off_hours_note(work_start: str) -> str:
+    return (
+        "Сейчас нерабочее время. Врач прочитает ваше сообщение и ответит "
+        f"после {work_start} {timezone_label()}."
+    )

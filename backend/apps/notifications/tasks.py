@@ -104,6 +104,18 @@ def notify_doctor_contact_request(self, appointment_id: int) -> bool:
     return _retry_doctor_alert(self, contact_request_alert_text(appointment), "doctor_contact", appointment)
 
 
+@shared_task(bind=True, max_retries=DOCTOR_ALERT_MAX_RETRIES)
+def notify_doctor_rescheduled(self, appointment_id: int, old_slot_text: str) -> bool:
+    from .messages import doctor as doctor_msg
+
+    appointment = _load(appointment_id)
+    if appointment is None:
+        return True
+    return _retry_doctor_alert(
+        self, doctor_msg.appointment_rescheduled(appointment, old_slot_text), "rescheduled", appointment
+    )
+
+
 @shared_task
 def send_doctor_daily_digest() -> bool:
     """Утренняя сводка: записи на сегодня и неотвеченные диалоги сообщества."""
@@ -158,6 +170,30 @@ def notify_patient_status_changed(self, appointment_id: int, status: str) -> str
     if appointment is None or not appointment.vk_user_id:
         return "skipped"
     ok, error_text = send_status_to_patient(appointment, status)
+    if ok:
+        return "sent"
+    if is_permanent_error(error_text):
+        return "not_allowed"
+    raise self.retry(countdown=60 * 2**self.request.retries)
+
+
+@shared_task(bind=True, max_retries=3)
+def notify_patient_rescheduled(self, appointment_id: int) -> str:
+    """Пациенту: врач изменил время записи."""
+    from .keyboards import vk as vk_kb
+    from .messages import patient as patient_msg
+    from .notifiers import send_to_patient_vk
+    from .transports.vk import is_permanent_error
+
+    appointment = _load(appointment_id)
+    if appointment is None or not appointment.vk_user_id:
+        return "skipped"
+    ok, _, error_text = send_to_patient_vk(
+        appointment,
+        patient_msg.rescheduled_by_doctor(appointment),
+        keyboard=vk_kb.active_root(appointment),
+        notification_type="patient_status",
+    )
     if ok:
         return "sent"
     if is_permanent_error(error_text):

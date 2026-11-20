@@ -282,3 +282,96 @@ def test_alert_check_command_fails_when_nobody_reachable(fake_vk, settings):
     fake_vk.allowed = False
     with pytest.raises(CommandError):
         call_command("send_test_doctor_alert", "--check")
+
+
+# ─── Быстрые ответы, нерабочее время, перенос ─────────────────────────────────
+
+
+def test_greeting_shows_faq_buttons_and_faq_button_answers_without_alert(fake_vk, doctor):
+    from apps.content.models import FaqItem
+
+    FaqItem.objects.all().delete()
+    faq = FaqItem.objects.create(question="Сколько стоит?", answer="Стоимость указана на сайте.", bot_label="Стоимость")
+
+    vk_bot.handle_event(_message_new("Здравствуйте, хочу узнать подробнее"))
+    keyboard = json.loads(fake_vk.sent(PATIENT_ID)[0]["keyboard"])
+    labels = [b["action"]["label"] for row in keyboard["buttons"] for b in row]
+    assert "Стоимость" in labels and "Записаться онлайн" in labels
+
+    alerts_before = len(fake_vk.sent(DOCTOR_ID))
+    vk_bot.handle_event(_message_new("Стоимость", payload=json.dumps({"cmd": "faq", "id": faq.id})))
+    assert "Стоимость указана на сайте." in fake_vk.sent(PATIENT_ID)[-1]["message"]
+    assert len(fake_vk.sent(DOCTOR_ID)) == alerts_before
+
+
+def test_off_hours_note_is_sent_once_per_night(fake_vk, doctor, monkeypatch):
+    monkeypatch.setattr(vk_bot, "is_off_hours", lambda now=None: True)
+    _appointment(patient_notified_at=timezone.now())
+
+    vk_bot.handle_event(_message_new("Добрый вечер, есть вопрос по записи"))
+    vk_bot.handle_event(_message_new("И ещё один вопрос"))
+
+    notes = [m for m in fake_vk.sent(PATIENT_ID) if "нерабочее время" in m["message"]]
+    assert len(notes) == 1
+    assert ("messages.markAsAnsweredDialog", {"peer_id": PATIENT_ID, "answered": 0, "group_id": "123"}) in fake_vk.calls
+
+
+def test_off_hours_note_is_skipped_while_doctor_is_chatting(fake_vk, doctor, monkeypatch):
+    monkeypatch.setattr(vk_bot, "is_off_hours", lambda now=None: True)
+    vk_bot.handle_event(
+        {"type": "message_reply", "object": {"id": 9, "peer_id": int(PATIENT_ID), "admin_author_id": 1}}
+    )
+
+    vk_bot.handle_event(_message_new("Спасибо за ответ, а завтра?"))
+
+    assert fake_vk.sent(PATIENT_ID) == []
+
+
+def test_reschedule_by_button_moves_appointment_and_alerts_doctor(fake_vk, doctor, django_capture_on_commit_callbacks):
+    appointment = _appointment()
+    old_slot = appointment.slot
+    new_slot = _slot(days=4, hour=12)
+    new_slot.is_booked = False
+    new_slot.save()
+    Appointment.objects.filter(pk=appointment.pk).update(reminder_response="yes", reminder_sent_at=timezone.now())
+
+    vk_bot.handle_event(_event("reschedule_request", appointment))
+    keyboard = json.loads(fake_vk.sent(PATIENT_ID)[-1]["keyboard"])
+    payloads = [json.loads(b["action"]["payload"]) for row in keyboard["buttons"] for b in row]
+    assert any(p.get("slot_id") == new_slot.id for p in payloads)
+
+    event = _event("reschedule_to", appointment)
+    event["object"]["payload"]["slot_id"] = new_slot.id
+    with django_capture_on_commit_callbacks(execute=True):
+        vk_bot.handle_event(event)
+
+    appointment.refresh_from_db()
+    old_slot.refresh_from_db()
+    new_slot.refresh_from_db()
+    assert appointment.slot_id == new_slot.id
+    assert (old_slot.is_booked, new_slot.is_booked) == (False, True)
+    assert appointment.reminder_sent_at is None and appointment.reminder_response == ""
+    assert "перенесена" in fake_vk.sent(PATIENT_ID)[-1]["message"]
+    assert any("перенёс запись" in m["message"] for m in fake_vk.sent(DOCTOR_ID))
+
+
+def test_reschedule_to_taken_slot_is_refused(fake_vk, doctor):
+    appointment = _appointment()
+    taken = _slot(days=6, hour=11)  # is_booked=True
+
+    event = _event("reschedule_to", appointment)
+    event["object"]["payload"]["slot_id"] = taken.id
+    vk_bot.handle_event(event)
+
+    appointment.refresh_from_db()
+    assert appointment.slot_id != taken.id
+    assert "заняли" in fake_vk.sent(PATIENT_ID)[-1]["message"]
+
+
+def test_reschedule_without_free_slots_asks_doctor(fake_vk, doctor):
+    appointment = _appointment()
+
+    vk_bot.handle_event(_event("reschedule_request", appointment))
+
+    assert "Свободного времени для переноса сейчас нет" in fake_vk.sent(PATIENT_ID)[-1]["message"]
+    assert any("хочет перенести" in m["message"] for m in fake_vk.sent(DOCTOR_ID))

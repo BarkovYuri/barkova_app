@@ -18,6 +18,8 @@ export type ScheduleInfo = {
   /** «по времени Томска (МСК+4)» */
   label: string;
   msk_offset_hours: number;
+  /** Ссылка на диалог с сообществом VK (пусто, если VK не настроен). */
+  community_url?: string;
 };
 
 export type AvailableDateItem =
@@ -69,6 +71,8 @@ export type ArticleListItem = {
   title: string;
   excerpt: string;
   cover_url: string | null;
+  /** Уменьшенная копия для карточек (WebP, 720 px). */
+  cover_thumb_url?: string | null;
   cover_alt: string;
   published_at: string | null;
   views_count: number;
@@ -88,6 +92,8 @@ export type BlogCategoryListItem = {
   name: string;
   description: string;
   cover_url: string | null;
+  /** Уменьшенная копия для плиток (WebP, 480 px). */
+  cover_thumb_url?: string | null;
   cover_alt: string;
   articles_count: number;
 };
@@ -209,4 +215,22 @@ export type ConditionCategory = {
   description: string;
   order: number;
   items: ConditionItem[];
+};
+
+export type Review = {
+  id: number;
+  author_name: string;
+  text: string;
+  date: string | null;
+  rating: number | null;
+  source: string;
+  source_url: string;
+};
+
+export type Credential = {
+  id: number;
+  title: string;
+  year: string;
+  image_url: string | null;
+  thumb_url: string | null;
 };

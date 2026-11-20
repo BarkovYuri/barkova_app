@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.core.images import CARD_WIDTH, TILE_WIDTH, variant_url
+
 from .models import (
     ApproachItem,
     Article,
@@ -7,9 +9,11 @@ from .models import (
     ConditionCategory,
     ConditionItem,
     ConsultationFeature,
+    Credential,
     FaqItem,
     HowItWorksStep,
     LegalDocument,
+    Review,
     Service,
     SiteBlock,
     TransportItem,
@@ -93,6 +97,8 @@ class ConditionCategorySerializer(serializers.ModelSerializer):
 
 
 class ArticleListSerializer(serializers.ModelSerializer):
+    # Уменьшенная обложка для карточек; cover_url — оригинал.
+    cover_thumb_url = serializers.SerializerMethodField()
     """Лёгкий сериализатор для /api/articles/ — без body."""
 
     cover_url = serializers.SerializerMethodField()
@@ -105,6 +111,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
             "title",
             "excerpt",
             "cover_url",
+            "cover_thumb_url",
             "cover_alt",
             "published_at",
             "views_count",
@@ -112,6 +119,9 @@ class ArticleListSerializer(serializers.ModelSerializer):
 
     def get_cover_url(self, obj):
         return obj.cover.url if obj.cover else None
+
+    def get_cover_thumb_url(self, obj):
+        return variant_url(obj.cover, CARD_WIDTH)
 
 
 class ArticleDetailSerializer(serializers.ModelSerializer):
@@ -149,6 +159,7 @@ class BlogCategoryListSerializer(serializers.ModelSerializer):
     """
 
     cover_url = serializers.SerializerMethodField()
+    cover_thumb_url = serializers.SerializerMethodField()
     articles_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -159,12 +170,16 @@ class BlogCategoryListSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "cover_url",
+            "cover_thumb_url",
             "cover_alt",
             "articles_count",
         ]
 
     def get_cover_url(self, obj):
         return obj.cover.url if obj.cover else None
+
+    def get_cover_thumb_url(self, obj):
+        return variant_url(obj.cover, TILE_WIDTH)
 
     def get_articles_count(self, obj):
         return getattr(obj, "_articles_count", obj.articles.filter(is_published=True).count())
@@ -216,3 +231,25 @@ class LegalDocumentSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
         ]
+
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ["id", "author_name", "text", "date", "rating", "source", "source_url"]
+
+
+class CredentialSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    thumb_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Credential
+        fields = ["id", "title", "year", "image_url", "thumb_url"]
+
+    def get_image_url(self, obj):
+        return obj.image.url if obj.image else None
+
+    def get_thumb_url(self, obj):
+        return variant_url(obj.image, TILE_WIDTH)

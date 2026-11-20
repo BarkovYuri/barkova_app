@@ -208,6 +208,13 @@ class HowItWorksStep(models.Model):
 class FaqItem(models.Model):
     question = models.CharField("Вопрос", max_length=500)
     answer = models.TextField("Ответ")
+    bot_label = models.CharField(
+        "Кнопка в VK-боте",
+        max_length=40,
+        blank=True,
+        help_text="Короткая подпись до 40 символов. Если заполнено, вопрос появится "
+        "кнопкой быстрого ответа в сообщениях сообщества VK.",
+    )
     order = models.PositiveIntegerField("Порядок", default=0)
     is_active = models.BooleanField("Показывать", default=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -663,3 +670,55 @@ class LegalDocument(models.Model):
 
     def __str__(self):
         return f"{self.title} (v{self.version})"
+
+
+# ============================================================================
+# Отзывы и документы врача
+# ============================================================================
+
+
+class Review(models.Model):
+    """Отзыв пациента на главной. Публикуйте только настоящие отзывы и
+    только те, что разрешено использовать (например, присланные пациентом
+    напрямую или с явным согласием)."""
+
+    author_name = models.CharField("Имя автора", max_length=120, help_text="Например: «Анна, 34 года»")
+    text = models.TextField("Текст отзыва")
+    date = models.DateField("Дата отзыва", null=True, blank=True)
+    rating = models.PositiveSmallIntegerField(
+        "Оценка, 1–5",
+        null=True,
+        blank=True,
+        choices=[(i, str(i)) for i in range(1, 6)],
+    )
+    source = models.CharField("Источник", max_length=80, blank=True, help_text="Например: ПроДокторов")
+    source_url = models.URLField("Ссылка на отзыв", blank=True)
+    order = models.PositiveIntegerField("Порядок", default=0)
+    is_active = models.BooleanField("Показывать на сайте", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Отзыв"
+        verbose_name_plural = "Отзывы"
+        ordering = ["order", "-date", "-id"]
+
+    def __str__(self):
+        return f"{self.author_name}: {self.text[:40]}"
+
+
+class Credential(models.Model):
+    """Диплом, сертификат или удостоверение на странице «О враче»."""
+
+    title = models.CharField("Название", max_length=200, help_text="Например: Диплом СибГМУ, «Педиатрия»")
+    year = models.CharField("Год", max_length=20, blank=True)
+    image = models.ImageField("Скан или фото", upload_to="credentials/")
+    order = models.PositiveIntegerField("Порядок", default=0)
+    is_active = models.BooleanField("Показывать на сайте", default=True)
+
+    class Meta:
+        verbose_name = "Документ врача"
+        verbose_name_plural = "Документы врача"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.title
